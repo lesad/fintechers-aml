@@ -1,0 +1,126 @@
+package cz.morosystems.aml.engine.sql
+
+import cz.morosystems.aml.engine.PostgresTest
+import cz.morosystems.aml.engine.rules.Agg
+import cz.morosystems.aml.engine.rules.RuleDefinition
+import cz.morosystems.aml.engine.rules.RuleRepository
+import cz.morosystems.aml.engine.rules.VariableDefinition
+import cz.morosystems.aml.engine.rules.Window
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.jdbc.core.simple.JdbcClient
+
+@PostgresTest
+class GrainQueryBuilderTest {
+    @Autowired
+    lateinit var builder: GrainQueryBuilder
+
+    @Autowired
+    lateinit var rules: RuleRepository
+
+    @Autowired
+    lateinit var jdbc: JdbcClient
+
+    private val c1 by lazy { rules.activeRules().single { it.key == "C1" } }
+    private val a1 by lazy { rules.activeRules().single { it.key == "A1" } }
+
+    @BeforeEach
+    fun clients() {
+        jdbc.sql("truncate client cascade").update()
+        listOf("K1", "K2").forEach {
+            jdbc.sql("insert into client (id, country, pep, type, q2_days) values (?, 'CZ', false, 'legal entity', 91)").param(it).update()
+        }
+    }
+
+    @Test
+    fun sumsDayVolumeInBothDirectionsSplitAtMidnight() {
+        tx("T1", "K1", "2026-07-14 23:30", 10_000, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-07-15 00:30", 5_000, "out", payee = "ACZ2")
+        tx("T3", "K1", "2026-07-15 08:00", 1_000, "in", payer = "ACZ1")
+
+        val rows = run(a1).associate { it["grain_key"] to it["day_volume"] }
+        assertThat(rows).isEqualTo(mapOf("2026-07-14" to czk(10_000), "2026-07-15" to czk(6_000)))
+    }
+
+    @Test
+    fun c1FindsFlowThroughAcrossMidnight() {
+        tx("T1", "K1", "2026-07-14 22:00", 60_000, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-07-14 23:30", 50_000, "in", payer = "ACZ2")
+        tx("T3", "K1", "2026-07-15 01:00", 90_000, "out", payee = "ACZ9")
+
+        val anchor = run(c1).single { it["grain_key"] == "T2" }
+        assertThat(anchor["inflow"]).isEqualTo(czk(110_000))
+        assertThat(anchor["outflow"]).isEqualTo(czk(90_000))
+    }
+
+    @Test
+    fun c1IgnoresMoneySentBackToAPayer() {
+        tx("T1", "K1", "2026-07-14 22:00", 60_000, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-07-14 23:30", 50_000, "in", payer = "ACZ2")
+        tx("T3", "K1", "2026-07-15 01:00", 90_000, "out", payee = "ACZ1")
+
+        assertThat(run(c1).single { it["grain_key"] == "T2" }["outflow"]).isEqualTo(0L)
+    }
+
+    @Test
+    fun c1CountsOutflowAtExactlySixHoursButNotOneMinuteLater() {
+        tx("T1", "K1", "2026-07-14 10:00", 110_000, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-07-14 16:00", 90_000, "out", payee = "ACZ9")
+        tx("T3", "K2", "2026-07-14 10:00", 110_000, "in", payer = "ACZ1")
+        tx("T4", "K2", "2026-07-14 16:01", 90_000, "out", payee = "ACZ9")
+
+        val outflow = run(c1).associate { it["grain_key"] to it["outflow"] }
+        assertThat(outflow).isEqualTo(mapOf("T1" to czk(90_000), "T3" to 0L))
+    }
+
+    @Test
+    fun c1PayersNeverHoldNullFromARemittance() {
+        tx("T1", "K1", "2026-07-14 10:00", 110_000, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-07-14 11:00", 5_000, "unknown", payee = "ACZ5")
+        tx("T3", "K1", "2026-07-14 12:00", 90_000, "out", payee = "ACZ9")
+
+        val anchor = run(c1).single { it["grain_key"] == "T1" }
+        assertThat(anchor["outflow"]).isEqualTo(czk(90_000))
+    }
+
+    @Test
+    fun restrictsTransactionGrainToGivenClients() {
+        tx("T1", "K1", "2026-07-14 10:00", 1_000, "in", payer = "ACZ1")
+        tx("T2", "K2", "2026-07-14 10:00", 1_000, "in", payer = "ACZ1")
+        tx("T3", "K1", "2026-06-30 23:59", 1_000, "in", payer = "ACZ1")
+        val a3 = rules.activeRules().single { it.key == "A3" }
+
+        assertThat(run(a3, setOf("K1")).map { it["grain_key"] }).containsExactly("T1")
+    }
+
+    @Test
+    fun rejectsAVariableNamedLikeATransactionColumn() {
+        val clash = a1.copy(variables = listOf(VariableDefinition(1, "amount", Agg.SUM, "amount", "true", Window.Day)))
+        assertThatThrownBy { builder.build(clash, Period.JULY_2026, null) }.isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun rejectsAnUnknownField() {
+        val unknown = a1.copy(variables = listOf(VariableDefinition(1, "day_volume", Agg.SUM, "amount; drop table client", "true", Window.Day)))
+        assertThatThrownBy { builder.build(unknown, Period.JULY_2026, null) }.isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    private fun czk(amount: Long) = amount * 100
+
+    private fun run(rule: RuleDefinition, clientIds: Set<String>? = null): List<Map<String, Any?>> {
+        val query = builder.build(rule, Period.JULY_2026, clientIds)
+        return jdbc.sql(query.sql).params(query.params).query().listOfRows()
+    }
+
+    private fun tx(id: String, client: String, ts: String, amountCzk: Long, direction: String, payer: String? = null, payee: String? = null) {
+        jdbc.sql(
+            """
+            insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_account, payee_account, type, direction)
+            values (?, ?, ?::timestamp, ?, ?, 'CZK', 1, ?, ?, 'x', ?)
+            """,
+        ).params(listOf(id, client, ts, czk(amountCzk), amountCzk, payer, payee, direction)).update()
+    }
+}
