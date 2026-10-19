@@ -1,0 +1,46 @@
+package cz.morosystems.aml.engine.bedrock
+
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.stereotype.Component
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient
+import software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
+import software.amazon.awssdk.services.bedrockruntime.model.ConversationRole
+import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse
+import software.amazon.awssdk.services.bedrockruntime.model.Message
+import software.amazon.awssdk.services.bedrockruntime.model.SystemContentBlock
+
+@ConfigurationProperties("bedrock")
+data class BedrockProperties(
+    val region: String = "eu-central-1",
+    val modelId: String = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+)
+
+class BedrockException(message: String) : RuntimeException(message)
+
+/**
+ * One-shot text question to a Bedrock model through the Converse API.
+ *
+ * Credentials come from the default AWS chain, so locally `AWS_PROFILE=hackathon` after `aws sso login`.
+ * The reply is untrusted text: callers validate it before storing or showing it.
+ *
+ * @throws BedrockException when the reply holds no text block
+ */
+@Component
+class Bedrock(private val properties: BedrockProperties) {
+    private val client: BedrockRuntimeClient by lazy {
+        BedrockRuntimeClient.builder().region(Region.of(properties.region)).build()
+    }
+
+    fun ask(system: String, prompt: String): String = answerText(
+        client.converse { request ->
+            request.modelId(properties.modelId)
+                .system(SystemContentBlock.fromText(system))
+                .messages(Message.builder().role(ConversationRole.USER).content(ContentBlock.fromText(prompt)).build())
+        },
+    )
+}
+
+internal fun answerText(response: ConverseResponse): String =
+    response.output().message().content().firstNotNullOfOrNull { it.text() }
+        ?: throw BedrockException("Bedrock reply has no text block")
