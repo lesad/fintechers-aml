@@ -42,3 +42,6 @@ storybook-static
 
 # Superpowers agent runtime docs — branch-runtime notes + plan/spec drafts, never committed (ADR-0004)
 docs/superpowers/
+
+# Organisers' datasets, never committed
+/data/
