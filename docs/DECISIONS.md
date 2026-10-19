@@ -2,9 +2,15 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0025 — No regulatory rule layer; every monitoring rule is the institution's own
+
+**Accepted.** The rules engine has three layers: company, client segment and client. The regulatory layer from ADR-0024 is dropped, and with it the "regulatory floor" proof. FINREG's rules A, B and C are seeded as company rules. Every rule can be added, changed, suppressed or replaced at its layer, through the checks and an approval. The cel-java verifier stays, as an informative change summary (what a change newly catches and no longer catches) rather than a gate. _Why:_ the team found that in practice monitoring scenarios and thresholds are each institution's own risk-based decision, so a hard-coded regulatory layer would model something that does not exist. Design: `docs/engine/rules-engine-design.md`.
+
 ### ADR-0024 — A Kotlin + Spring Boot engine owns the monitoring rules and the database; local only for now
 
 **Accepted.** Monitoring scenarios (rules A, B and C first, more later), their layered configuration (regulatory rules that cannot be switched off or loosened, company, client-segment and per-client rules) and rule backtests live in a Kotlin + Spring Boot service in this repo, next to the Next.js app. The engine is the only component that touches the database: it owns the local Postgres (`compose.yaml`), the `public` schema and its migrations (Liquibase SQL changelogs). The Next.js app gets no direct database access; its Drizzle layer is removed and any UI reads through the engine. It runs locally only; no deployment target yet. Design: `docs/engine/rules-engine-design.md`. _Why:_ the engine's owner is fluent in Kotlin and Spring, and the JVM is the usual home for bank monitoring and rules engines. One owner for the data keeps schema, migrations and access rules in one place. Rules A, B and C stay deterministic code, as ADR-0020 requires. Settles the Kotlin backend that ADR-0023 records as proposed (`docs/challenge/architecture.md`) for the rules engine.
+
+_Superseded in part by ADR-0025: there is no regulatory layer; the layers are company, segment and client._
 
 ### ADR-0023 — `docs/challenge/` is the single source of hackathon context; the context repo is frozen
 
