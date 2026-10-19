@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0020 — Hackathon AML build: Vercel app, AWS Bedrock through a role, Jev for typed decisions
+
+**Accepted.** The app is the FINREG AML triage entry for The FinTechers Hackathon 2026. It runs on Vercel; model calls go to AWS Bedrock in Frankfurt through an IAM role (the team account blocks access keys); typed decisions come from TypeSafe's Jev, with Laya as a later migration behind the same request shape. Rules A, B and C and all arithmetic are deterministic code; the model only answers typed questions, and code validates its output. The organisers' data stays out of git (`data/`, pulled by `scripts/pull-data.sh`). _Why:_ the team is frontend-heavy, Jev has a TypeScript SDK, the hackathon provides Bedrock credits, and FINREG grades explainable, auditable decisions. Detail: `docs/challenge/decision-architecture.md`. The database (Supabase from the template or Postgres on AWS) is still open.
+
 ### ADR-0019 — Lint policy: `type` over `interface`, PascalCase component files, and the test-relaxation block covers every test suffix
 
 **Accepted.** Three `.oxlintrc.json` changes, ported from a downstream fork that had hit each of them.

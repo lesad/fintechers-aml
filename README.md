@@ -6,6 +6,13 @@ MoroSystems entry for The FinTechers Hackathon 2026, Track 5 (Compliance and Reg
 
 Before the event, this repo held only a generic Next.js app template (`agentic-next-app`): framework setup, tooling and an example feature, with no AML or domain code. That state is the `hackathon-start` tag. Everything after it is built during the hackathon.
 
+## Getting started for the hackathon
+
+1. `pnpm install`
+2. Sign in to the team AWS account: `aws sso login --profile <your-sso-profile>` (setup in `docs/challenge/aws-participant-guide.md`).
+3. `pnpm data:pull -- --profile <your-sso-profile>` fetches the ČNB AML data, the MostlyRight file and the ČNB FX fixings into `data/raw/` (git-ignored).
+4. Read `docs/challenge/README.md` for the challenge, the data findings and the decision design.
+
 ## Template notes
 
 The sections below come from the template and describe its tooling.

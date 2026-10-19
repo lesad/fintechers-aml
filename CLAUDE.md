@@ -1,4 +1,14 @@
-# agentic-next-app — Agent Instructions
+# fintechers-aml — Agent Instructions
+
+## Hackathon context (read first)
+
+This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FINREG PARTNERS "AML transaction monitoring: triage and red-flag escalation". Code freeze: Tuesday 20 October, 13:30. Only commits after the `hackathon-start` tag are judged.
+
+- Challenge, data, decision design and AWS limits: `docs/challenge/README.md`. Read it before building a feature.
+- Data: `pnpm data:pull -- --profile <sso-profile>` fills `data/raw/` (git-ignored). Never commit the organisers' data.
+- Reference data we own: `reference/high-risk-countries-2026-07.json` (rule B).
+- AWS: Frankfurt (`eu-central-1`) only, SSO sign-in, no IAM users or access keys; running code uses an IAM role. Models: `openai.gpt-oss-120b-1:0` (unthrottled), Claude 4.5 only through `eu.` profiles.
+- Deterministic rules and all arithmetic stay in code; the model makes typed decisions only, and code validates every model output.
 
 ## Stack
 

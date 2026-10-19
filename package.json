@@ -37,6 +37,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "db:types": "supabase gen types typescript --local > src/core/db/supabase-types.ts",
+    "data:pull": "bash scripts/pull-data.sh",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "setup:agentic": "tsx scripts/setup-skills.ts"

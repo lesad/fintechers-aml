@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+### Added
+
+- `docs/challenge/`: the FINREG AML challenge context copied from the team's context repo (challenge text, data profile, decision design, rule B lists, Czech escalation, UX research, AWS guide and demo guidance).
+- `scripts/pull-data.sh` and `pnpm data:pull`: sync the organisers' datasets from S3 and the ČNB FX fixings into the git-ignored `data/raw/`.
+- `reference/high-risk-countries-2026-07.json`: EU and FATF high-risk countries for July 2026 (rule B).
+- ADR-0020 for the hackathon build.
+
+### Changed
+
+- Renamed the app to `fintechers-aml`, removed the guestbook example, added the "Built during the hackathon" README section.
+
 ## [0.2.0] — 2026-08-13
 
 ### Added

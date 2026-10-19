@@ -1,0 +1,224 @@
+{
+  "description": "Union of the EU high-risk third countries list (Delegated Regulation 2016/1675, consolidated 2026-01-29) and the FATF black and grey lists of 19 June 2026, as in force for July 2026 transactions. Used by FINREG rule B. Interpretation that the grey list counts is ours; confirm with FINREG.",
+  "source": "fintechers-hackathon-2026 context repo, context/1-projects/track5-aml/rule-b-reference-data.md (2026-10-19)",
+  "validFor": "2026-07",
+  "countries": [
+    {
+      "iso2": "AF",
+      "country": "Afghanistan",
+      "eu": true,
+      "fatf": null,
+      "note": null
+    },
+    {
+      "iso2": "DZ",
+      "country": "Algeria",
+      "eu": true,
+      "fatf": null,
+      "note": "EU: yes; FATF: no (removed 19 Jun 2026)"
+    },
+    {
+      "iso2": "AO",
+      "country": "Angola",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "BA",
+      "country": "Bosnia and Herzegovina",
+      "eu": false,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "BO",
+      "country": "Bolivia",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "BG",
+      "country": "Bulgaria",
+      "eu": false,
+      "fatf": "grey",
+      "note": "EU: no (EU member); FATF: grey"
+    },
+    {
+      "iso2": "CD",
+      "country": "DR Congo",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "CI",
+      "country": "Côte d'Ivoire",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "CM",
+      "country": "Cameroon",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "HT",
+      "country": "Haiti",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "IQ",
+      "country": "Iraq",
+      "eu": false,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "IR",
+      "country": "Iran",
+      "eu": true,
+      "fatf": "black",
+      "note": null
+    },
+    {
+      "iso2": "KE",
+      "country": "Kenya",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "KP",
+      "country": "DPRK",
+      "eu": true,
+      "fatf": "black",
+      "note": null
+    },
+    {
+      "iso2": "KW",
+      "country": "Kuwait",
+      "eu": false,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "LA",
+      "country": "Laos",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "LB",
+      "country": "Lebanon",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "MC",
+      "country": "Monaco",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "MM",
+      "country": "Myanmar",
+      "eu": true,
+      "fatf": "black",
+      "note": null
+    },
+    {
+      "iso2": "NA",
+      "country": "Namibia",
+      "eu": true,
+      "fatf": null,
+      "note": "EU: yes; FATF: no (removed 19 Jun 2026)"
+    },
+    {
+      "iso2": "NP",
+      "country": "Nepal",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "PG",
+      "country": "Papua New Guinea",
+      "eu": false,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "RU",
+      "country": "Russia",
+      "eu": true,
+      "fatf": null,
+      "note": "EU: yes (point IV); FATF: no (membership suspended)"
+    },
+    {
+      "iso2": "SS",
+      "country": "South Sudan",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "SY",
+      "country": "Syria",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "TT",
+      "country": "Trinidad and Tobago",
+      "eu": true,
+      "fatf": null,
+      "note": null
+    },
+    {
+      "iso2": "VE",
+      "country": "Venezuela",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "VG",
+      "country": "British Virgin Islands",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "VN",
+      "country": "Vietnam",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    },
+    {
+      "iso2": "VU",
+      "country": "Vanuatu",
+      "eu": true,
+      "fatf": null,
+      "note": null
+    },
+    {
+      "iso2": "YE",
+      "country": "Yemen",
+      "eu": true,
+      "fatf": "grey",
+      "note": null
+    }
+  ]
+}

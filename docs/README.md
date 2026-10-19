@@ -15,6 +15,7 @@ This directory is durable, committed project memory. Live, in-flight work lives 
 | `QUICKSTART.md`  | Local / preview / production setup runbook                                                 | humans                       |
 | `FORKING.md`     | One-time "make it yours" checklist for a new fork                                          | humans (new forks)           |
 | `ENVIRONMENT.md` | Env-var manifest + secure-handling guide                                                   | humans + agents              |
+| `challenge/`     | Hackathon challenge context (FINREG AML triage): start at `challenge/README.md`            | copied from the context repo |
 | `UPSTREAM.md`    | Generic changes to contribute back — **consuming forks only**; empty in this template repo | agents + humans (forks)      |
 | _(live tasks)_   | tracked in **dex** (`.dex/`), not a file here                                              | agents                       |
 
