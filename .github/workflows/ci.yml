@@ -5,6 +5,11 @@ on:
   push:
     branches: [main]
 
+# A newer push to a PR cancels its stale run; pushes to main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
   SKIP_ENV_VALIDATION: "true"
@@ -13,6 +18,7 @@ jobs:
   check:
     name: typecheck / lint / format / unit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -26,6 +32,7 @@ jobs:
   integration:
     name: integration (Vitest + Postgres)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:17-alpine
@@ -49,6 +56,7 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -62,6 +70,7 @@ jobs:
   fallow:
     name: fallow (dead code / dupes / health)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     continue-on-error: true
     permissions:
       contents: read

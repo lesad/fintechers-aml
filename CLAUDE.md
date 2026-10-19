@@ -138,3 +138,14 @@ Vercel MCP at `https://mcp.vercel.com` (HTTP, OAuth auth required on first conne
 - `pnpm check` (fast, no DB): typecheck + lint + format-check + unit
 - `pnpm check:full` (pre-PR, needs `pnpm db:start`): `check` + integration
 - CI jobs: `check` (unit) + `integration` (Postgres service, `db:migrate` + `db:seed`) + `build` + `fallow`
+
+## Shipping (ADR-0022)
+
+Every change reaches `main` through a short-lived PR, merged by GitHub once CI is green. No approvals; the PR is the audit trail. Agents may push and open PRs in this repo without asking.
+
+- One branch per task, branched from fresh `origin/main`. Run `pnpm check` locally first.
+- `pnpm ship --title "<cc title>" --body "<what changed, how verified>"` pushes, opens the PR, arms squash auto-merge and waits for the required checks (`check`, `integration`, `build`). Branches with gittr: `gittr ship` first, then `pnpm ship`.
+- Red PR: `ship` prints the failing log and exits 1. Fix, commit, run `pnpm ship` again; auto-merge stays armed. Don't stop at a red PR.
+- After the merge: start the next task from fresh `origin/main` (`git fetch`, new branch). The remote branch is deleted on merge.
+- The PR title becomes the squash commit on `main`, so make it a Conventional Commit.
+- `main` ruleset lives in `.github/rulesets/main.json`. Apply a change with `gh api -X PUT repos/lesad/fintechers-aml/rulesets/<id> --input .github/rulesets/main.json` (`gh api repos/lesad/fintechers-aml/rulesets` lists the id).

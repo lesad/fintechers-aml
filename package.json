@@ -32,7 +32,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "data:pull": "bash scripts/pull-data.sh",
-    "setup:agentic": "tsx scripts/setup-skills.ts"
+    "setup:agentic": "tsx scripts/setup-skills.ts",
+    "ship": "bash scripts/ship.sh"
   },
   "dependencies": {
     "@base-ui/react": "1.4.1",
