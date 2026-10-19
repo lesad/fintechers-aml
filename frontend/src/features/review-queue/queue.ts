@@ -1,4 +1,4 @@
-import { czk, type FlaggedTransaction } from "./api";
+import { czk, type Disposition, type FlaggedTransaction } from "./api";
 import { rulesSummary } from "./rules";
 
 import type { AiRating, CaseStatus, RiskLevel } from "@/components";
@@ -15,6 +15,17 @@ export type QueueItem = {
   date: string;
   status: CaseStatus;
   flagged: Date;
+  /** The engine's triage: what should happen to the case, and its 0–100 score. */
+  disposition: Disposition;
+  score: number;
+};
+
+export const DISPOSITION_LABEL: Record<Disposition, string> = {
+  AUTO_CLOSE: "Closed by triage",
+  REVIEW_LOW: "Review · low",
+  REVIEW_MEDIUM: "Review · medium",
+  REVIEW_HIGH: "Review · high",
+  ESCALATE: "Escalate",
 };
 
 /** `2026-07-01T00:15:25` → `2026-07-01 00:15` */
@@ -25,7 +36,7 @@ export function toQueueItem(f: FlaggedTransaction): QueueItem {
     id: f.id,
     client: f.clientId,
     rule: f.rating,
-    ruleReason: rulesSummary(f.rules),
+    ruleReason: rulesSummary(f.rules.map((r) => r.name)),
     // No model rates cases (ADR-0032); the AI part of the badge stays empty.
     ai: "none",
     amount: czk(f.amountHalere),
@@ -33,6 +44,8 @@ export function toQueueItem(f: FlaggedTransaction): QueueItem {
     // The engine has no case status yet; decisions live in the browser (useDecisions).
     status: "New",
     flagged: new Date(f.flaggedAt),
+    disposition: f.disposition,
+    score: f.score,
   };
 }
 

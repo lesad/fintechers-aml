@@ -22,6 +22,7 @@ const client: DetailClient = {
 
 const hit = (rule: string, evidence: Hit["evidence"]): Hit => ({
   rule,
+  name: `Rule ${rule}`,
   version: 1,
   grainKey: "x",
   evidence,
@@ -67,7 +68,9 @@ describe("ruleFacts", () => {
 
 describe("rulesSummary", () => {
   it("names the first rule and counts the rest", () => {
-    expect(rulesSummary(["B2"])).toBe("PEP outgoing payment above the limit");
-    expect(rulesSummary(["A1", "A2"])).toMatch(/\(\+1 more\)$/);
+    expect(rulesSummary(["PEP outgoing payment above the limit"])).toBe(
+      "PEP outgoing payment above the limit",
+    );
+    expect(rulesSummary(["Daily volume", "Q2 average"])).toMatch(/\(\+1 more\)$/);
   });
 });

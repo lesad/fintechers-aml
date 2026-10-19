@@ -14,8 +14,11 @@ const row = (id: string, rating: string, rules: string[], clientId = "K1") => ({
   currency: "EUR",
   direction: "out",
   alertTypes: [rules[0]?.charAt(0) ?? "A"],
-  rules,
+  rules: rules.map((key) => ({ key, name: `Rule ${key}` })),
   rating,
+  disposition:
+    rating === "High" ? "REVIEW_HIGH" : rating === "Medium" ? "REVIEW_MEDIUM" : "REVIEW_LOW",
+  score: rating === "High" ? 80 : rating === "Medium" ? 50 : 20,
   flaggedAt: new Date().toISOString(),
 });
 
@@ -51,14 +54,27 @@ const detail = {
     q2Days: 91,
   },
   rating: "High",
+  disposition: "ESCALATE",
   alerts: [
     {
       id: 7,
       alertType: "B",
       createdAt: new Date().toISOString(),
+      triage: {
+        disposition: "ESCALATE",
+        score: 95,
+        reasons: [
+          { code: "RULE_BASE", description: "base score for B2", points: 60 },
+          { code: "CLIENT_PEP", description: "client is a PEP", points: 35 },
+          { code: "PRIOR_REPORTS", description: "0 earlier filing(s) for this client", points: 0 },
+        ],
+        configVersion: "triage-v1",
+        decidedAt: null,
+      },
       hits: [
         {
           rule: "B2",
+          name: "PEP outgoing payment above the limit",
           version: 1,
           grainKey: "TX1",
           evidence: { "tx.amount": 18_450_000, "p.pep_min": 10_000_000 },
@@ -147,6 +163,8 @@ describe("App", () => {
 
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
     expect(await screen.findByText("100,000 CZK")).toBeInTheDocument();
+    expect(screen.getByText("Escalate", { selector: "span" })).toBeInTheDocument();
+    expect(screen.queryByText("client is a PEP")).not.toBeInTheDocument();
     expect(screen.getAllByText("184,500 CZK").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Close tab" }));

@@ -4,6 +4,7 @@ import { type Column, LoadMore, RatingBadge, Select, StatusLabel, Table } from "
 
 import {
   byStatus,
+  DISPOSITION_LABEL,
   formatAge,
   formatAmount,
   NO_FILTER,
@@ -57,9 +58,17 @@ export function ReviewQueue({
   const columns: Column<QueueItem>[] = [
     {
       key: "rating",
-      header: "Rating",
-      width: 110,
-      cell: (r) => <RatingBadge rule={r.rule} ai={r.ai} />,
+      header: "Rating · score",
+      width: 130,
+      cell: (r) => (
+        <span
+          className="flex items-center gap-2"
+          title={`Triage: ${DISPOSITION_LABEL[r.disposition]} · score ${r.score} of 100`}
+        >
+          <RatingBadge rule={r.rule} ai={r.ai} />
+          <span className="text-xs text-fg-muted tabular-nums">{r.score}</span>
+        </span>
+      ),
     },
     {
       key: "reason",

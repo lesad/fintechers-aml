@@ -5,6 +5,14 @@ import { z } from "zod";
 
 const rating = z.enum(["High", "Medium", "Low"]);
 const direction = z.enum(["in", "out", "unknown"]);
+/** Triage dispositions, mildest first (engine triage/TriageModel.kt). */
+const disposition = z.enum([
+  "AUTO_CLOSE",
+  "REVIEW_LOW",
+  "REVIEW_MEDIUM",
+  "REVIEW_HIGH",
+  "ESCALATE",
+]);
 
 const flagged = z.object({
   id: z.string(),
@@ -15,8 +23,10 @@ const flagged = z.object({
   currency: z.string(),
   direction,
   alertTypes: z.array(z.string()),
-  rules: z.array(z.string()),
+  rules: z.array(z.object({ key: z.string(), name: z.string() })),
   rating,
+  disposition,
+  score: z.number(),
   flaggedAt: z.string(),
 });
 
@@ -30,6 +40,7 @@ const page = z.object({
 
 const hit = z.object({
   rule: z.string(),
+  name: z.string(),
   version: z.number(),
   grainKey: z.string(),
   evidence: z.record(z.string(), z.unknown()),
@@ -67,8 +78,25 @@ const detail = z.object({
     q2Days: z.number(),
   }),
   rating: rating.nullable(),
+  disposition: disposition.nullable(),
   alerts: z.array(
-    z.object({ id: z.number(), alertType: z.string(), createdAt: z.string(), hits: z.array(hit) }),
+    z.object({
+      id: z.number(),
+      alertType: z.string(),
+      createdAt: z.string(),
+      triage: z
+        .object({
+          disposition,
+          score: z.number(),
+          reasons: z.array(
+            z.object({ code: z.string(), description: z.string(), points: z.number() }),
+          ),
+          configVersion: z.string(),
+          decidedAt: z.string().nullable(),
+        })
+        .nullable(),
+      hits: z.array(hit),
+    }),
   ),
   history: z.array(
     z.object({
@@ -86,6 +114,7 @@ const detail = z.object({
 export type FlaggedTransaction = z.infer<typeof flagged>;
 export type TransactionPage = z.infer<typeof page>;
 export type Hit = z.infer<typeof hit>;
+export type Disposition = z.infer<typeof disposition>;
 export type TransactionDetail = z.infer<typeof detail>;
 export type DetailClient = TransactionDetail["client"];
 export type HistoryTransaction = TransactionDetail["history"][number];

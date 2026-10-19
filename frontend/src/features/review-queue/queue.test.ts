@@ -13,8 +13,10 @@ const flagged: FlaggedTransaction = {
   currency: "EUR",
   direction: "out",
   alertTypes: ["B"],
-  rules: ["B2"],
+  rules: [{ key: "B2", name: "PEP outgoing payment above the limit" }],
   rating: "High",
+  disposition: "ESCALATE",
+  score: 92,
   flaggedAt: "2026-10-19T18:25:35Z",
 };
 
@@ -29,6 +31,8 @@ describe("toQueueItem", () => {
       amount: 184_500,
       date: "2026-07-17 15:58",
       status: "New",
+      disposition: "ESCALATE",
+      score: 92,
     });
   });
 });

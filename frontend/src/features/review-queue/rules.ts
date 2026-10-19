@@ -1,23 +1,13 @@
 import { czk, type DetailClient, type Hit } from "./api";
 
-// What each engine rule checks (engine/.../db/migrations/0004-seed-rules.sql). Thresholds come
-// from the hit's evidence (`p.*`), not from here, because the engine keeps them as config.
-const RULE_NAMES: Record<string, string> = {
-  A1: "Daily volume above the projected share of expected monthly volume",
-  A2: "Daily volume above a multiple of the Q2 daily average",
-  A3: "Single transaction above a multiple of the Q2 maximum",
-  B1: "Transaction touching a high-risk country",
-  B2: "PEP outgoing payment above the limit",
-  C1: "Flow-through: inflow forwarded within hours",
-};
-
-const ruleName = (key: string) => RULE_NAMES[key] ?? `Rule ${key}`;
+// Rule names come from the engine (`rule.name`). Thresholds come from the hit's evidence (`p.*`),
+// not from here, because the engine keeps them as config.
 
 /** One line for the queue: the first rule's name, plus how many others fired. */
-export function rulesSummary(rules: string[]): string {
-  const [first, ...rest] = rules;
+export function rulesSummary(names: readonly string[]): string {
+  const [first, ...rest] = names;
   if (!first) return "Alert raised";
-  return rest.length ? `${ruleName(first)} (+${rest.length} more)` : ruleName(first);
+  return rest.length ? `${first} (+${rest.length} more)` : first;
 }
 
 export type RuleFacts = {
@@ -46,7 +36,7 @@ export function ruleFacts(hit: Hit, client: DetailClient): RuleFacts {
     const fmt = f.fmt ?? money;
     return {
       rule: hit.rule,
-      name: ruleName(hit.rule),
+      name: hit.name,
       threshold: (f.prefix ?? "") + fmt(f.threshold),
       actual: fmt(f.actual),
       ratio: f.threshold ? f.actual / f.threshold : 0,
@@ -86,7 +76,7 @@ export function ruleFacts(hit: Hit, client: DetailClient): RuleFacts {
       });
     }
     default:
-      return { rule: hit.rule, name: ruleName(hit.rule), threshold: "—", actual: "—", ratio: 0 };
+      return { rule: hit.rule, name: hit.name, threshold: "—", actual: "—", ratio: 0 };
   }
 }
 
