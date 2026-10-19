@@ -74,9 +74,25 @@ class TransactionControllerTest {
     }
 
     @Test
+    fun filtersByAlertStatus() {
+        jdbc.sql("update alert set status = 'ESCALATED' where transaction_id = 'T3' and run_id = (select max(id) from run)").update()
+        jdbc.sql("update alert set status = 'REPORTED' where transaction_id = 'T2'").update()
+
+        val escalated = assertThat(mvc.get().uri("/api/transactions?status=ESCALATED")).hasStatusOk().bodyJson()
+        escalated.extractingPath("$.items[*].id").asArray().containsExactly("T3")
+        escalated.extractingPath("$.total").isEqualTo(1)
+
+        assertThat(mvc.get().uri("/api/transactions?status=ESCALATED&status=REPORTED")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T3", "T2")
+        assertThat(mvc.get().uri("/api/transactions?status=NEW")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T1", "T4")
+    }
+
+    @Test
     fun rejectsBadPaging() {
         assertThat(mvc.get().uri("/api/transactions?size=0")).hasStatus(HttpStatus.BAD_REQUEST)
         assertThat(mvc.get().uri("/api/transactions?rating=Critical")).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(mvc.get().uri("/api/transactions?status=CLOSED")).hasStatus(HttpStatus.BAD_REQUEST)
     }
 
     @Test

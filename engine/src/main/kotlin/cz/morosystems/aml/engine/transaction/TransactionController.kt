@@ -13,18 +13,22 @@ import org.springframework.web.server.ResponseStatusException
 class TransactionController(private val transactions: TransactionRepository) {
     /**
      * Flagged transactions of the latest finished run, one page at a time.
-     * `q` matches a transaction or client id; `rating` is `High`, `Medium` or `Low`.
+     * `q` matches a transaction or client id; `rating` is `High`, `Medium` or `Low`; `status` (repeatable or
+     * comma-separated) keeps transactions with an alert in one of those statuses.
      */
     @GetMapping
     fun list(
         @RequestParam(required = false) q: String?,
         @RequestParam(required = false) rating: String?,
+        @RequestParam(required = false) status: List<String>?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "50") size: Int,
     ): TransactionPage {
         if (page < 0 || size !in 1..MAX_SIZE) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "page >= 0, size 1..$MAX_SIZE")
         if (rating != null && rating !in RATINGS) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "rating is one of $RATINGS")
-        return transactions.flagged(q, rating, page, size)
+        val statuses = status.orEmpty()
+        if (!STATUSES.containsAll(statuses)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $STATUSES")
+        return transactions.flagged(q, rating, statuses, page, size)
     }
 
     /** One transaction with its client, its alerts and their evidence, and the client's other transactions. */
@@ -35,5 +39,6 @@ class TransactionController(private val transactions: TransactionRepository) {
     private companion object {
         const val MAX_SIZE = 200
         val RATINGS = setOf("High", "Medium", "Low")
+        val STATUSES = setOf("NEW", "ESCALATED", "FALSE_POSITIVE", "REPORTED")
     }
 }

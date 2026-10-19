@@ -14,15 +14,17 @@ class TransactionRepository(private val jdbc: JdbcClient) {
 
     /**
      * The review queue: transactions the latest finished run alerted on and triage did not close on its own,
-     * most severe disposition first, then highest score.
+     * most severe disposition first, then highest score. `statuses` keeps a transaction when any of its alerts
+     * has one of them; empty keeps all.
      */
-    fun flagged(query: String?, rating: String?, page: Int, size: Int): TransactionPage {
+    fun flagged(query: String?, rating: String?, statuses: List<String>, page: Int, size: Int): TransactionPage {
         val filter = """
             where (:q = '' or q.id ilike :like or t.client_id ilike :like)
               and (:rating = '' or q.rating = :rating)
+              and (:statuses = '' or q.statuses && string_to_array(:statuses, ','))
         """
         val q = query?.trim().orEmpty()
-        val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty())
+        val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty(), "statuses" to statuses.joinToString(","))
 
         val items = jdbc.sql(
             """
@@ -212,7 +214,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
          */
         const val QUEUE = """
             with alert_sev as (
-                select a.id, a.transaction_id, a.alert_type, a.created_at, tr.score,
+                select a.id, a.transaction_id, a.alert_type, a.status, a.created_at, tr.score,
                        array_position(array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'], tr.disposition) as sev
                 from alert a join alert_triage tr on tr.alert_id = a.id
                 where a.run_id = ($LATEST_RUN) and a.transaction_id is not null
@@ -220,10 +222,11 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 select transaction_id as id,
                        array_agg(distinct alert_type order by alert_type) as alert_types,
                        array_agg(id) as alert_ids,
+                       array_agg(distinct status) as statuses,
                        max(sev) as sev, max(score) as score, min(created_at) as flagged_at
                 from alert_sev group by transaction_id
             ), queue as (
-                select p.id, p.alert_types, p.sev, p.score, p.flagged_at,
+                select p.id, p.alert_types, p.statuses, p.sev, p.score, p.flagged_at,
                        coalesce(rk.rules, '{}') as rules, coalesce(rk.rule_names, '{}') as rule_names,
                        (array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'])[p.sev] as disposition,
                        (case when p.sev >= 4 then 'High' when p.sev = 3 then 'Medium' else 'Low' end) as rating
