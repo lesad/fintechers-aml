@@ -68,6 +68,16 @@ data class TriageConfig(
     val requiredFields: List<RequiredField>,
     val floors: List<Floor>,
     val highRiskCountries: Set<String>,
+    /**
+     * The reader-facing name of each alert type, by code, for the reason lines the review queue renders. Presentation
+     * only — no score reads it — and like [highRiskCountries] it comes from the database, so the file ships it empty.
+     */
+    val alertTypeNames: Map<String, String> = emptyMap(),
+    /**
+     * The reader-facing name of each rule, by key, from the `rule` table's latest version of that key. Presentation
+     * only, like [alertTypeNames]: a rule the table has no name for stays on its bare key.
+     */
+    val ruleNames: Map<String, String> = emptyMap(),
 ) {
     init {
         require(configVersion.isNotBlank()) { "configVersion must not be blank" }

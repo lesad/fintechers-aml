@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.transaction.annotation.Transactional
 
 /** Triage over a real run: one verdict per alert, and re-running it replaces rather than duplicates. */
 @PostgresTest
@@ -16,6 +17,9 @@ class TriageServiceTest {
 
     @Autowired
     lateinit var triage: TriageService
+
+    @Autowired
+    lateinit var repository: TriageRepository
 
     @Autowired
     lateinit var jdbc: JdbcClient
@@ -46,6 +50,36 @@ class TriageServiceTest {
         assertThat(decisions).hasSize(before.size)
         assertThat(triageRows(runId)).isEqualTo(before.size.toLong())
         assertThat(hashes(runId)).isEqualTo(before)
+    }
+
+    // Both rule-name tests edit the seeded `rule` table, which the Postgres container shares with every other test
+    // in this context: @Transactional rolls the edit back so the next test still sees the seeded names.
+    @Test
+    @Transactional
+    fun theRuleNamesComeFromTheLatestVersionOfEachKey() {
+        jdbc.sql("update rule set name = 'An older name' where key = 'C1' and version = 1").update()
+        jdbc.sql("update rule set name = 'The current name' where key = 'C1' and version = 2").update()
+
+        assertThat(repository.ruleNames()).containsEntry("C1", "The current name")
+    }
+
+    @Test
+    @Transactional
+    fun aRuleWithoutANameIsLeftOutRatherThanNamedNull() {
+        jdbc.sql("update rule set name = null where key = 'A1'").update()
+
+        assertThat(repository.ruleNames()).doesNotContainKey("A1").containsKey("A2")
+    }
+
+    @Test
+    fun theReasonsNameTheRulesThatFired() {
+        val runId = runs.run().runId
+        val descriptions = jdbc.sql("select t.reasons::text from alert_triage t join alert a on a.id = t.alert_id where a.run_id = ?")
+            .param(runId).query(String::class.java).list().filterNotNull()
+
+        // Whichever rule this fixture fires, its base-score line carries the rule table's name before the key.
+        val named = Regex("""base score for [^"(]+ \([A-Z]\d\)""")
+        assertThat(descriptions).isNotEmpty().anyMatch { named.containsMatchIn(it) }
     }
 
     @Test

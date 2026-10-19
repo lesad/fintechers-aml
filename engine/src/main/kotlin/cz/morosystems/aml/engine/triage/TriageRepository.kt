@@ -55,6 +55,21 @@ class TriageRepository(private val jdbc: JdbcClient) {
         jdbc.sql("select code from reference_list where list = 'high_risk'")
             .query(String::class.java).list().filterNotNull().map { it.uppercase() }.toSet()
 
+    /** The name of each alert type, by code, as the reason lines spell it out. A code with no name is left out. */
+    fun alertTypeNames(): Map<String, String> =
+        jdbc.sql("select code, name from alert_type where name is not null and name <> code")
+            .query { rs, _ -> rs.getString("code") to rs.getString("name") }
+            .list().toMap()
+
+    /**
+     * The name of each rule, by key, as the reason lines spell it out. The latest version of a key wins — the same
+     * `distinct on` the review queue uses — and a key whose latest version carries no name is left out.
+     */
+    fun ruleNames(): Map<String, String> =
+        jdbc.sql("select key, name from (select distinct on (key) key, name from rule order by key, version desc) latest where name is not null")
+            .query { rs, _ -> rs.getString("key") to rs.getString("name") }
+            .list().toMap()
+
     /** The run's period end, exclusive. */
     fun periodTo(runId: Long): LocalDate? =
         jdbc.sql("select period_to from run where id = ?").param(runId)

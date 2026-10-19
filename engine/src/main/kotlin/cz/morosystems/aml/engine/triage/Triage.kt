@@ -29,7 +29,11 @@ object Triage {
         if (disposition == Disposition.AUTO_CLOSE && !ruleKeys.all { it in config.autoCloseWhitelist }) {
             val blocking = ruleKeys.filterNot { it in config.autoCloseWhitelist }
             disposition = Disposition.REVIEW_LOW
-            reasons += Reason("AUTO_CLOSE_BLOCKED", "rule(s) ${blocking.joinToString(", ")} are not on the auto-close whitelist", 0)
+            reasons += Reason(
+                "AUTO_CLOSE_BLOCKED",
+                "rule(s) ${prose(blocking.map { namedRule(it, config) })} are not on the auto-close whitelist",
+                0,
+            )
         }
 
         // Step 5: anything we were supposed to know and do not is reviewed by a person, whatever the score says.
@@ -65,11 +69,11 @@ object Triage {
             unknownRules.isNotEmpty() ->
                 reasons += Reason(
                     "RULE_UNKNOWN",
-                    "unrecognised rule(s) ${unknownRules.joinToString(", ")}; fail-safe base score",
+                    "unrecognised rule(s) ${prose(unknownRules.map { namedRule(it, config) })}; fail-safe base score",
                     maxOf(config.unknownRuleScore, known),
                 )
             else ->
-                reasons += Reason("RULE_BASE", "base score for ${ruleKeys.joinToString(", ")}", known)
+                reasons += Reason("RULE_BASE", "base score for ${prose(ruleKeys.map { namedRule(it, config) })}", known)
         }
         if (ruleKeys.size > 1) {
             val extra = (config.perExtraRule * (ruleKeys.size - 1)).coerceAtMost(config.extraRuleMax)
@@ -91,7 +95,7 @@ object Triage {
             "CLIENT_PEP",
             when {
                 input.client.pep != true -> "client is not a PEP"
-                pepImplied -> "client is a PEP, already required by ${ruleKeys.joinToString(", ")}"
+                pepImplied -> "client is a PEP, already required by ${prose(ruleKeys.map { namedRule(it, config) })}"
                 else -> "client is a PEP"
             },
             pep,
@@ -144,10 +148,23 @@ object Triage {
         val multi = (f.perExtraAlertType * others.size).coerceAtMost(f.extraAlertTypeMax)
         reasons += Reason(
             "MULTIPLE_FLAGS",
-            if (others.isEmpty()) "no other alert type on this client" else "also flagged by ${others.sorted().joinToString(", ")}",
+            if (others.isEmpty()) "no other alert type on this client"
+            else "the client is also flagged for ${prose(others.sorted().map { named(it, config) })} in this run",
             multi,
         )
     }
+
+    /** An alert type as a reviewer reads it: the name the database carries for it, with the code it is filed under. */
+    private fun named(alertType: String, config: TriageConfig): String =
+        config.alertTypeNames[alertType]?.let { "$it ($alertType)" } ?: "alert type $alertType"
+
+    /** A rule as a reviewer reads it. Unnamed in the table — an unrecognised key especially — leaves the bare key. */
+    private fun namedRule(ruleKey: String, config: TriageConfig): String =
+        config.ruleNames[ruleKey]?.let { "$it ($ruleKey)" } ?: ruleKey
+
+    /** 'a', 'a and b', 'a, b and c' — the reason lines are read, not parsed. */
+    private fun prose(parts: List<String>): String =
+        if (parts.size <= 1) parts.joinToString("") else "${parts.dropLast(1).joinToString(", ")} and ${parts.last()}"
 
     private fun band(score: Int, config: TriageConfig): Disposition =
         config.bands.first { score <= it.maxScore }.disposition

@@ -14,7 +14,11 @@ import org.springframework.transaction.annotation.Transactional
 class TriageService(private val repository: TriageRepository) {
     @Transactional
     fun triageRun(runId: Long): List<TriageDecision> {
-        val config = TriageConfig.load().copy(highRiskCountries = repository.highRiskCountries())
+        val config = TriageConfig.load().copy(
+            highRiskCountries = repository.highRiskCountries(),
+            alertTypeNames = repository.alertTypeNames(),
+            ruleNames = repository.ruleNames(),
+        )
         // The run's period end is exclusive; the last day actually covered is the day before it.
         val asOf = (repository.periodTo(runId) ?: error("run $runId not found, or it has no period")).minusDays(1)
 

@@ -110,7 +110,8 @@ class TriageTest {
     fun thePepFactorIsSuppressedWhenEveryRuleAlreadyRequiresPepStatus() {
         val implied = Triage.decide(input(hits = listOf(hit("P1")), pep = true), CONFIG)
         assertThat(reasonOf(implied, "CLIENT_PEP").points).isZero()
-        assertThat(reasonOf(implied, "CLIENT_PEP").description).contains("already required by P1")
+        assertThat(reasonOf(implied, "CLIENT_PEP").description)
+            .contains("already required by PEP outgoing payment above the limit (P1)")
 
         val alsoAnotherRule = Triage.decide(input(hits = listOf(hit("P1"), hit("N1")), pep = true), CONFIG)
         assertThat(reasonOf(alsoAnotherRule, "CLIENT_PEP").points).isEqualTo(CONFIG.factors.pep)
@@ -142,6 +143,36 @@ class TriageTest {
         assertThat(decision.configVersion).isEqualTo(CONFIG.configVersion)
         assertThat(decision.alertId).isEqualTo(1L)
         assertThat(decision.inputHash).hasSize(64)
+    }
+
+    @Test
+    fun otherAlertTypesAreNamedNotLeftAsBareCodes() {
+        val named = reasonOf(Triage.decide(input(otherAlertTypesOnClient = setOf("C", "B")), CONFIG), "MULTIPLE_FLAGS")
+        // 'B' has no name in this config: it falls back to the code rather than dropping out of the sentence.
+        assertThat(named.description).isEqualTo("the client is also flagged for alert type B and flow-through (C) in this run")
+    }
+
+    @Test
+    fun rulesAreNamedFromTheRuleTableWhereverAReasonListsThem() {
+        val decision = Triage.decide(input(hits = listOf(hit("N1"), hit("W1"))), CONFIG)
+        // 'W1' has no name in this config: it falls back to the key rather than dropping out of the sentence.
+        assertThat(reasonOf(decision, "RULE_BASE").description)
+            .isEqualTo("base score for Something not whitelisted (N1) and W1")
+        assertThat(reasonOf(decision, "AUTO_CLOSE_BLOCKED").description)
+            .isEqualTo("rule(s) Something not whitelisted (N1) are not on the auto-close whitelist")
+    }
+
+    @Test
+    fun theSuppressedPepFactorNamesTheRuleThatAlreadyRequiresPep() {
+        val decision = Triage.decide(input(hits = listOf(hit("P1")), pep = true), CONFIG)
+        assertThat(reasonOf(decision, "CLIENT_PEP").description)
+            .isEqualTo("client is a PEP, already required by PEP outgoing payment above the limit (P1)")
+    }
+
+    @Test
+    fun anUnrecognisedRuleHasNoNameToShowAndKeepsItsKey() {
+        assertThat(reasonOf(Triage.decide(input(hits = listOf(hit("ZZ"))), CONFIG), "RULE_UNKNOWN").description)
+            .isEqualTo("unrecognised rule(s) ZZ; fail-safe base score")
     }
 
     private fun reasonOf(decision: TriageDecision, code: String): Reason =
@@ -193,6 +224,8 @@ class TriageTest {
                 Floor(FloorCondition.ALERT_TYPE, "B", Disposition.REVIEW_MEDIUM),
             ),
             highRiskCountries = setOf("IR", "SY"),
+            alertTypeNames = mapOf("A" to "client profile discrepancy", "C" to "flow-through"),
+            ruleNames = mapOf("N1" to "Something not whitelisted", "P1" to "PEP outgoing payment above the limit"),
         )
 
         @JvmStatic

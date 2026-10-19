@@ -59,6 +59,16 @@ class TriageConfigTest {
     }
 
     @Test
+    fun theShippedConfigLeavesTheAlertTypeNamesToBeInjectedAtRuntime() {
+        assertThat(shipped.alertTypeNames).isEmpty()
+    }
+
+    @Test
+    fun theShippedConfigLeavesTheRuleNamesToBeInjectedAtRuntime() {
+        assertThat(shipped.ruleNames).isEmpty()
+    }
+
+    @Test
     fun loadingAConfigThatIsNotOnTheClasspathFails() {
         assertThatThrownBy { TriageConfig.load("/triage/nope.json") }.isInstanceOf(IllegalStateException::class.java)
     }
