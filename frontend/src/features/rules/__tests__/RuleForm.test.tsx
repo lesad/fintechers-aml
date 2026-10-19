@@ -175,3 +175,50 @@ describe("saving from the rules page", () => {
     });
   });
 });
+
+describe("editing a draft", () => {
+  it("overwrites the draft in place and shows the saved version", async () => {
+    const edited: RuleVersion = {
+      ...B2_V2,
+      params: { pep_min: { value: 70_000, unit: "amount" } },
+    };
+    const puts: { url: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "PUT") {
+          puts.push({ url, body: JSON.parse(String(init.body)) });
+          return json(edited);
+        }
+        return json([...SEEDED, puts.length ? edited : B2_V2]);
+      }),
+    );
+    render(<RulesPage author="J. Novák" />, { route: `/rules?rule=${B2_V2.id}` });
+    fireEvent.click(await screen.findByRole("button", { name: "Edit draft v2" }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("B2 · edit draft v2");
+    fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "70000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save draft v2" }));
+
+    const detail = await screen.findByRole("region", { name: "B2 v2" });
+    expect(detail).toHaveTextContent("70,000 CZK");
+    expect(puts).toEqual([
+      {
+        url: `/api/rules/${B2_V2.id}`,
+        body: expect.objectContaining({
+          key: "B2",
+          params: { pep_min: { value: 70_000, unit: "amount" } },
+        }),
+      },
+    ]);
+  });
+
+  it("offers editing only on a draft", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(SEEDED)),
+    );
+    render(<RulesPage author="J. Novák" />);
+    await screen.findByRole("button", { name: /New version from/ });
+    expect(screen.queryByRole("button", { name: /Edit draft/ })).not.toBeInTheDocument();
+  });
+});

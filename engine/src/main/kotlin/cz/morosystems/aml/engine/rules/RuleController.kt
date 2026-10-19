@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -31,6 +32,11 @@ class RuleController(private val rules: RuleService) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun save(@RequestBody body: RuleBody): RuleVersionJson = rules.save(body.toNewRule()).toJson()
+
+    /** Overwrites a draft and writes its explanation again; 400 when the version is not a draft, 404 when there is none. */
+    @PutMapping("/{id}")
+    fun update(@PathVariable id: Long, @RequestBody body: RuleBody): RuleVersionJson =
+        rules.update(id, body.toNewRule())?.toJson() ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "rule version $id not found")
 
     /** Explains a rule as it would be saved, without saving it; 400 like a save, 502 when the model gives no usable answer. */
     @PostMapping("/explanation")

@@ -12,7 +12,7 @@ type RulesPageProps = {
   author: string;
 };
 
-type Mode = { kind: "view" } | { kind: "form"; from: RuleVersion | null };
+type Mode = { kind: "view" } | { kind: "form"; from: RuleVersion | null; edit?: boolean };
 
 const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg hover:bg-hover";
 
@@ -29,16 +29,10 @@ export function RulesPage({ author }: RulesPageProps) {
   const [saved, setSaved] = useState<RuleVersion[]>([]);
 
   const fetched = rules.status === "ready" ? rules.versions : [];
-  const versions = [...fetched, ...saved.filter((s) => !fetched.some((v) => v.id === s.id))];
+  // An edited draft keeps its id, so the saved copy replaces the fetched one.
+  const versions = [...fetched.filter((v) => !saved.some((s) => s.id === v.id)), ...saved];
   const groups = groupByKey(versions);
-  const group =
-    groups.find((g) => g.key === selectedKey) ??
-    groups.find((g) => g.versions.some((v) => v.id === selectedId)) ??
-    groups[0];
-  const version =
-    group?.versions.find((v) => v.id === selectedId) ??
-    group?.versions.find((v) => v.status === "active") ??
-    group?.versions[0];
+  const { group, version } = pick(groups, selectedKey, selectedId);
 
   const select = (key: string, id: number | null = null) => {
     setSelectedKey(key);
@@ -75,7 +69,7 @@ export function RulesPage({ author }: RulesPageProps) {
               onMode={setMode}
               onSelectVersion={setSelectedId}
               onSaved={(v) => {
-                setSaved((s) => [...s, v]);
+                setSaved((s) => [...s.filter((x) => x.id !== v.id), v]);
                 select(v.key, v.id);
                 rules.reload();
               }}
@@ -85,6 +79,21 @@ export function RulesPage({ author }: RulesPageProps) {
       )}
     </div>
   );
+}
+
+type Group = ReturnType<typeof groupByKey>[number];
+
+/** The selected key (or the key of the selected id, or the first), on the selected, active or newest version. */
+function pick(groups: Group[], key: string | null, id: number | null) {
+  const group =
+    groups.find((g) => g.key === key) ??
+    groups.find((g) => g.versions.some((v) => v.id === id)) ??
+    groups[0];
+  const version =
+    group?.versions.find((v) => v.id === id) ??
+    group?.versions.find((v) => v.status === "active") ??
+    group?.versions[0];
+  return { group, version };
 }
 
 type PanelProps = {
@@ -112,8 +121,9 @@ function Panel({
   if (mode.kind === "form") {
     return (
       <RuleForm
-        key={mode.from?.id ?? "new"}
+        key={`${mode.from?.id ?? "new"}-${mode.edit ? "edit" : "version"}`}
         from={mode.from}
+        edit={mode.edit}
         author={author}
         nextVersion={mode.from ? Math.max(...siblings.map((s) => s.version)) + 1 : 1}
         existingKeys={keys}
@@ -129,6 +139,7 @@ function Panel({
       siblings={siblings}
       onSelectVersion={onSelectVersion}
       onNewVersion={() => onMode({ kind: "form", from: version })}
+      onEditDraft={() => onMode({ kind: "form", from: version, edit: true })}
     />
   );
 }

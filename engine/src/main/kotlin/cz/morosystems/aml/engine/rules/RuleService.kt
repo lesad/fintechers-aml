@@ -34,6 +34,22 @@ class RuleService(
     }
 
     /**
+     * Overwrites the draft [id] with [rule], then writes its explanation again.
+     *
+     * @return null when there is no version [id]
+     * @throws InvalidRuleException when [id] is not a draft, [rule] has another key, or [rule] fails validation as in [save]
+     */
+    fun update(id: Long, rule: NewRule): RuleVersion? {
+        val existing = rules.find(id) ?: return null
+        if (existing.status != "draft") throw InvalidRuleException("only a draft can be edited; ${existing.rule.key} v${existing.rule.version} is ${existing.status}")
+        if (existing.rule.key != rule.key) throw InvalidRuleException("the draft keeps its key ${existing.rule.key}")
+        validate(rule)
+        if (!rules.updateDraft(id, rule)) throw InvalidRuleException("${existing.rule.key} v${existing.rule.version} is no longer a draft")
+        explain(rules.find(id)!!.rule)
+        return rules.find(id)!!
+    }
+
+    /**
      * Explains [rule] as its next version would read, without storing anything.
      *
      * @return null when the model gave no usable explanation

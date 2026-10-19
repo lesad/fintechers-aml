@@ -53,6 +53,32 @@ class RuleRepository(private val jdbc: JdbcClient) {
             ),
         ).query(Long::class.java).single()
 
+        insertParts(id, rule)
+        return id
+    }
+
+    /**
+     * Overwrites the draft [id] of [rule]'s key with [rule] and clears its explanation; the key's fixed fields stay.
+     *
+     * @return false when [id] is no draft of that key
+     */
+    @Transactional
+    fun updateDraft(id: Long, rule: NewRule): Boolean {
+        val updated = jdbc.sql(
+            """
+            update rule set grain = ?, anchor = ?, condition = ?, author = ?, name = coalesce(?, name),
+                            explanation = null, explanation_model = null, explanation_prompt_hash = null
+            where id = ? and key = ? and status = 'draft'
+            """,
+        ).params(listOf(rule.grain.name.lowercase(), rule.anchor, rule.condition, rule.author, rule.name, id, rule.key)).update()
+        if (updated == 0) return false
+        jdbc.sql("delete from rule_variable where rule_id = ?").param(id).update()
+        jdbc.sql("delete from rule_param where rule_id = ?").param(id).update()
+        insertParts(id, rule)
+        return true
+    }
+
+    private fun insertParts(id: Long, rule: NewRule) {
         rule.variables.forEach { v ->
             val (kind, from, to) = when (val w = v.window) {
                 Window.Day -> Triple("day", null, null)
@@ -69,7 +95,6 @@ class RuleRepository(private val jdbc: JdbcClient) {
             jdbc.sql("insert into rule_param (rule_id, name, value, unit) values (?, ?, ?, ?)")
                 .params(id, name, param.value, param.unit.name.lowercase()).update()
         }
-        return id
     }
 
     /** Writes the explanation once; a version that already has one keeps it. */

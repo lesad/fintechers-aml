@@ -70,10 +70,14 @@ export async function fetchRules(signal?: AbortSignal): Promise<RuleVersion[]> {
   return z.array(ruleVersion).parse(await res.json());
 }
 
-/** POSTs a rule; a 400, 409 or 502 becomes a {@link RuleRejectedError} carrying the engine's reason. */
-async function postRule(path: string, body: NewRule): Promise<unknown> {
+/** Sends a rule; a 400, 409 or 502 becomes a {@link RuleRejectedError} carrying the engine's reason. */
+async function postRule(
+  path: string,
+  body: NewRule,
+  method: "POST" | "PUT" = "POST",
+): Promise<unknown> {
   const res = await fetch(path, {
-    method: "POST",
+    method,
     headers: { Accept: "application/json", "Content-Type": "application/json", ...userHeaders() },
     body: JSON.stringify(body),
   });
@@ -87,6 +91,10 @@ async function postRule(path: string, body: NewRule): Promise<unknown> {
 
 export const saveRule = async (body: NewRule): Promise<RuleVersion> =>
   ruleVersion.parse(await postRule("/api/rules", body));
+
+/** Overwrites the draft [id]; the engine refuses any other status. */
+export const updateRule = async (id: number, body: NewRule): Promise<RuleVersion> =>
+  ruleVersion.parse(await postRule(`/api/rules/${id}`, body, "PUT"));
 
 const explanation = z.object({ explanation: z.string(), model: z.string() });
 

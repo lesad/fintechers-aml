@@ -13,6 +13,7 @@ type RuleDetailProps = {
   siblings: RuleVersion[];
   onSelectVersion: (id: number) => void;
   onNewVersion: () => void;
+  onEditDraft: () => void;
 };
 
 const dot = cva("inline-block size-1.5 flex-none rounded-full", {
@@ -52,6 +53,7 @@ export function RuleDetail({
   siblings,
   onSelectVersion,
   onNewVersion,
+  onEditDraft,
 }: RuleDetailProps) {
   const active = siblings.find((s) => s.status === "active");
   return (
@@ -64,6 +66,7 @@ export function RuleDetail({
         siblings={siblings}
         onSelectVersion={onSelectVersion}
         onNewVersion={onNewVersion}
+        onEditDraft={onEditDraft}
       />
       {v.status === "draft" && <DraftNote draft={v} active={active} />}
       {v.status === "retired" && (
@@ -90,7 +93,13 @@ export function RuleDetail({
   );
 }
 
-function Header({ version: v, siblings, onSelectVersion, onNewVersion }: RuleDetailProps) {
+function Header({
+  version: v,
+  siblings,
+  onSelectVersion,
+  onNewVersion,
+  onEditDraft,
+}: RuleDetailProps) {
   const name = siblings[0]?.name ?? v.name;
   return (
     <div className="flex flex-col gap-2">
@@ -103,6 +112,15 @@ function Header({ version: v, siblings, onSelectVersion, onNewVersion }: RuleDet
           <span className="font-mono text-lg font-bold">{v.key}</span>
           {name && <h1 className="text-lg leading-tight font-semibold text-pretty">{name}</h1>}
         </div>
+        {v.status === "draft" && (
+          <button
+            type="button"
+            onClick={onEditDraft}
+            className="h-7 rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover"
+          >
+            Edit draft v{v.version}
+          </button>
+        )}
         <button
           type="button"
           onClick={onNewVersion}

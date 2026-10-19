@@ -167,6 +167,38 @@ class RuleControllerTest {
     }
 
     @Test
+    fun editsADraftInPlace() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        val id = idOf("B2", 2)
+        bedrock.reply = "Flags PEP payments above the edited limit."
+        val edited = assertThat(put(id, b2Body(pepMin = 70_000.0))).hasStatusOk().bodyJson()
+        edited.extractingPath("$.version").isEqualTo(2)
+        edited.extractingPath("$.status").isEqualTo("draft")
+        edited.extractingPath("$.params.pep_min.value").isEqualTo(70_000.0)
+        edited.extractingPath("$.explanation").isEqualTo("Flags PEP payments above the edited limit.")
+        assertThat(mvc.get().uri("/api/rules")).hasStatusOk().bodyJson().extractingPath("$.length()").isEqualTo(8)
+    }
+
+    @Test
+    fun editingAVersionThatIsNoDraftIs400() {
+        assertThat(put(idOf("B2", 1), b2Body())).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("only a draft")
+    }
+
+    @Test
+    fun editingADraftUnderAnotherKeyIs400() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        val id = idOf("B2", 2)
+        assertThat(put(id, b2Body(key = "B7"))).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("keeps its key B2")
+    }
+
+    @Test
+    fun editingAnUnknownVersionIs404() {
+        assertThat(put("999999", b2Body())).hasStatus(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
     fun explainsARuleWithoutSavingIt() {
         val explained = assertThat(explain(b2Body())).hasStatusOk().bodyJson()
         explained.extractingPath("$.explanation").isEqualTo(LOWER_B2)
@@ -188,6 +220,12 @@ class RuleControllerTest {
 
     private fun explain(body: String) =
         mvc.post().uri("/api/rules/explanation").contentType(MediaType.APPLICATION_JSON).content(body)
+
+    private fun idOf(key: String, version: Int) =
+        jdbc.sql("select id from rule where key = ? and version = ?").params(key, version).query(Long::class.java).single().toString()
+
+    private fun put(id: String, body: String) =
+        mvc.put().uri("/api/rules/$id").contentType(MediaType.APPLICATION_JSON).content(body)
 
     private fun post(body: String) = mvc.post().uri("/api/rules").contentType(MediaType.APPLICATION_JSON).content(body)
 

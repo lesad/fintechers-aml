@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ConditionLegend, conditionToken } from "@/components";
 import { cn } from "@/utils";
 
-import { type RuleVersion, saveRule } from "./api";
+import { type RuleVersion, saveRule, updateRule } from "./api";
 import { ExplanationPreview } from "./ExplanationPreview";
 import { ChangedBadge, field, Issues, SectionTitle, Segmented } from "./form-parts";
 import { conditionTokens, grainLabel } from "./format";
@@ -26,6 +26,8 @@ import type { ReactNode } from "react";
 type RuleFormProps = {
   /** The version to start from; null for a brand-new rule. */
   from: RuleVersion | null;
+  /** Overwrite [from], a draft, instead of saving a new version. */
+  edit?: boolean;
   author: string;
   /** The version number the draft will get. */
   nextVersion: number;
@@ -72,6 +74,7 @@ function statusOf({ shown, hidden, changed }: Counts, base: number | null): Stat
 
 export function RuleForm({
   from,
+  edit = false,
   author,
   nextVersion,
   existingKeys,
@@ -104,7 +107,8 @@ export function RuleForm({
     setSaving(true);
     setRejected(null);
     try {
-      onSaved(await saveRule(toNewRule(draft, from, author)));
+      const body = toNewRule(draft, from, author);
+      onSaved(await (edit && from ? updateRule(from.id, body) : saveRule(body)));
     } catch (err) {
       setRejected(err instanceof Error ? err.message : String(err));
     } finally {
@@ -115,7 +119,7 @@ export function RuleForm({
   return (
     <div className="flex min-h-full flex-col">
       <div className="flex w-full max-w-[1040px] flex-1 flex-col gap-[18px] px-6 pt-4 pb-6">
-        <Heading from={from} nextVersion={nextVersion} />
+        <Heading from={from} edit={edit} nextVersion={nextVersion} />
         <Identity draft={draft} set={set} isNew={from === null} nameBadge={badge("name")}>
           <Issues issues={of("identity")} onFix={fix} />
         </Identity>
@@ -170,7 +174,7 @@ export function RuleForm({
         status={statusOf({ shown, hidden: errors - shown, changed: changed.size }, baseVersion)}
         saving={saving}
         disabled={saving || errors > 0 || (base !== null && changed.size === 0)}
-        nextVersion={nextVersion}
+        saveLabel={edit && from ? `Save draft v${from.version}` : `Save as draft v${nextVersion}`}
         onCancel={onCancel}
         onSave={save}
       />
@@ -178,16 +182,24 @@ export function RuleForm({
   );
 }
 
-function Heading({ from, nextVersion }: { from: RuleVersion | null; nextVersion: number }) {
+type HeadingProps = { from: RuleVersion | null; edit: boolean; nextVersion: number };
+
+function Heading({ from, edit, nextVersion }: HeadingProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="text-xs text-fg-subtle">
         {from
-          ? `${from.key} · based on v${from.version} ${from.status}`
+          ? edit
+            ? `${from.key} · saving overwrites draft v${from.version}`
+            : `${from.key} · based on v${from.version} ${from.status}`
           : "New rule · saved as draft v1"}
       </div>
       <h1 className="text-lg leading-tight font-semibold">
-        {from ? `${from.key} · new version v${nextVersion}` : "New rule"}
+        {from
+          ? edit
+            ? `${from.key} · edit draft v${from.version}`
+            : `${from.key} · new version v${nextVersion}`
+          : "New rule"}
       </h1>
     </div>
   );
@@ -267,12 +279,12 @@ type FooterProps = {
   status: Status;
   saving: boolean;
   disabled: boolean;
-  nextVersion: number;
+  saveLabel: string;
   onCancel: () => void;
   onSave: () => void;
 };
 
-function Footer({ status: s, saving, disabled, nextVersion, onCancel, onSave }: FooterProps) {
+function Footer({ status: s, saving, disabled, saveLabel, onCancel, onSave }: FooterProps) {
   return (
     <div className="sticky bottom-0 flex flex-none flex-wrap items-center gap-3 border-t border-border bg-bg/90 px-6 py-2 backdrop-blur-md">
       <span className={status({ tone: s.tone })}>
@@ -293,7 +305,7 @@ function Footer({ status: s, saving, disabled, nextVersion, onCancel, onSave }: 
         disabled={disabled}
         className="h-7 rounded bg-indigo px-3.5 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot"
       >
-        {saving ? "Writing explanation…" : `Save as draft v${nextVersion}`}
+        {saving ? "Writing explanation…" : saveLabel}
       </button>
     </div>
   );
