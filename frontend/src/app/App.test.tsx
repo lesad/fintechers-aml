@@ -131,6 +131,7 @@ beforeEach(() => {
         });
       }
       if (url.pathname === "/api/transactions/TX1") return json(detail);
+      if (url.pathname === "/api/rules") return json([]);
       return json({ message: "not found" }, 404);
     }),
   );
@@ -155,6 +156,20 @@ describe("App", () => {
     );
     await waitFor(() => expect(within(queueTable()).getAllByRole("row")).toHaveLength(4));
     expect(screen.getByText("3 of 3 loaded")).toBeInTheDocument();
+  });
+
+  it("the cog opens the rules page and back returns to the queue with tabs intact", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    const cog = screen.getByRole("button", { name: "Rules" });
+    expect(cog).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(cog);
+    expect(cog).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "← Review queue" }));
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
   });
 
   it("opens a row as a detail tab with the rule's threshold and actual value", async () => {

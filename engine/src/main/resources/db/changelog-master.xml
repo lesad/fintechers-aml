@@ -15,4 +15,6 @@
     <include file="db/migrations/0009-alert-summary.sql" />
     <include file="db/migrations/0010-rule-name.sql" />
     <include file="db/migrations/0011-alert-status.sql" />
+    <include file="db/migrations/0012-params-on-version.sql" />
+    <include file="db/migrations/0013-rule-explanation.sql" />
 </databaseChangeLog>

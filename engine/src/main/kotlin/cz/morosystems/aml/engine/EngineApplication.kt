@@ -1,6 +1,7 @@
 package cz.morosystems.aml.engine
 
 import cz.morosystems.aml.engine.importer.DataImporter
+import cz.morosystems.aml.engine.rules.RuleService
 import cz.morosystems.aml.engine.run.RunService
 import cz.morosystems.aml.engine.triage.Disposition
 import cz.morosystems.aml.engine.triage.TriageRepository
@@ -21,6 +22,7 @@ class EngineApplication {
         runs: RunService,
         triage: TriageService,
         triageRuns: TriageRepository,
+        rules: RuleService,
     ) = ApplicationRunner { args ->
         when (args.nonOptionArgs.firstOrNull()) {
             "import" -> println(importer.import())
@@ -34,13 +36,14 @@ class EngineApplication {
                 println("run $runId: ${decisions.size} alert(s) triaged")
                 perDisposition.forEach { (disposition, count) -> println("  $disposition: $count") }
             }
+            "explain" -> rules.explainMissing().let { println("explanations: ${it.filled} filled, ${it.failed} failed") }
             null -> Unit
             else -> println(USAGE)
         }
     }
 
     private companion object {
-        const val USAGE = "Usage: <import|run|triage [runId]>"
+        const val USAGE = "Usage: <import|run|triage [runId]|explain>"
     }
 }
 

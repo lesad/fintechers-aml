@@ -1,6 +1,7 @@
 package cz.morosystems.aml.engine.rules
 
 import java.time.Duration
+import java.time.OffsetDateTime
 
 enum class Grain { TRANSACTION, CLIENT_DAY, CLIENT_ANCHOR }
 
@@ -37,15 +38,32 @@ data class RuleDefinition(
     val condition: String,
     val replacesKey: String?,
     val variables: List<VariableDefinition>,
+    val params: Map<String, Long> = emptyMap(),
 )
 
-data class ParamRow(
-    val ruleKey: String,
-    val name: String,
+/** A stored rule version with its lifecycle and explanation; [status] is `draft`, `approved`, `active` or `retired`. */
+data class RuleVersion(
+    val rule: RuleDefinition,
+    val status: String,
+    val author: String?,
+    val createdAt: OffsetDateTime,
+    val explanation: String?,
+    val explanationModel: String?,
+)
+
+data class NewRule(
+    val key: String,
+    val alertType: String,
     val layer: Layer,
     val scopeSegmentId: Long?,
     val scopeClientId: String?,
-    val value: Long,
+    val grain: Grain,
+    val anchor: String?,
+    val condition: String,
+    val replacesKey: String?,
+    val variables: List<VariableDefinition>,
+    val params: Map<String, Long>,
+    val author: String,
 )
 
 data class Segment(val id: Long, val name: String, val predicate: String)

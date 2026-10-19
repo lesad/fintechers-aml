@@ -1,0 +1,39 @@
+package cz.morosystems.aml.engine.rules
+
+import cz.morosystems.aml.engine.cel.RuleCompileException
+import org.springframework.dao.DuplicateKeyException
+import org.springframework.http.HttpStatus
+import org.springframework.http.ProblemDetail
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
+
+@RestController
+@RequestMapping("/api/rules")
+class RuleController(private val rules: RuleService) {
+    /** Every rule version, by key, newest version first. */
+    @GetMapping
+    fun all(): List<RuleVersionJson> = rules.all().map { it.toJson() }
+
+    @GetMapping("/{id}")
+    fun find(@PathVariable id: Long): RuleVersionJson =
+        rules.find(id)?.toJson() ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "rule version $id not found")
+
+    /** Saves a new draft version; 201 even when the explanation could not be written (`explanation: null`). */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    fun save(@RequestBody body: RuleBody): RuleVersionJson = rules.save(body.toNewRule()).toJson()
+
+    @ExceptionHandler(InvalidRuleException::class, RuleCompileException::class)
+    fun badRequest(e: RuntimeException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.message)
+
+    @ExceptionHandler(DuplicateKeyException::class)
+    fun conflict(e: DuplicateKeyException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "another version of this rule was saved at the same time; try again")
+}

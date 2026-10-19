@@ -2,6 +2,9 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0035 — Parameter values belong to the immutable rule version
+
+**Accepted.** A rule version fixes its condition, variables and parameter values together: `rule_param` is keyed by `rule_id`, and changing a threshold means saving a new version. A segment or client that needs a different threshold gets its own rule version at that layer that replaces the company rule (`replaces_key`), the way suppression already works; per-parameter overrides are gone. A run fails, naming the client and the rules, when two rules at the same layer replace the same key for one client. _Why:_ a stored explanation, a hit's evidence or an audit entry must describe exactly what ran, and a rule whose thresholds could change under it cannot promise that. Supersedes the parameter-override half of ADR-0027 and the parameter layering in `docs/engine/rules-engine-design.md`.
 ### ADR-0034 — A model may judge, summarise and suggest; it never counts, computes or decides
 
 **Accepted.** Refines ADR-0032. Every model call in the engine (Bedrock today) is limited to three jobs: a typed judgement code asked for, a summary of facts code collected, and a suggestion a person or the engine's checks accept or reject. It never counts, does arithmetic (sums, ratios, percentages, min and max) or decides an outcome (detection, triage, disposition, filing). Code prepares every number the model may quote: counts, ranges and converted amounts arrive in its input. The prompt says so, and code enforces it on the output: refs must exist in the input and numbers must appear in it. _Why:_ the alert summary showed the failure. Given 54 raw hits, Sonnet reported per-rule counts of 15 and 26 where the data held 18 and 23, in fluent text an analyst would trust. A prompt rule alone did not stop it; giving the model the counts did. _Trade-off:_ the code-side number check matches values, not meaning, so a wrong number that equals another input value passes. Precomputing in code is the real guard.
@@ -45,6 +48,8 @@ _Superseded in part by ADR-0031: `class-variance-authority` is back, for compone
 ### ADR-0027 — No regulatory rule layer; every monitoring rule is the institution's own
 
 **Accepted.** The rules engine has three layers: company, client segment and client. The regulatory layer from ADR-0024 is dropped, and with it the "regulatory floor" proof. FINREG's rules A, B and C are seeded as company rules. Every rule can be added, changed, suppressed or replaced at its layer, through the checks and an approval. The cel-java verifier stays, as an informative change summary (what a change newly catches and no longer catches) rather than a gate. _Why:_ the team found that in practice monitoring scenarios and thresholds are each institution's own risk-based decision, so a hard-coded regulatory layer would model something that does not exist. Design: `docs/engine/rules-engine-design.md`.
+
+_Superseded in part by ADR-0035: thresholds change through a new or replacing rule version, not a parameter override._
 
 ### ADR-0026 — Direct pushes to `main`; PRs are optional and `pnpm ship` is removed
 

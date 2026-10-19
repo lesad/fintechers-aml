@@ -103,7 +103,7 @@ Rules:
 
 - `rule` — immutable rule versions. Columns: `key` (e.g. `C1`), `version`, `name` (human-readable, shown in the review UI; nullable, the API falls back to the key), `alert_type` (`A`/`B`/`C`/further), `layer` (`company`/`segment`/`client`), `scope_segment_id`, `scope_client_id`, `grain` (`transaction`/`client_day`/`client_anchor`), `anchor` (CEL, only for `client_anchor`), `condition` (CEL), `replaces_key` (nullable), `status` (`draft`/`approved`/`active`/`retired`), `author`, `approver`, timestamps. At most one `active` version per `(key, scope)`.
 - `rule_variable` — rule version, `name`, `agg` (`sum`/`max`/`min`/`count`/`set`), `field`, `filter` (CEL), window spec (see below).
-- `rule_param` — rule `key`, `name`, `layer`, scope, integer `value`. The company row is the default.
+- `rule_param` — rule version (`rule_id`), `name`, integer `value`. Part of the immutable version (ADR-0035).
 - `segment` — id, name, `predicate` (CEL over `client`). Membership is computed, not stored.
 - `rule_check` — rule version, check kind (`typecheck`/`satisfiable`/`not_always_true`/`change_summary`/`segment_overlap`), status (`verified`/`violated`/`inconclusive`/`error`), message incl. counterexample, timestamp.
 
@@ -169,16 +169,16 @@ For each client, the effective rule set is:
 3. plus active rules scoped to the client,
 4. minus any rule whose `key` is named in `replaces_key` by an active rule in a more specific scope that covers this client.
 
-Parameters resolve most-specific first: client, segment, company default. If a client matches two segments that set the same parameter, that is a configuration error: the run fails and names the client and segments. (The segment-overlap check below prevents it at save time.)
+Parameters come with the rule version that applies to the client (ADR-0035): a different threshold for a segment or client is a replacing rule version at that layer. If two rules at the same layer replace the same key for one client, that is a configuration error: the run fails and names the client and the rules. (The segment-overlap check below prevents it at save time.)
 
 ## Checks at save and approval
 
-Run on every new rule version and every parameter override; results go to `rule_check`.
+Run on every new rule version; results go to `rule_check`.
 
 1. **Type-check** — compile `condition`, `anchor`, every `filter` and segment predicate against the vocabulary. Errors carry positions (they are the retry signal for the future LLM loop).
 2. **Satisfiable** — `isSatisfiable(condition)`: reject a rule that can never fire. Skipped for a suppression (condition `false` on purpose).
 3. **Not always true** — reject a condition that is always true (it would alert on every row).
-4. **Change summary** (informative): for a new version, a replacement, a suppression or a parameter override, prove which inputs the old and the new rule disagree on (parameters substituted as constants) and store counterexamples in both directions ("now also catches…", "no longer catches…") for the approver.
+4. **Change summary** (informative): for a new version, a replacement or a suppression, prove which inputs the old and the new rule disagree on (parameters substituted as constants) and store counterexamples in both directions ("now also catches…", "no longer catches…") for the approver.
 5. **Segment overlap** — on segment save, `isSatisfiable(a && b)` against every other segment; overlap is stored as a warning with an example client.
 
 Domain assumptions given to the verifier as `assume` constraints: amounts, counts and every `sum`/`max`/`count` variable ≥ 0; `day_max ≤ day_volume` where both exist; `q2_tx_count ≥ 0`. Without them the solver returns impossible counterexamples.

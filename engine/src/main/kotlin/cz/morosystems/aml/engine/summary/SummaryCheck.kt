@@ -33,12 +33,17 @@ fun checkSummary(sentences: List<Sentence>, known: Set<String>): List<Sentence> 
  * Digits inside identifiers (TX000000651, K005146) are not numbers.
  */
 fun checkNumbers(sentences: List<Sentence>, input: Any?): List<Sentence> {
-    val known = numbersIn(input).flatMap { listOf(it, it.movePointLeft(2)) }
     sentences.forEachIndexed { i, s ->
-        val unknown = NUMBER.findAll(s.text).map { it.value }.filterNot { n -> known.any { it.compareTo(BigDecimal(n.replace(",", ""))) == 0 } }.toList()
+        val unknown = numbersNotIn(s.text, input)
         if (unknown.isNotEmpty()) throw InvalidSummaryException("sentence $i has numbers not in the input: $unknown")
     }
     return sentences
+}
+
+/** The numbers in [text] that appear in [input] neither as is nor as haléře shown in CZK (÷ 100). */
+fun numbersNotIn(text: String, input: Any?): List<String> {
+    val known = numbersIn(input).flatMap { listOf(it, it.movePointLeft(2)) }
+    return NUMBER.findAll(text).map { it.value }.filterNot { n -> known.any { it.compareTo(BigDecimal(n.replace(",", ""))) == 0 } }.toList()
 }
 
 private fun numbersIn(value: Any?): List<BigDecimal> = when (value) {

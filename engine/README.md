@@ -40,6 +40,7 @@ Run from `engine/`:
 ./gradlew bootRun --args=import   # load data/raw/ into Postgres
 ./gradlew bootRun --args=run      # run the rules into hits, alerts and data/out/alerts-<run>.csv
 ./gradlew bootRun --args=triage   # re-triage the latest run; add a run id to pick one
+./gradlew bootRun --args=explain  # write the missing rule explanations with Bedrock (needs AWS_PROFILE after aws sso login)
 ./gradlew test                    # tests use a throwaway Postgres container, never the dev database
 ./gradlew build                   # compile, test, package (what CI runs)
 ```
@@ -58,6 +59,9 @@ Run from `engine/`:
 - `GET /api/alerts/{id}/summary`: the latest stored summary, 404 when there is none yet.
 - `GET /api/transactions`: the review queue, one row per transaction the latest finished run alerted on and triage did not close on its own (alert types, rules that fired with their key and name, rating, disposition, score, when flagged). Paged with `?page=` (from 0) and `?size=` (1–200, default 50); filtered with `?q=` (transaction or client id, case-insensitive) and `?rating=High|Medium|Low`. The response carries `total` (matching rows) and `countsByRating` (the whole queue, unfiltered). Order: disposition (most severe first), then score, then id.
 - `GET /api/transactions/{id}`: one transaction with its client, its alerts in the latest run with each hit's rule name and evidence and its triage (disposition, score, reasons, config version), the transaction's most severe disposition and rating (null when not flagged), and all of the client's transactions, newest first, each with its alert types. 404 for an unknown id.
+- `GET /api/rules`: every rule version, by key, newest version first, each with its variables, parameters, status, author and plain-English `explanation` (null until written). Enums are lowercase; a window is `{ "kind": "day" }` or `{ "kind": "relative", "from": "PT-24H", "to": "PT0S" }`.
+- `GET /api/rules/{id}`: one rule version. 404 for an unknown id.
+- `POST /api/rules`: saves a new `draft` version of `key` (version = the key's highest + 1). The body is the same shape without `id`, `version`, `status`, `createdAt` and the explanation fields. A new version keeps its key's alert type, layer, scope and `replaces`. 400 with the reason in `detail` for a CEL type error or an invalid rule, 409 when another version of the key was saved at the same moment. After storing the draft the engine asks Bedrock (Opus 4.5, `RULES_EXPLANATION_MODEL_ID`) for its explanation; a model failure still returns 201 with `explanation: null`. Drafts do not run.
 
 Amounts in the transaction API are in haléře (`amountHalere`), as stored. A transaction's disposition is the most severe of its alerts' triage dispositions (see Triage below); the three-level rating the UI shows maps `ESCALATE` and `REVIEW_HIGH` to High, `REVIEW_MEDIUM` to Medium, and `REVIEW_LOW` and `AUTO_CLOSE` to Low. `AUTO_CLOSE` transactions stay out of the queue but keep their detail.
 
