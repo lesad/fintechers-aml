@@ -6,6 +6,7 @@
 
 ### Added
 
+- `pnpm freeze` (`scripts/freeze.sh`): tag `origin/main` as `hackathon-submit` and lock `main` for the code freeze; `--undo` unlocks.
 - `pnpm ship` (`scripts/ship.sh`): push, open the PR, arm squash auto-merge and wait for CI, printing the failing log on red.
 - `.github/rulesets/main.json`: the `main` ruleset (PR required, 0 approvals, squash only, required CI checks). CI now cancels stale PR runs and times jobs out after 10 minutes.
 - `docs/challenge/`: the FINREG AML challenge context copied from the team's context repo (challenge text, data profile, decision design, rule B lists, Czech escalation, UX research, AWS guide and demo guidance).

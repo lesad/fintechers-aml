@@ -149,3 +149,4 @@ Every change reaches `main` through a short-lived PR, merged by GitHub once CI i
 - After the merge: start the next task from fresh `origin/main` (`git fetch`, new branch). The remote branch is deleted on merge.
 - The PR title becomes the squash commit on `main`, so make it a Conventional Commit.
 - `main` ruleset lives in `.github/rulesets/main.json`. Apply a change with `gh api -X PUT repos/lesad/fintechers-aml/rulesets/<id> --input .github/rulesets/main.json` (`gh api repos/lesad/fintechers-aml/rulesets` lists the id).
+- Code freeze (Tuesday 20 October, 13:30): `pnpm freeze` tags `origin/main` as `hackathon-submit` and locks `main` (no merges, no bypass). `pnpm freeze --undo` unlocks it. After the freeze `pnpm ship` still opens PRs, but they won't merge.
