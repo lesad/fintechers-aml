@@ -11,36 +11,29 @@ This repo is a **template** (copied, not forked with shared history). `docs/UPST
 - Find leftovers: `git grep -n agentic-next-app`.
 - Vercel project name when you link it.
 
-## 2. Wire your own database
+## 2. Wire your own backend
 
-Local dev needs only Docker or Podman (`pnpm db:start` runs `compose.yaml`). For preview/prod, create a Postgres database (AWS RDS here) and set `POSTGRES_URL` (plus `POSTGRES_URL_NON_POOLING` if `POSTGRES_URL` goes through a proxy) in the Vercel env. Full manifest: `docs/ENVIRONMENT.md`.
+There is none in this repo: the app is a client-only Vite + React SPA and the data lives behind the Kotlin engine (ADR-0024/0025). Point the SPA at your own API over `fetch`. Nothing in `pnpm dev` depends on it being up. Environment handling: `docs/ENVIRONMENT.md` — remember that every `VITE_*` variable ships in the bundle.
 
-## 3. First table → migration
+## 3. First feature
 
-Follow `src/core/db/README.md`: add a table in `src/core/db/schema/`, `pnpm db:gen`, review the SQL, `pnpm db:reset`. Never `drizzle-kit push`.
+A feature is a folder under `src/features/<name>/`: components, its zod schema, co-located tests, a client-safe `index.ts` barrel. Data access is a `fetch` wrapper against your API — no client query lib (**ADR-0005** in `docs/DECISIONS.md`, as amended by ADR-0025). Forms via `react-hook-form` + `zod`. Wire UI test-ids via `src/core/test/ids`.
 
-## 4. First feature
+## 4. The app shell
 
-Reads via Server Components calling `src/core/db` functions; mutations via Server Actions + `react-hook-form` + `zod` (see **ADR-0005** in `docs/DECISIONS.md`). No client query lib. Wire UI test-ids via `src/core/test/ids`.
+`src/app/` is the shell, not a router: `main.tsx` mounts `App.tsx` inside `ErrorBoundary.tsx`. Replace `App.tsx` with your own first screen, and add a router there if you grow past one page (ADR-0025 deliberately ships without one).
 
-## 5. Demo slice → your app
+UI copy is inline English — there is no i18n layer. Add one back only if a second locale appears.
 
-The template ships a demo `guestbook` slice (route `/guestbook`) exemplifying every core pattern (see **ADR-0010**). Two ways to use it:
-
-- **Building a similar feature?** Re-point the pattern — copy the slice's shape and replace guestbook specifics with yours. Don't delete; re-aim.
-- **Want a clean skeleton?** Run `pnpm eject:examples` to strip the whole slice (add `--clean-self` to also remove the eject machinery), then `pnpm db:reset`. Leaves `src/app/[locale]/page.tsx` as a bare home page to replace.
-
-The app ships the `en` locale only; add locales to `messages/` + the `next-intl` config on demand.
-
-## 6. Agentic setup
+## 5. Agentic setup
 
 `pnpm setup:agentic` installs the curated skills. `.mcp.json` ships shadcn / Fallow / Vercel. See `CLAUDE.md` → Skills / MCPs.
 
-## 7. Deploy
+## 6. Deploy
 
-`docs/QUICKSTART.md` §2–3 (Vercel preview/prod). Confirm env vars and applied migrations before promoting.
+`pnpm build` emits a static `dist/`. Nothing is deployed from this repo (ADR-0023); add the host layer you want.
 
-## 8. Make the docs yours
+## 7. Make the docs yours
 
 - `docs/DECISIONS.md` — ADRs 0001–0009 are your inherited baseline; supersede them (never edit) as you diverge.
 - `docs/ROADMAP.md` — seed your own phases.

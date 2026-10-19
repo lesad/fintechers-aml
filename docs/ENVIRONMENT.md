@@ -1,28 +1,21 @@
 # Environment & secrets
 
-> **Intended use:** the single reference for which environment variables the recommended setup needs, which are public vs secret, where each comes from, and how to handle them safely. `.env.example` is the copy-me template; `src/core/env` is the typed/validated schema (via `@t3-oss/env-nextjs`) — this file explains them. **No real secret values ever live in this doc or in git.**
+> **Intended use:** the single reference for which environment variables the setup needs, which are public vs secret, and how to handle them safely. **No real secret values ever live in this doc or in git.**
 
 ## Required-vars manifest
 
-| Variable                   | Required | Scope               | Source                                                         | Purpose                                                                           |
-| -------------------------- | -------- | ------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `POSTGRES_URL`             | yes      | **secret** (server) | Vercel project env (AWS RDS endpoint) / `.env.example` (local) | Connection for the app runtime                                                    |
-| `POSTGRES_URL_NON_POOLING` | no¹      | **secret** (server) | Vercel project env                                             | Direct connection for DDL/migrations; falls back to `POSTGRES_URL`                |
-| `SKIP_ENV_VALIDATION`      | no       | build               | —                                                              | Set `true` to skip `env.ts` validation (e.g. Docker build without env)            |
-| `STRIP_TEST_IDS`           | no       | build               | —                                                              | Set `1` to strip `data-testid` from the build. Only where no test selects on them |
+The app itself needs **none**. The Vite SPA is client-only (ADR-0025): the typed `env.ts` schema, `@t3-oss/env-nextjs`, the Postgres URLs and `.env.example` all went with the data layer. Database credentials are the Kotlin engine's business (ADR-0024) and are configured there.
 
-¹ Needed only when `POSTGRES_URL` goes through a pooling proxy (for example RDS Proxy). Migrations then use this direct endpoint.
+| Variable      | Required | Scope | Source          | Purpose                                                 |
+| ------------- | -------- | ----- | --------------- | ------------------------------------------------------- |
+| `AWS_PROFILE` | no       | shell | your SSO config | Used by `pnpm data:pull` (default profile: `hackathon`) |
 
 ## Secure handling
 
-- **Never commit `.env*`** — only `.env.example` (template, empty values) is committed; `.env.local` and friends are gitignored. Confirm with `git check-ignore .env.local`.
-- **Least privilege by scope:**
-  - `NEXT_PUBLIC_*` are the _only_ vars sent to the browser — never prefix a secret with `NEXT_PUBLIC_`.
-  - The **Postgres URLs** are server-only. They must never reach client bundles (`src/core/db/*` carries an `import "server-only"` guard).
-- **Managed environments (Vercel):** set `POSTGRES_URL` (and `POSTGRES_URL_NON_POOLING` if used) to the AWS RDS endpoint in the Vercel dashboard (`vercel env ls`).
-- **Local dev:** copy `.env.example` → `.env.local`. The Postgres URL defaults to the local container from `compose.yaml` (`…@127.0.0.1:5432`); no cloud database needed.
-- **Rotation:** rotate the database password if leaked and update the Vercel env.
-- **Validation:** `src/core/env` validates presence/shape at boot and is the source of truth for what's required — add new vars there (server vs client) _and_ to `.env.example` in the same change.
+- **Never commit `.env*`** — `.env.local` and friends are gitignored. Confirm with `git check-ignore .env.local`.
+- **Anything a Vite app reads at build time is public.** Only `VITE_*` variables are exposed to client code, and everything exposed ships in the bundle — so **never put a secret behind a `VITE_` prefix**. If the SPA needs privileged data, the engine fetches it server-side.
+- **AWS access is SSO-only** — no IAM users, no access keys (`docs/challenge/aws-participant-guide.md`). `aws sso login --profile hackathon`; sessions last 12 hours.
+- **The organisers' data never enters git** — `pnpm data:pull` writes to the gitignored `data/`.
 
 ## MCP secrets (`.mcp.json`)
 

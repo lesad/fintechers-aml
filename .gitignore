@@ -2,10 +2,8 @@
 node_modules
 .pnpm-store
 
-# Next.js
-.next
-out
-next-env.d.ts
+# Build output
+dist
 tsconfig.tsbuildinfo
 
 # Environment

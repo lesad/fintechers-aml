@@ -6,6 +6,10 @@
 
 ### Added
 
+- Vite 8 as the build tool: `index.html` → `src/app/main.tsx` → `src/app/App.tsx`. `pnpm dev` / `pnpm build` / `pnpm preview` replace the Next CLI. React Compiler stays on (Rolldown Babel preset), Tailwind moves to `@tailwindcss/vite`, and the Vitest unit project now lives in `vite.config.ts`.
+- `src/app/ErrorBoundary.tsx`: one top-level error boundary with a retry button, replacing the `error.tsx` / `global-error.tsx` / `global-not-found.tsx` route conventions.
+- ADR-0025 for the move off Next.js.
+
 - `docs/challenge/data-patterns.md` and `aml-pattern-research.md`: the data run on the synthetic data (no planted patterns; the generator ignores the profile) and the research behind it. Rule A, rule C, the priority scorecard and the candidates list now carry the data verdicts and proposals.
 - `docs/rules/`: the rule specifications to iterate on. One spec per rule (A, B, C) in a shared seven-step shape (detect, facts, gates, Jev judgements, triage, priority, route) with parameter tables, Jev questions in the API's request shape, reason templates and test cases; plus the priority scorecard, the escalation matrix, a guide to writing Jev questions and what Jev returns for the audit trail, and a backlog of further red flags.
 - `docs/challenge/`: `aml-legal-sources.md`, `mentor-questions.md`, `architecture.md` and `hackathon.md` (team, timeline, rules, judging, deliverables). The folder is now the single source of hackathon context; the context repo is frozen (ADR-0023).
@@ -27,6 +31,10 @@
 
 ### Removed
 
+- **Next.js** and everything that only served it: `next`, `next.config.ts`, the App Router tree under `src/app/[locale]/`, `src/proxy.ts`, `postcss.config.mjs`, and the `@swc/plugin-react-remove-properties` / `STRIP_TEST_IDS` test-id strip (ADR-0014 — `data-testid` now ships in the bundle).
+- **i18n**: `next-intl`, `messages/en.json`, `src/core/i18n/`, the `global.ts` message-type augmentation, and `@/validation`'s `zodErrorMap`. UI strings are inline English; Zod falls back to its own English defaults.
+- **The data layer**: `drizzle-orm`, `drizzle-kit`, `postgres`, `compose.yaml`, `db/`, `src/core/db/`, `src/core/env.ts` (`@t3-oss/env-nextjs`), `.env.example`, and the `db:*` scripts. The Kotlin engine owns the database (ADR-0024); the SPA will read through it.
+- **The integration test project**: `*.spec.ts(x)`, `src/core/test/{db,integration-setup,integration-global,server-only-stub}.ts`, `pnpm test:integration` / `pnpm check:full`, and the CI `integration` job (dropped from the `main` ruleset's required checks too). Every test is now a unit test.
 - `docs/challenge/lane-overview.md`: every section was duplicated elsewhere in the folder.
 
 - Supabase: `@supabase/ssr`, `@supabase/supabase-js`, `src/core/supabase`, the CLI stack, `pnpm db:types`, the Supabase env vars, MCP server and skills, and the RLS convention.

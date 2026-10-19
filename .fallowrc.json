@@ -1,43 +1,14 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": [
-    "src/app/**/{page,layout,loading,error,not-found,route}.{ts,tsx}",
-    "src/proxy.ts",
-    "src/instrumentation.ts",
+    "src/app/main.tsx",
     "scripts/**/*.ts",
-    "vitest.config.ts",
-    "drizzle.config.ts",
-    "next.config.ts",
+    "vite.config.ts",
+    "src/core/test/setup.ts",
     "src/features/*/index.ts",
-    "src/core/*/index.ts",
-    "src/core/i18n/request.ts",
-    "src/core/test/server-only-stub.ts",
-    "global.ts"
+    "src/core/*/index.ts"
   ],
-  "ignorePatterns": [
-    "**/*.generated.ts",
-    "src/components/ui/**",
-    "db/migrations/**",
-    ".next/**",
-    "messages/**"
-  ],
-  "ignoreExports": [
-    {
-      "file": "src/app/**/*.{ts,tsx}",
-      "exports": [
-        "dynamic",
-        "dynamicParams",
-        "revalidate",
-        "fetchCache",
-        "runtime",
-        "preferredRegion",
-        "maxDuration",
-        "alt",
-        "size",
-        "contentType"
-      ]
-    }
-  ],
+  "ignorePatterns": ["**/*.generated.ts", "src/components/ui/**", "dist/**"],
   "rules": {
     "unused-files": "error",
     "unused-exports": "error",
@@ -55,7 +26,7 @@
     "lucide-react",
     "react-hook-form",
     "react-dom",
-    "@swc/plugin-react-remove-properties",
+    "zod",
     "shadcn",
     "tw-animate-css"
   ],

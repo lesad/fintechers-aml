@@ -4,7 +4,7 @@ MoroSystems entry for The FinTechers Hackathon 2026, Track 5 (Compliance and Reg
 
 ## Built during the hackathon
 
-Before the event, this repo held only a generic Next.js app template (`agentic-next-app`): framework setup, tooling and an example feature, with no AML or domain code. That state is the `hackathon-start` tag. Everything after it is built during the hackathon.
+Before the event, this repo held only a generic Next.js app template (`agentic-next-app`): framework setup, tooling and an example feature, with no AML or domain code. That state is the `hackathon-start` tag. Everything after it is built during the hackathon — including the move off Next.js to a plain Vite + React SPA (ADR-0025).
 
 ## Getting started for the hackathon
 
@@ -22,72 +22,58 @@ The sections below come from the template and describe its tooling.
 
 ```bash
 pnpm install
-cp .env.example .env.local         # defaults point at the local container
-pnpm db:start                       # boots Postgres 17 from compose.yaml
-pnpm db:reset                       # applies migrations + seed
-pnpm dev                            # http://localhost:3000
+pnpm dev                            # http://localhost:5173
 ```
+
+No environment file and no database: the app is a client-only SPA. Persistence and the monitoring rules live in the Kotlin engine (ADR-0024).
 
 > **Forking this for a new app?** See [`docs/FORKING.md`](docs/FORKING.md) for the one-time "make it yours" steps.
 
 ## Stack
 
-| Concern       | Pick                                                    |
-| ------------- | ------------------------------------------------------- |
-| Framework     | Next.js 16 (App Router, Server Components default)      |
-| Lang          | TypeScript strict, `noUncheckedIndexedAccess`           |
-| Styling       | Tailwind v4 (CSS-first, `@theme`)                       |
-| Components    | shadcn/ui                                               |
-| DB            | Postgres (local Docker, AWS RDS deployed) + Drizzle ORM |
-| Validation    | zod                                                     |
-| Forms         | react-hook-form + `@hookform/resolvers/zod`             |
-| Env           | `@t3-oss/env-nextjs`                                    |
-| i18n          | next-intl (single `en` locale; add more on demand)      |
-| Lint / format | Oxlint + Oxfmt (no ESLint/Prettier)                     |
-| Dead code     | Fallow                                                  |
-| Tests         | Vitest (unit + integration)                             |
-| Commit gate   | Claude PreToolUse hook (`.claude/hooks/`, no husky)     |
+| Concern       | Pick                                                |
+| ------------- | --------------------------------------------------- |
+| Build         | Vite 8 (client-only SPA, React Compiler on)         |
+| Lang          | TypeScript strict, `noUncheckedIndexedAccess`       |
+| Styling       | Tailwind v4 (CSS-first, `@theme`)                   |
+| Components    | shadcn/ui                                           |
+| Data          | HTTP to the Kotlin rules engine (ADR-0024)          |
+| Validation    | zod                                                 |
+| Forms         | react-hook-form + `@hookform/resolvers/zod`         |
+| Lint / format | Oxlint + Oxfmt (no ESLint/Prettier)                 |
+| Dead code     | Fallow                                              |
+| Tests         | Vitest (unit)                                       |
+| Commit gate   | Claude PreToolUse hook (`.claude/hooks/`, no husky) |
 
 ## Why these picks
 
 - **Oxlint/Oxfmt over ESLint/Prettier** — µs-scale linting, 100% Prettier-compatible formatter, smaller agent surface.
-- **Drizzle over Prisma** — pure TypeScript schema, generated SQL is reviewable, no codegen step required.
+- **Vite SPA over Next.js** — the engine owns the data and the rules, so the frontend had no server work left to do (ADR-0025).
 - **Fallow** — single tool replaces knip + jscpd + complexity tooling; native MCP for agents.
-- **Single `en` locale** — keeps agent surface clean on day one. Adding locales is two lines.
+- **English strings inline** — one locale, no i18n layer to thread through every component.
 - **No demo CRUD** — skeleton only. Project skills generate examples on demand.
 
 ## Scripts
 
-| Command                                  | What it does                                   |
-| ---------------------------------------- | ---------------------------------------------- |
-| `pnpm dev`                               | Next dev server (Turbopack)                    |
-| `pnpm build`                             | Production build                               |
-| `pnpm check`                             | typecheck + lint + format-check + unit tests   |
-| `pnpm check:fast`                        | typecheck + lint + format-check (no tests)     |
-| `pnpm test`                              | Vitest unit                                    |
-| `pnpm test:integration`                  | Vitest integration (hits local Postgres)       |
-| `pnpm db:start` / `db:stop` / `db:reset` | Local Postgres container control               |
-| `pnpm db:gen`                            | Drizzle: schema → SQL migration                |
-| `pnpm db:migrate`                        | Apply migrations (CI/prod)                     |
-| `pnpm check:fallow`                      | Dead code + dupes + health                     |
-| `pnpm setup:agentic`                     | Install recommended global skills + Fallow MCP |
+| Command              | What it does                                   |
+| -------------------- | ---------------------------------------------- |
+| `pnpm dev`           | Vite dev server (HMR)                          |
+| `pnpm build`         | Production build to `dist/`                    |
+| `pnpm preview`       | Serve the built `dist/` locally                |
+| `pnpm check`         | typecheck + lint + format-check + unit tests   |
+| `pnpm check:fast`    | typecheck + lint + format-check (no tests)     |
+| `pnpm test`          | Vitest unit                                    |
+| `pnpm data:pull`     | Sync the organisers' datasets into `data/raw/` |
+| `pnpm check:fallow`  | Dead code + dupes + health                     |
+| `pnpm setup:agentic` | Install recommended global skills + Fallow MCP |
 
 ## Testing
 
-| Layer       | Tool                     | Where                                                        |
-| ----------- | ------------------------ | ------------------------------------------------------------ |
-| Unit        | Vitest + happy-dom       | `*.test.ts(x)` co-located                                    |
-| Integration | Vitest + node + Postgres | `*.spec.ts(x)` co-located, sequential; resets touched tables |
+| Layer | Tool               | Where                     |
+| ----- | ------------------ | ------------------------- |
+| Unit  | Vitest + happy-dom | `*.test.ts(x)` co-located |
 
-## Database workflow
-
-1. Edit `src/core/db/schema/*.ts`.
-2. `pnpm db:gen` → review the generated SQL in `db/migrations/`.
-3. **Renames appear as DROP+ADD** — fix manually to `RENAME COLUMN` before committing.
-4. `pnpm db:reset` (replays migrations against fresh local DB).
-5. Commit schema + migration together.
-
-Never use `drizzle-kit push`.
+Every test is a unit test. The `*.spec.ts(x)` integration project went with the database (ADR-0025).
 
 ## Agentic setup
 
@@ -101,13 +87,12 @@ Installs (globally) curated skills via `npx skills add`. The Fallow MCP server s
 
 ## CI
 
-`.github/workflows/ci.yml` runs four jobs on PRs and pushes to `main`:
+`.github/workflows/ci.yml` runs three jobs on PRs and pushes to `main`:
 
 1. `check` — typecheck / lint / format / unit
-2. `integration`: Vitest integration against a Postgres service container
-3. `build` — Next.js production build
-4. `fallow` — dead code / dupes / health; advisory (`continue-on-error`, `fail-on-issues: false`), posts a sticky PR comment. Uses a signed `fallow` binary (pinned ≥2.77.0).
+2. `build` — Vite production build
+3. `fallow` — dead code / dupes / health; advisory (`continue-on-error`, `fail-on-issues: false`), posts a sticky PR comment. Uses a signed `fallow` binary (pinned ≥2.77.0).
 
 ## Deployment
 
-Host-agnostic. Add a Vercel / Fly / Railway / Docker layer per consumer.
+Nothing is deployed (ADR-0023) — `pnpm build` produces a static `dist/` that any host can serve if that changes.
