@@ -15,6 +15,7 @@ const flagged: FlaggedTransaction = {
   alertTypes: ["B"],
   rules: [{ key: "B2", name: "PEP outgoing payment above the limit" }],
   rating: "High",
+  aiRating: null,
   disposition: "ESCALATE",
   score: 92,
   status: "ESCALATED",
@@ -35,6 +36,11 @@ describe("toQueueItem", () => {
       disposition: "ESCALATE",
       score: 92,
     });
+  });
+
+  it("maps the row's AI rating", () => {
+    expect(toQueueItem({ ...flagged, aiRating: "Low" }).ai).toEqual({ rating: "Low" });
+    expect(toQueueItem({ ...flagged, aiRating: null }).ai).toBe("none");
   });
 });
 

@@ -1,14 +1,14 @@
 import { rulesSummary } from "./rules";
 
 import type { AlertStatus, Disposition, FlaggedTransaction } from "./api";
-import type { AiRating, CaseStatus, RiskLevel } from "@/components";
+import type { AiStatus, CaseStatus, RiskLevel } from "@/components";
 
 export type QueueItem = {
   id: string;
   client: string;
   rule: RiskLevel;
   ruleReason: string;
-  ai: AiRating;
+  ai: AiStatus;
   /** CZK */
   amount: number;
   /** Transaction date and time as shown, `YYYY-MM-DD HH:mm`. */
@@ -37,8 +37,7 @@ export function toQueueItem(f: FlaggedTransaction): QueueItem {
     client: f.clientId,
     rule: f.rating,
     ruleReason: rulesSummary(f.rules.map((r) => r.name)),
-    // No model rates cases (ADR-0032); the AI part of the badge stays empty.
-    ai: "none",
+    ai: f.aiRating ? { rating: f.aiRating } : "none",
     amount: f.amount,
     date: formatTs(f.ts),
     status: CASE_STATUS[f.status],

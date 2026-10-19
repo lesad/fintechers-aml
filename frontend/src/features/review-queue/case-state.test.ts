@@ -63,6 +63,22 @@ const closed: Decision = {
   by: "",
 };
 
+const alert = (id: number, disposition: "ESCALATE" | "REVIEW_LOW") => ({
+  id,
+  alertType: "A",
+  createdAt: "2026-07-17T16:00:00Z",
+  status: "NEW" as const,
+  rating: null,
+  triage: {
+    disposition,
+    score: 1,
+    reasons: [],
+    configVersion: "v1",
+    decidedAt: null,
+  },
+  hits: [],
+});
+
 describe("caseState", () => {
   it("leaves a case triage closed to triage, until a reviewer decides otherwise", () => {
     expect(caseState(base, undefined)).toMatchObject({
@@ -105,5 +121,14 @@ describe("caseState", () => {
     const state = caseState(base, undefined);
     expect(state.dayTx.map((t) => t.id)).toEqual(["T1"]);
     expect(state.dayLabel).toBe("17 Jul 2026 · 1 transaction");
+  });
+
+  it("lists every alert id, the triage alert first", () => {
+    const detail = {
+      ...base,
+      disposition: "ESCALATE" as const,
+      alerts: [alert(3, "REVIEW_LOW"), alert(5, "ESCALATE"), alert(9, "REVIEW_LOW")],
+    };
+    expect(caseState(detail, undefined).alertIds).toEqual([5, 3, 9]);
   });
 });

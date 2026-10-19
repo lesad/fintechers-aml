@@ -30,6 +30,7 @@ const flagged = z.object({
   alertTypes: z.array(z.string()),
   rules: z.array(z.object({ key: z.string(), name: z.string() })),
   rating,
+  aiRating: rating.nullable(),
   disposition,
   score: z.number(),
   status: alertStatus,
@@ -116,6 +117,8 @@ const detail = z.object({
       alertType: z.string(),
       createdAt: z.string(),
       status: alertStatus,
+      /** The rule rating of this alert; null when no rating was computed. */
+      rating: rating.nullable(),
       triage: z
         .object({
           disposition,

@@ -1,8 +1,8 @@
 export { Card } from "./Card";
 export { ConditionCode, ConditionLegend, conditionToken } from "./Condition";
 export {
-  type AiRating,
   AiLabel,
+  type AiStatus,
   RatingBadge,
   RiskBadge,
   riskDot,

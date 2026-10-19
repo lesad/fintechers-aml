@@ -5,8 +5,8 @@ import { cn } from "@/utils";
 import type { ReactNode } from "react";
 
 export type RiskLevel = "High" | "Medium" | "Low";
-/** The AI assessment: a level once done, its pending/failed state, or `none` when no model rates. */
-export type AiRating = RiskLevel | "running" | "failed" | "none";
+/** The AI rating as a badge sees it: the rating once generated, or `none` while the alert has none. */
+export type AiStatus = { rating: RiskLevel } | "none";
 
 /** The small square/round marker in a risk colour (badges, tabs). */
 export const riskDot = cva("", {
@@ -53,20 +53,18 @@ export function AiLabel({ children }: { children: ReactNode }) {
   );
 }
 
-const AI_STATE = { running: "running", failed: "failed", none: "not connected" } as const;
-
-/** Rule rating with an "AI" tag once the AI has rated; the rule rating alone otherwise. */
-export function RatingBadge({ rule, ai }: { rule: RiskLevel; ai: AiRating }) {
-  if (ai === "running" || ai === "failed" || ai === "none") {
+/** Rule rating with an "AI" tag once the alert has an AI rating; the rule rating alone otherwise. The tooltip says whether the two match. */
+export function RatingBadge({ rule, ai }: { rule: RiskLevel; ai: AiStatus }) {
+  if (ai === "none") {
     return (
-      <span title={`Rule rating ${rule} · AI assessment ${AI_STATE[ai]}`}>
+      <span title={`Rule rating ${rule} · AI rating not generated yet`}>
         <RiskBadge level={rule} />
       </span>
     );
   }
   return (
     <span
-      title={`Rule rating ${rule} · AI rating ${ai} (${ai === rule ? "matches" : "differs"})`}
+      title={`Rule rating ${rule} · AI rating ${ai.rating} (${ai.rating === rule ? "matches" : "differs"})`}
       className="inline-flex h-5 flex-none items-stretch overflow-hidden rounded text-xs leading-none"
     >
       <RiskBadge level={rule} attached />

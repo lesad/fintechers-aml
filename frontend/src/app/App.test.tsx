@@ -17,6 +17,7 @@ const row = (id: string, rating: string, rules: string[], clientId = "K1") => ({
   alertTypes: [rules[0]?.charAt(0) ?? "A"],
   rules: rules.map((key) => ({ key, name: `Rule ${key}` })),
   rating,
+  aiRating: null,
   disposition:
     rating === "High" ? "REVIEW_HIGH" : rating === "Medium" ? "REVIEW_MEDIUM" : "REVIEW_LOW",
   score: rating === "High" ? 80 : rating === "Medium" ? 50 : 20,
@@ -64,6 +65,7 @@ const detail = {
       alertType: "B",
       createdAt: new Date().toISOString(),
       status: "NEW",
+      rating: "High",
       triage: {
         disposition: "ESCALATE",
         score: 95,
@@ -159,6 +161,35 @@ const ruleSuggestion = {
     "Flags outgoing payments above CZK 50,000 by this PEP client, except to the supplier.",
 };
 
+const readyAssessment = {
+  alertId: 7,
+  kind: "assessment",
+  status: "ready",
+  error: null,
+  modelId: "fake-model",
+  promptHash: "p",
+  inputHash: "i",
+  createdAt: "2026-10-19T10:00:00Z",
+  body: {
+    rating: "high",
+    verdict: "pass_through",
+    summary: [{ text: "The payment left the same day.", refs: ["rule:B2"] }],
+    openPoints: [
+      {
+        question: { text: "Who is the payee?", refs: ["rule:B2"] },
+        suspicious: "A PEP paid an unknown account.",
+        normal: "A known supplier.",
+        wouldSettle: "The contract.",
+        askWho: "client",
+      },
+    ],
+  },
+};
+
+/** Nothing stored yet: the card generates one on open. */
+const assessmentReply = (init?: RequestInit) =>
+  init?.method === "POST" ? json(readyAssessment) : json({}, 404);
+
 let suggestionReply: unknown = noSuggestion;
 let observers: IntersectionObserverCallback[] = [];
 
@@ -242,6 +273,7 @@ beforeEach(() => {
         return fakeEnginePut(init);
       }
       if (url.pathname === "/api/alerts/7/suggestion") return json(suggestionReply);
+      if (url.pathname === "/api/alerts/7/assessment") return assessmentReply(init);
       if (init?.method === "POST" && url.pathname === "/api/rules") {
         const body = JSON.parse(String(init.body));
         return json({
@@ -673,5 +705,6 @@ describe("App", () => {
     await waitFor(() =>
       expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1"),
     );
+    expect(await screen.findByText("Pass-through")).toBeInTheDocument();
   });
 });

@@ -14,6 +14,11 @@ const toFlow = (h: HistoryTransaction): FlowTx => ({
   amount: h.amount,
 });
 
+const alertIdsOf = (
+  alerts: TransactionDetail["alerts"],
+  first: TransactionDetail["alerts"][number] | undefined,
+) => [...(first ? [first] : []), ...alerts.filter((a) => a !== first)].map((a) => a.id);
+
 /**
  * What the detail shows about one transaction, derived from the engine's detail and the decision
  * made in the browser. Pure, so the case rules (who decides, what status) are testable on their own.
@@ -22,6 +27,7 @@ export function caseState(detail: TransactionDetail, decision: Decision | undefi
   const { transaction: tx, rating, alerts } = detail;
   const hits = alerts.flatMap((a) => a.hits);
   const autoClosed = detail.disposition === "AUTO_CLOSE";
+  const triageAlert = alerts.find((a) => a.triage?.disposition === detail.disposition);
   const day = tx.ts.slice(0, 10);
   const dayTx = detail.day.map(toFlow).toSorted((a, b) => (a.dt > b.dt ? 1 : -1));
 
@@ -42,7 +48,9 @@ export function caseState(detail: TransactionDetail, decision: Decision | undefi
     alertTypes: alerts.map((a) => a.alertType),
     flaggedAt: alerts[0] ? new Date(alerts[0].createdAt) : null,
     /** The triage of the alert that set the transaction's (most severe) disposition. */
-    triage: alerts.find((a) => a.triage?.disposition === detail.disposition)?.triage ?? null,
+    triage: triageAlert?.triage ?? null,
+    /** Every alert, the one behind the triage first: each gets its own AI Rating card. */
+    alertIds: alertIdsOf(alerts, triageAlert),
     /** What the engine holds: its status once someone decided; a false positive when triage closed it; else New. */
     saved,
     /** Not flagged → no status; a decision made here wins over what the engine holds. */

@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { AiLabel, Card, Toast } from "@/components";
+import { Card, Toast } from "@/components";
 
-import { AiNotConnected } from "./AiNotConnected";
+import { AiRatingCard } from "./AiRatingCard";
 import { assign, fetchSuggestion } from "./api";
 import { AssigneeCard } from "./AssigneeCard";
 import { caseState } from "./case-state";
@@ -68,6 +68,22 @@ export function TransactionDetail({ id, ...rest }: TransactionDetailProps) {
   );
 }
 
+/** One AI Rating card per alert, stacked, each beside its own rule rating. */
+function AiRatingCards({ detail, alertIds }: { detail: Detail; alertIds: number[] }) {
+  if (alertIds.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3">
+      {alertIds.map((id) => (
+        <AiRatingCard
+          key={id}
+          alertId={id}
+          ruleRating={detail.alerts.find((a) => a.id === id)?.rating ?? null}
+        />
+      ))}
+    </div>
+  );
+}
+
 function DetailView({
   detail,
   decisions,
@@ -125,9 +141,7 @@ function DetailView({
                 alertTypes={state.alertTypes}
               />
 
-              <Card tone="ai" title={<AiLabel>Rating</AiLabel>} className="gap-2">
-                <AiNotConnected />
-              </Card>
+              <AiRatingCards detail={detail} alertIds={state.alertIds} />
             </div>
 
             <Card
