@@ -28,7 +28,13 @@ class TriageRepository(private val jdbc: JdbcClient) {
      * names its columns itself rather than borrowing `Vocabulary.client`.
      */
     fun clientFacts(): Map<String, ClientFacts> =
-        jdbc.sql("select id, risk, pep, country, channel, contract_date, type from client")
+        jdbc.sql(
+            """
+            select id, risk, pep, country, channel, contract_date,
+                   expected_monthly_volume, q2_volume, q2_tx_count, q2_days
+            from client
+            """,
+        )
             .query { rs, _ ->
                 ClientFacts(
                     id = rs.getString("id"),
@@ -37,7 +43,10 @@ class TriageRepository(private val jdbc: JdbcClient) {
                     country = rs.getString("country"),
                     channel = rs.getString("channel"),
                     contractDate = (rs.getObject("contract_date") as Date?)?.toLocalDate(),
-                    type = rs.getString("type"),
+                    expectedMonthlyVolume = rs.getObject("expected_monthly_volume") as Long?,
+                    q2Volume = rs.getObject("q2_volume") as Long?,
+                    q2TxCount = rs.getObject("q2_tx_count") as Int?,
+                    q2Days = rs.getObject("q2_days") as Int?,
                 )
             }.list().associateBy { it.id }
 

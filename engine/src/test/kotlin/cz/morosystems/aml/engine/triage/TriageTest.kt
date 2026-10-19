@@ -21,7 +21,7 @@ class TriageTest {
     @Test
     fun reasonsReconstructTheScore() {
         val decision = Triage.decide(
-            input(risk = "high", country = "IR", channel = "distant form", hits = listOf(hit("M1"), hit("N1")), amountMinor = 30_000_000, priorReports = 1),
+            input(risk = "high", country = "IR", channel = "distant form", hits = listOf(hit("M1"), hit("N1")), amountMinor = 30_000_000),
             CONFIG,
         )
         assertThat(decision.reasons.sumOf { it.points }).isEqualTo(decision.score)
@@ -29,7 +29,7 @@ class TriageTest {
 
     @Test
     fun reasonsReconstructTheScoreWhenTheRawScoreWasClamped() {
-        val decision = Triage.decide(input(hits = listOf(hit("BIG")), risk = "high", pep = true, country = "IR", priorReports = 2, amountMinor = 200_000_000), CONFIG)
+        val decision = Triage.decide(input(hits = listOf(hit("BIG")), risk = "high", pep = true, country = "IR", amountMinor = 200_000_000), CONFIG)
         assertThat(decision.score).isEqualTo(100)
         assertThat(decision.reasons.sumOf { it.points }).isEqualTo(decision.score)
         assertThat(decision.reasons.map { it.code }).contains("SCORE_CLAMPED")
@@ -38,7 +38,17 @@ class TriageTest {
     @Test
     fun everyFactorLeavesAReasonLineEvenWhenItScoresNothing() {
         val reasons = Triage.decide(input(), CONFIG).reasons.associateBy { it.code }
-        val silent = listOf("CLIENT_RISK", "CLIENT_PEP", "COUNTRY_HIGH_RISK", "CLIENT_CHANNEL", "AMOUNT", "HIT_INTENSITY", "RELATIONSHIP_LENGTH", "MULTIPLE_FLAGS", "PRIOR_REPORTS")
+        val silent = listOf(
+            "CLIENT_RISK",
+            "CLIENT_PEP",
+            "COUNTRY_HIGH_RISK",
+            "CLIENT_CHANNEL",
+            "AMOUNT",
+            "CLIENT_UNBASELINED",
+            "HIT_INTENSITY",
+            "RELATIONSHIP_LENGTH",
+            "MULTIPLE_FLAGS",
+        )
         assertThat(reasons.keys).contains(*silent.toTypedArray())
         assertThat(silent.map { reasons.getValue(it).points }).containsOnly(0)
     }
@@ -156,12 +166,11 @@ class TriageTest {
                 highRiskCountry = 10,
                 staticCap = 25,
                 channelPoints = mapOf("in person" to 0, "distant form" to 5),
+                unbaselinedClient = 0,
                 tenureUnder90Days = 10,
                 tenureUnder365Days = 5,
                 perExtraAlertType = 10,
                 extraAlertTypeMax = 20,
-                perPriorReport = 10,
-                priorReportMax = 20,
             ),
             amountBands = listOf(AmountBand(100_000_000, 15), AmountBand(25_000_000, 8), AmountBand(5_000_000, 3)),
             intensityBands = mapOf(
@@ -179,14 +188,11 @@ class TriageTest {
             autoCloseWhitelist = setOf("Z0", "W1", "W2", "M1"),
             requiredFields = listOf(RequiredField.CLIENT_RISK, RequiredField.CLIENT_COUNTRY, RequiredField.ALERT_AMOUNT),
             floors = listOf(
-                Floor(FloorCondition.SANCTIONS_MATCH, null, Disposition.ESCALATE),
                 Floor(FloorCondition.UNKNOWN_RULE, null, Disposition.REVIEW_HIGH),
                 Floor(FloorCondition.PEP_AND_HIGH_RISK_COUNTRY, null, Disposition.REVIEW_HIGH),
                 Floor(FloorCondition.ALERT_TYPE, "B", Disposition.REVIEW_MEDIUM),
             ),
             highRiskCountries = setOf("IR", "SY"),
-            sanctionedCountries = setOf("KP"),
-            sanctionedClients = setOf("SANCTIONED"),
         )
 
         @JvmStatic
@@ -197,8 +203,6 @@ class TriageTest {
             case("an alert with no hit at all is treated as unrecognised", input(hits = emptyList()), Disposition.REVIEW_HIGH),
             case("a missing mandatory field forces a review at score zero", input(hits = listOf(hit("Z0")), risk = null), Disposition.REVIEW_MEDIUM),
             case("a blank mandatory field counts as missing", input(hits = listOf(hit("Z0")), country = " "), Disposition.REVIEW_MEDIUM),
-            case("a sanctioned client escalates at score zero", input(hits = listOf(hit("Z0")), clientId = "SANCTIONED"), Disposition.ESCALATE),
-            case("a sanctioned counterparty country escalates at score zero", input(hits = listOf(hit("Z0")), counterpartyCountries = setOf("kp")), Disposition.ESCALATE),
             case("an ALERT_TYPE floor never softens an escalation", input(alertType = "B", hits = listOf(hit("BIG")), risk = "high"), Disposition.ESCALATE),
             case("an ALERT_TYPE floor does lift a quiet alert of that type", input(alertType = "B", hits = listOf(hit("Z0"))), Disposition.REVIEW_MEDIUM),
             case("a PEP in a high-risk country is reviewed at least highly", input(hits = listOf(hit("W1")), pep = true, country = "IR"), Disposition.REVIEW_HIGH),
@@ -216,9 +220,13 @@ class TriageTest {
 
         private fun case(name: String, input: TriageInput, expected: Disposition) = Arguments.of(name, input, expected)
 
-        private fun hit(rule: String, grainKey: String = "G1") = TriagedHit(rule, 1, grainKey, mapOf("amount" to 1_000_000L))
+        fun hit(rule: String, grainKey: String = "G1") = TriagedHit(rule, 1, grainKey, mapOf("amount" to 1_000_000L))
 
-        private fun input(
+        /**
+         * The default client is deliberately **fully baselined** — a declared volume and a complete Q2 history —
+         * so the client-profile factors contribute nothing unless a test opts in by overriding them.
+         */
+        fun input(
             alertType: String = "A",
             hits: List<TriagedHit> = listOf(hit("W1")),
             clientId: String = "K1",
@@ -227,11 +235,13 @@ class TriageTest {
             country: String? = "CZ",
             channel: String? = "in person",
             contractDate: LocalDate? = LocalDate.of(2020, 1, 1),
-            type: String? = "individual",
+            expectedMonthlyVolume: Long? = 10_000_000L,
+            q2Volume: Long? = 30_000_000L,
+            q2TxCount: Int? = 30,
+            q2Days: Int? = 60,
             counterpartyCountries: Set<String> = emptySet(),
             amountMinor: Long? = 1_000_000,
             otherAlertTypesOnClient: Set<String> = emptySet(),
-            priorReports: Int = 0,
         ) = TriageInput(
             alertId = 1,
             alertType = alertType,
@@ -239,11 +249,21 @@ class TriageTest {
             transactionId = "T1",
             asOf = ASOF,
             hits = hits,
-            client = ClientFacts(clientId, risk, pep, country, channel, contractDate, type),
+            client = ClientFacts(
+                clientId,
+                risk,
+                pep,
+                country,
+                channel,
+                contractDate,
+                expectedMonthlyVolume,
+                q2Volume,
+                q2TxCount,
+                q2Days,
+            ),
             counterpartyCountries = counterpartyCountries,
             amountMinor = amountMinor,
             otherAlertTypesOnClient = otherAlertTypesOnClient,
-            priorReports = priorReports,
         )
     }
 }

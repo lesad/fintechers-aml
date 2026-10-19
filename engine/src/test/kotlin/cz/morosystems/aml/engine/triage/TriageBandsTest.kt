@@ -8,8 +8,8 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 
 /**
- * Band edges, exactly. The config here scores nothing but prior reports, one point each, so a decision can be
- * dialled to any integer score and the band boundaries can be asserted on both sides.
+ * Band edges, exactly. The config here scores nothing but the amount, through one band per haléř that pays out its
+ * own threshold, so a decision can be dialled to any integer score and the band boundaries asserted on both sides.
  */
 class TriageBandsTest {
     @ParameterizedTest(name = "score {0} is {1}")
@@ -61,7 +61,13 @@ class TriageBandsTest {
         decision.reasons.firstOrNull { it.code == code } ?: error("no '$code' reason in ${decision.reasons.map { it.code }}")
 
     companion object {
-        /** Scores nothing but prior reports (one point each) and floors nothing, so the score is dialled directly. */
+        /**
+         * One amount band per haléř from 200 down to 0, each worth exactly its own threshold, so passing `score`
+         * haléře as the alert amount scores exactly `score`. Nothing else scores and nothing floors.
+         */
+        private val DIAL = (200 downTo 0).map { AmountBand(it.toLong(), it) }
+
+        /** Scores nothing but the dialled amount and floors nothing, so the score is set directly. */
         val CONFIG = TriageConfig(
             configVersion = "bands-test",
             baseScores = mapOf("Z0" to 0),
@@ -74,14 +80,13 @@ class TriageBandsTest {
                 highRiskCountry = 0,
                 staticCap = 0,
                 channelPoints = emptyMap(),
+                unbaselinedClient = 0,
                 tenureUnder90Days = 0,
                 tenureUnder365Days = 0,
                 perExtraAlertType = 0,
                 extraAlertTypeMax = 0,
-                perPriorReport = 1,
-                priorReportMax = 1_000,
             ),
-            amountBands = emptyList(),
+            amountBands = DIAL,
             intensityBands = emptyMap(),
             pepImpliedByRules = emptySet(),
             bands = listOf(
@@ -95,8 +100,6 @@ class TriageBandsTest {
             requiredFields = emptyList(),
             floors = emptyList(),
             highRiskCountries = emptySet(),
-            sanctionedCountries = emptySet(),
-            sanctionedClients = emptySet(),
         )
 
         @JvmStatic
@@ -120,11 +123,12 @@ class TriageBandsTest {
             transactionId = null,
             asOf = LocalDate.of(2026, 6, 30),
             hits = listOf(TriagedHit("Z0", 1, "G1", emptyMap())),
-            client = ClientFacts("K1", null, null, null, null, null, null),
+            // Nothing is known about this client, and nothing here scores it: unbaselinedClient is 0 and no other
+            // factor pays out, so the score stays dialled by the amount alone.
+            client = ClientFacts("K1", null, null, null, null, null, null, null, null, null),
             counterpartyCountries = emptySet(),
-            amountMinor = null,
+            amountMinor = score.toLong(),
             otherAlertTypesOnClient = emptySet(),
-            priorReports = score,
         )
     }
 }

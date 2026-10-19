@@ -14,6 +14,8 @@
 
 Tuning lives in `resources/triage/triage-config-v1.json` under a `configVersion`, validated on load. Changing a number means a new file and a new version, so decisions already taken stay explicable under the config that produced them. Each decision stores its reasons, `config_version` and a SHA-256 `input_hash` over a canonical serialisation, in `alert_triage` — a separate table, so a run can be re-triaged (`bootRun --args=triage`) without touching detection output.
 
+**Only what the data supports.** A factor ships only if this dataset can support an interpretation of it; one that cannot is not carried as a disabled knob, it is not written. Two were cut on that rule: the amount as a ratio of the client's declared monthly volume (the generator draws `amount = exp_vol/exp_cnt × exp(N(0,1))`, so the ratio is substantially a proxy for declared transaction count — r = −0.563, R² = 0.317 against `expected_count`) and points per legal type (no weight derivable, and type moves behaviour only through declared size, which the amount factor already counts). The sanctions floor went the same way: there is no sanctions list in the data, and a floor that can never fire is not a control.
+
 _Why:_ an AML disposition has to be defensible to a regulator line by line, which rules out a model and rules out hidden state; the hash plus the config version make any past decision reproducible. _Trade-off:_ the weights are a judgement call, not a fit — the data carries no labels — so they are data rather than code, and expected to be re-tuned. Supersedes the paper scorecard in `docs/rules/priority.md`.
 
 ### ADR-0032 — Triage is code; AI only writes summaries and rule proposals; `docs/rules/` follows the engine

@@ -63,11 +63,13 @@ class TriageDeterminismTest {
             "client country" to base.copy(client = base.client.copy(country = "IR")),
             "client channel" to base.copy(client = base.client.copy(channel = "distant form")),
             "client contract date" to base.copy(client = base.client.copy(contractDate = LocalDate.of(2021, 1, 1))),
-            "client type" to base.copy(client = base.client.copy(type = "legal entity")),
+            "client expected monthly volume" to base.copy(client = base.client.copy(expectedMonthlyVolume = 20_000_000L)),
+            "client q2 volume" to base.copy(client = base.client.copy(q2Volume = 40_000_000L)),
+            "client q2 tx count" to base.copy(client = base.client.copy(q2TxCount = 31)),
+            "client q2 days" to base.copy(client = base.client.copy(q2Days = 61)),
             "counterparty countries" to base.copy(counterpartyCountries = setOf("IR")),
             "amount" to base.copy(amountMinor = 2_000_000),
             "other alert types" to base.copy(otherAlertTypesOnClient = setOf("C")),
-            "prior reports" to base.copy(priorReports = 1),
         )
         val hashes = mutations.mapValues { hashOf(it.value) }
         hashes.forEach { (field, hash) -> assertThat(hash).describedAs("changing $field").isNotEqualTo(hashOf(base)) }
@@ -135,10 +137,20 @@ class TriageDeterminismTest {
         transactionId = "T1",
         asOf = LocalDate.of(2026, 6, 30),
         hits = listOf(hit("W1", "G1")),
-        client = ClientFacts("K1", "low", false, "CZ", "in person", LocalDate.of(2020, 1, 1), "individual"),
+        client = ClientFacts(
+            id = "K1",
+            risk = "low",
+            pep = false,
+            country = "CZ",
+            channel = "in person",
+            contractDate = LocalDate.of(2020, 1, 1),
+            expectedMonthlyVolume = 10_000_000L,
+            q2Volume = 30_000_000L,
+            q2TxCount = 30,
+            q2Days = 60,
+        ),
         counterpartyCountries = emptySet(),
         amountMinor = 1_000_000,
         otherAlertTypesOnClient = emptySet(),
-        priorReports = 0,
     )
 }

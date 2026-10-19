@@ -11,7 +11,12 @@ enum class Disposition { AUTO_CLOSE, REVIEW_LOW, REVIEW_MEDIUM, REVIEW_HIGH, ESC
 /** One rule hit as triage sees it: which rule fired, on which grain, with the evidence the run recorded. */
 data class TriagedHit(val ruleKey: String, val ruleVersion: Int, val grainKey: String, val evidence: Map<String, Any?>)
 
-/** The client facts triage scores. Plain values only — triage never reads the database. */
+/**
+ * The client facts triage scores. Plain values only — triage never reads the database.
+ *
+ * The declared volume and the Q2 counts are here only to answer whether the client can be profiled at all;
+ * the rule evidence cannot answer it, because a hit records `day_volume` but never what the client declared.
+ */
 data class ClientFacts(
     val id: String,
     val risk: String?,
@@ -19,8 +24,27 @@ data class ClientFacts(
     val country: String?,
     val channel: String?,
     val contractDate: LocalDate?,
-    val type: String?,
-)
+    val expectedMonthlyVolume: Long?,
+    val q2Volume: Long?,
+    val q2TxCount: Int?,
+    val q2Days: Int?,
+) {
+    /**
+     * True when the client cannot be profiled at all: no declared volume, or no Q2 history to compare against.
+     * Such a client is not evidence of good behaviour — it is an absence of evidence, so it blocks an auto-close.
+     */
+    val unbaselined: Boolean
+        get() = (expectedMonthlyVolume ?: 0L) <= 0L || (q2Volume ?: 0L) <= 0L || (q2TxCount ?: 0) <= 0 || (q2Days ?: 0) <= 0
+
+    /** Why the client is unbaselined, for the reason line. Empty when it is not. */
+    val missingBaseline: List<String>
+        get() = buildList {
+            if ((expectedMonthlyVolume ?: 0L) <= 0L) add("expected_monthly_volume")
+            if ((q2Volume ?: 0L) <= 0L) add("q2_volume")
+            if ((q2TxCount ?: 0) <= 0) add("q2_tx_count")
+            if ((q2Days ?: 0) <= 0) add("q2_days")
+        }
+}
 
 /**
  * Everything one decision is made from. Immutable and self-contained: no clock, no connection, no list lookup
@@ -29,7 +53,6 @@ data class ClientFacts(
  * @param asOf the run period's end, the date relationship length is measured against. Never `now()`.
  * @param amountMinor the alert's amount in haléře (CZK x 100), or null when the alert is not transaction-bound.
  * @param otherAlertTypesOnClient alert types **other than this one** raised on the same client in the same run.
- * @param priorReports count of earlier filings for this client. No such data exists yet; the engine passes 0.
  */
 data class TriageInput(
     val alertId: Long,
@@ -42,7 +65,6 @@ data class TriageInput(
     val counterpartyCountries: Set<String>,
     val amountMinor: Long?,
     val otherAlertTypesOnClient: Set<String>,
-    val priorReports: Int,
 ) {
     /**
      * The shape the input hash is taken over. Hits are sorted because the order the run happened to emit them in
@@ -64,12 +86,14 @@ data class TriageInput(
             "country" to client.country,
             "channel" to client.channel,
             "contractDate" to client.contractDate,
-            "type" to client.type,
+            "expectedMonthlyVolume" to client.expectedMonthlyVolume,
+            "q2Volume" to client.q2Volume,
+            "q2TxCount" to client.q2TxCount,
+            "q2Days" to client.q2Days,
         ),
         "counterpartyCountries" to counterpartyCountries,
         "amountMinor" to amountMinor,
         "otherAlertTypesOnClient" to otherAlertTypesOnClient,
-        "priorReports" to priorReports,
     )
 }
 

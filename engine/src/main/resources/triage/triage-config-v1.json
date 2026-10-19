@@ -12,12 +12,11 @@
     "highRiskCountry": 10,
     "staticCap": 25,
     "channelPoints": { "in person": 0, "distant form": 5 },
+    "unbaselinedClient": 10,
     "tenureUnder90Days": 10,
     "tenureUnder365Days": 5,
     "perExtraAlertType": 10,
-    "extraAlertTypeMax": 20,
-    "perPriorReport": 10,
-    "priorReportMax": 20
+    "extraAlertTypeMax": 20
   },
 
   "amountBands": [
@@ -49,17 +48,15 @@
 
   "autoCloseWhitelist": ["A1", "A2", "A3"],
 
-  "requiredFields": ["client.risk", "client.country", "alert.amount"],
+  "requiredFields": ["client.risk", "client.country", "client.expected_monthly_volume", "alert.amount"],
 
   "floors": [
-    { "condition": "SANCTIONS_MATCH", "minDisposition": "ESCALATE" },
     { "condition": "UNKNOWN_RULE", "minDisposition": "REVIEW_HIGH" },
     { "condition": "PEP_AND_HIGH_RISK_COUNTRY", "minDisposition": "REVIEW_HIGH" },
     { "condition": "ALERT_TYPE", "alertType": "B", "minDisposition": "REVIEW_MEDIUM" },
-    { "condition": "ALERT_TYPE", "alertType": "C", "minDisposition": "REVIEW_MEDIUM" }
+    { "condition": "ALERT_TYPE", "alertType": "C", "minDisposition": "REVIEW_MEDIUM" },
+    { "condition": "CLIENT_UNBASELINED", "minDisposition": "REVIEW_LOW" }
   ],
 
-  "highRiskCountries": [],
-  "sanctionedCountries": [],
-  "sanctionedClients": []
+  "highRiskCountries": []
 }

@@ -33,11 +33,11 @@ class TriageService(private val repository: TriageRepository) {
                 hits = alert.hits,
                 // A client the alert names but the client table does not know is missing data, not a crash:
                 // the missing-data floor is exactly what takes over from here.
-                client = clients[alert.clientId] ?: ClientFacts(alert.clientId, null, null, null, null, null, null),
+                client = clients[alert.clientId]
+                    ?: ClientFacts(alert.clientId, null, null, null, null, null, null, null, null, null),
                 counterpartyCountries = countries[alert.id].orEmpty(),
                 amountMinor = amountMinor(alert),
                 otherAlertTypesOnClient = typesByClient[alert.clientId].orEmpty() - alert.alertType,
-                priorReports = 0,
             )
             Triage.decide(input, config)
         }

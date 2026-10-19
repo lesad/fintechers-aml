@@ -16,7 +16,7 @@ data class AmountBand(val fromMinor: Long, val points: Int)
 data class IntensityBand(val fromHits: Int, val points: Int)
 
 /** The conditions a hard floor may test. A closed set on purpose: a floor is a lookup, never an expression. */
-enum class FloorCondition { SANCTIONS_MATCH, UNKNOWN_RULE, PEP_AND_HIGH_RISK_COUNTRY, ALERT_TYPE }
+enum class FloorCondition { UNKNOWN_RULE, PEP_AND_HIGH_RISK_COUNTRY, ALERT_TYPE, CLIENT_UNBASELINED }
 
 /** A hard floor. It may only raise the disposition's severity, never lower it. */
 data class Floor(val condition: FloorCondition, val alertType: String?, val minDisposition: Disposition)
@@ -25,10 +25,7 @@ data class Floor(val condition: FloorCondition, val alertType: String?, val minD
 enum class RequiredField(val key: String) {
     CLIENT_RISK("client.risk"),
     CLIENT_COUNTRY("client.country"),
-    CLIENT_PEP("client.pep"),
-    CLIENT_CHANNEL("client.channel"),
-    CLIENT_CONTRACT_DATE("client.contract_date"),
-    CLIENT_TYPE("client.type"),
+    CLIENT_EXPECTED_VOLUME("client.expected_monthly_volume"),
     ALERT_AMOUNT("alert.amount"),
     ;
 
@@ -45,12 +42,11 @@ data class Factors(
     val highRiskCountry: Int,
     val staticCap: Int,
     val channelPoints: Map<String, Int>,
+    val unbaselinedClient: Int,
     val tenureUnder90Days: Int,
     val tenureUnder365Days: Int,
     val perExtraAlertType: Int,
     val extraAlertTypeMax: Int,
-    val perPriorReport: Int,
-    val priorReportMax: Int,
 )
 
 /**
@@ -72,8 +68,6 @@ data class TriageConfig(
     val requiredFields: List<RequiredField>,
     val floors: List<Floor>,
     val highRiskCountries: Set<String>,
-    val sanctionedCountries: Set<String>,
-    val sanctionedClients: Set<String>,
 ) {
     init {
         require(configVersion.isNotBlank()) { "configVersion must not be blank" }
@@ -120,12 +114,11 @@ data class TriageConfig(
                     highRiskCountry = factors.required("highRiskCountry").intValue(),
                     staticCap = factors.required("staticCap").intValue(),
                     channelPoints = factors.required("channelPoints").intMap().mapKeys { it.key.lowercase() },
+                    unbaselinedClient = factors.required("unbaselinedClient").intValue(),
                     tenureUnder90Days = factors.required("tenureUnder90Days").intValue(),
                     tenureUnder365Days = factors.required("tenureUnder365Days").intValue(),
                     perExtraAlertType = factors.required("perExtraAlertType").intValue(),
                     extraAlertTypeMax = factors.required("extraAlertTypeMax").intValue(),
-                    perPriorReport = factors.required("perPriorReport").intValue(),
-                    priorReportMax = factors.required("priorReportMax").intValue(),
                 ),
                 amountBands = root.required("amountBands").values().map { AmountBand(it.required("fromMinor").longValue(), it.required("points").intValue()) },
                 intensityBands = root.required("intensityBands").properties().associate { (alertType, node) ->
@@ -143,8 +136,6 @@ data class TriageConfig(
                     )
                 },
                 highRiskCountries = root.required("highRiskCountries").values().map { it.stringValue().uppercase() }.toSet(),
-                sanctionedCountries = root.required("sanctionedCountries").values().map { it.stringValue().uppercase() }.toSet(),
-                sanctionedClients = root.required("sanctionedClients").values().map { it.stringValue() }.toSet(),
             )
         }
 

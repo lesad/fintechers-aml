@@ -77,10 +77,15 @@ Each decision stores its reasons, `config_version` and a SHA-256 `input_hash` in
 
 Tuning lives in `src/main/resources/triage/triage-config-v1.json`, validated on load — weights, bands, the auto-close whitelist, the required fields and the floors. **Change a number and you must bump the file and its `configVersion`**, so decisions already taken stay explicable under the config that made them.
 
-Two things the config deliberately leaves empty, filled at runtime or waiting for data:
+### What it reads from the client
 
-- `highRiskCountries` — injected from `reference_list` (`list = 'high_risk'`); the database is the single source.
-- `sanctionedCountries` / `sanctionedClients` — placeholders. There is **no sanctions list in the organisers' data**, so the `SANCTIONS_MATCH → ESCALATE` floor is implemented and tested but fires on nothing until a list is loaded.
+Triage scores the client record, not just the alert: rating, PEP, residence, onboarding channel and relationship length come straight off `client`. On top of them sits one check the rule evidence cannot answer, because a hit records `day_volume` but never what the client declared:
+
+- **`CLIENT_UNBASELINED`** — `expected_monthly_volume`, `q2_volume`, `q2_tx_count` or `q2_days` zero or absent. Such a client cannot be profiled at all, so this is an *absence* of evidence, not a red flag: it scores points **and** carries a floor that makes an auto-close impossible. It fires on exactly one client in the July data, K005492, which `data-patterns.md` independently says "has no Q2 activity and should not enter the branch at all".
+
+The rest of the client table is read but **not scored**, deliberately. A ratio of the amount to `expected_monthly_volume` looks like the obvious profile check and is not one here: the generator draws `amount = exp_vol/exp_cnt × exp(N(0,1))`, so the ratio is substantially a proxy for the client's declared transaction *count* (measured r = −0.563, R² = 0.317 against `expected_count`). It would rank clients by how few transactions they declared rather than by how far they deviated, so it is not implemented. The sound form is the per-transaction `z = ln(amount / (exp_vol/exp_cnt))` of rule F, which would need `StrictMath.log` to stay bit-reproducible. Legal type is likewise unscored: no weight is derivable from this data, and type moves behaviour only through declared size, which the amount factor already counts.
+
+`highRiskCountries` is the one key the config ships empty: it is injected at runtime from `reference_list` (`list = 'high_risk'`), so the database stays the single source. On the July data it matches nothing — the list and the countries in the data do not intersect — so the country factor scores zero on every row and rule `B1` never fires.
 
 Three calibration decisions the July data forced, worth re-reading before trusting the numbers:
 

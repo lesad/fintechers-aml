@@ -43,10 +43,19 @@ class TriageConfigTest {
     }
 
     @Test
-    fun theShippedConfigLeavesTheCountryAndSanctionsListsToBeInjectedAtRuntime() {
+    fun theShippedConfigScoresAnUnbaselinedClient() {
+        assertThat(shipped.factors.unbaselinedClient).isPositive()
+    }
+
+    @Test
+    fun theShippedConfigHoldsAnUnbaselinedClientBackFromAnAutoClose() {
+        val floor = shipped.floors.single { it.condition == FloorCondition.CLIENT_UNBASELINED }
+        assertThat(floor.minDisposition).isGreaterThan(Disposition.AUTO_CLOSE)
+    }
+
+    @Test
+    fun theShippedConfigLeavesTheHighRiskCountryListToBeInjectedAtRuntime() {
         assertThat(shipped.highRiskCountries).isEmpty()
-        assertThat(shipped.sanctionedCountries).isEmpty()
-        assertThat(shipped.sanctionedClients).isEmpty()
     }
 
     @Test
@@ -114,7 +123,7 @@ class TriageConfigTest {
 
     @Test
     fun aFloorThatIsNotAnAlertTypeFloorMayNotCarryAnAlertType() {
-        assertThatThrownBy { valid().copy(floors = listOf(Floor(FloorCondition.SANCTIONS_MATCH, "B", Disposition.ESCALATE))) }
+        assertThatThrownBy { valid().copy(floors = listOf(Floor(FloorCondition.UNKNOWN_RULE, "B", Disposition.ESCALATE))) }
             .isInstanceOf(IllegalArgumentException::class.java)
             .hasMessageContaining("alertType")
     }
@@ -166,12 +175,11 @@ class TriageConfigTest {
             highRiskCountry = 10,
             staticCap = 25,
             channelPoints = mapOf("in person" to 0),
+            unbaselinedClient = 0,
             tenureUnder90Days = 10,
             tenureUnder365Days = 5,
             perExtraAlertType = 10,
             extraAlertTypeMax = 20,
-            perPriorReport = 10,
-            priorReportMax = 20,
         ),
         amountBands = listOf(AmountBand(100_000_000, 15), AmountBand(25_000_000, 8)),
         intensityBands = mapOf("A" to listOf(IntensityBand(60, 10), IntensityBand(45, 5))),
@@ -179,9 +187,7 @@ class TriageConfigTest {
         bands = listOf(Band(24, Disposition.AUTO_CLOSE), Band(100, Disposition.ESCALATE)),
         autoCloseWhitelist = setOf("W1"),
         requiredFields = listOf(RequiredField.CLIENT_RISK),
-        floors = listOf(Floor(FloorCondition.SANCTIONS_MATCH, null, Disposition.ESCALATE)),
+        floors = listOf(Floor(FloorCondition.UNKNOWN_RULE, null, Disposition.ESCALATE)),
         highRiskCountries = setOf("IR"),
-        sanctionedCountries = setOf("KP"),
-        sanctionedClients = emptySet(),
     )
 }

@@ -117,6 +117,15 @@ object Triage {
         val amount = input.amountMinor?.let { value -> config.amountBands.firstOrNull { value >= it.fromMinor }?.points } ?: 0
         reasons += Reason("AMOUNT", input.amountMinor?.let { "largest amount ${it} haléře" } ?: "no amount on this alert", amount)
 
+        // Not a red flag in itself — an absence of evidence. It also blocks the auto-close, through its own floor.
+        val unbaselined = if (input.client.unbaselined) f.unbaselinedClient else 0
+        reasons += Reason(
+            "CLIENT_UNBASELINED",
+            if (input.client.unbaselined) "no usable baseline, zero or absent: ${input.client.missingBaseline.joinToString(", ")}"
+            else "the client has a usable KYC and Q2 baseline",
+            unbaselined,
+        )
+
         // 'An A alert exists' says nothing — every client has one. How hard it fired is the only thing that separates them.
         val intensity = config.intensityBands[input.alertType]?.firstOrNull { input.hits.size >= it.fromHits }?.points ?: 0
         reasons += Reason("HIT_INTENSITY", "${input.hits.size} hit(s) on a type ${input.alertType} alert", intensity)
@@ -137,9 +146,6 @@ object Triage {
             if (others.isEmpty()) "no other alert type on this client" else "also flagged by ${others.sorted().joinToString(", ")}",
             multi,
         )
-
-        val prior = (f.perPriorReport * input.priorReports).coerceAtMost(f.priorReportMax)
-        reasons += Reason("PRIOR_REPORTS", "${input.priorReports} earlier filing(s) for this client", prior)
     }
 
     private fun band(score: Int, config: TriageConfig): Disposition =
@@ -155,21 +161,15 @@ object Triage {
     private fun missing(field: RequiredField, input: TriageInput): Boolean = when (field) {
         RequiredField.CLIENT_RISK -> input.client.risk.isNullOrBlank()
         RequiredField.CLIENT_COUNTRY -> input.client.country.isNullOrBlank()
-        RequiredField.CLIENT_PEP -> input.client.pep == null
-        RequiredField.CLIENT_CHANNEL -> input.client.channel.isNullOrBlank()
-        RequiredField.CLIENT_CONTRACT_DATE -> input.client.contractDate == null
-        RequiredField.CLIENT_TYPE -> input.client.type.isNullOrBlank()
+        RequiredField.CLIENT_EXPECTED_VOLUME -> (input.client.expectedMonthlyVolume ?: 0L) <= 0L
         RequiredField.ALERT_AMOUNT -> input.amountMinor == null
     }
 
     private fun matches(floor: Floor, input: TriageInput, config: TriageConfig, unknownRules: List<String>): Boolean =
         when (floor.condition) {
-            FloorCondition.SANCTIONS_MATCH ->
-                input.clientId in config.sanctionedClients ||
-                    input.client.country?.uppercase() in config.sanctionedCountries ||
-                    input.counterpartyCountries.any { it.uppercase() in config.sanctionedCountries }
             FloorCondition.UNKNOWN_RULE -> unknownRules.isNotEmpty() || input.hits.isEmpty()
             FloorCondition.PEP_AND_HIGH_RISK_COUNTRY -> input.client.pep == true && highRiskCountries(input, config).isNotEmpty()
             FloorCondition.ALERT_TYPE -> input.alertType == floor.alertType
+            FloorCondition.CLIENT_UNBASELINED -> input.client.unbaselined
         }
 }
