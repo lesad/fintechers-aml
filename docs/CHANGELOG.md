@@ -27,6 +27,7 @@
 
 ### Removed
 
+- CI `integration` job (Vitest + Postgres service container) and its required check in the `main` ruleset: the app will not use Postgres. ADR-0025.
 - `docs/challenge/lane-overview.md`: every section was duplicated elsewhere in the folder.
 
 - Supabase: `@supabase/ssr`, `@supabase/supabase-js`, `src/core/supabase`, the CLI stack, `pnpm db:types`, the Supabase env vars, MCP server and skills, and the RLS convention.

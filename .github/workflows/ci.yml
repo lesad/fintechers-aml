@@ -29,30 +29,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
 
-  integration:
-    name: integration (Vitest + Postgres)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm db:migrate && pnpm db:seed
-      - run: pnpm test:integration
-
   build:
     name: build
     runs-on: ubuntu-latest
