@@ -14,8 +14,9 @@ const label = cva("inline-flex items-center gap-1.5", {
     boxed: { true: "h-[22px] rounded border border-border px-2 text-xs font-medium text-fg" },
   },
   compoundVariants: [
-    { status: "Escalated", boxed: true, className: "border-yellow bg-sel font-bold" },
-    { status: "Reported", boxed: true, className: "border-high-bg bg-high-bg text-high" },
+    { status: "Escalated", boxed: true, className: "font-bold" },
+    { status: "Reported", boxed: true, className: "text-high" },
+    { status: "False Positive", boxed: true, className: "text-low" },
   ],
 });
 
