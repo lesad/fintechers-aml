@@ -7,7 +7,7 @@
     "src/features/*/index.ts",
     "src/core/*/index.ts"
   ],
-  "ignorePatterns": ["**/*.generated.ts", "src/components/ui/**", "dist/**"],
+  "ignorePatterns": ["**/*.generated.ts", "dist/**"],
   "rules": {
     "unused-files": "error",
     "unused-exports": "error",
@@ -18,17 +18,7 @@
   "health": {
     "ignore": ["*.config.ts", "src/core/test/**"]
   },
-  "ignoreDependencies": [
-    "@base-ui/react",
-    "@hookform/resolvers",
-    "class-variance-authority",
-    "lucide-react",
-    "react-hook-form",
-    "react-dom",
-    "zod",
-    "shadcn",
-    "tw-animate-css"
-  ],
+  "ignoreDependencies": ["@hookform/resolvers", "react-hook-form", "react-dom", "zod"],
   "duplicates": {
     "minTokens": 50,
     "minLines": 5,

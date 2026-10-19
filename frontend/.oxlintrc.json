@@ -137,18 +137,7 @@
       "rules": {
         "unicorn/filename-case": ["error", { "case": "pascalCase" }]
       }
-    },
-    {
-      // shadcn generates these — keep upstream conventions so `shadcn add` stays a no-edit
-      // operation. Must stay LAST: overrides apply in order and the later block wins per rule.
-      "files": ["src/components/ui/**"],
-      "rules": {
-        "unicorn/filename-case": "off",
-        "typescript/consistent-type-definitions": "off",
-        "jsx-a11y/label-has-associated-control": "off",
-        "react/no-array-index-key": "off"
-      }
     }
   ],
-  "ignorePatterns": ["node_modules", "dist", "docs/design"]
+  "ignorePatterns": ["node_modules", "dist"]
 }

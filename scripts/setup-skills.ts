@@ -14,7 +14,6 @@ const PROJECT_SKILLS = [
   "dcramer/dex/dex",
   "wshobson/agents/tailwind-design-system",
   "vercel-labs/agent-skills/vercel-react-best-practices",
-  "shadcn/ui/shadcn",
   "typesafe-ai/skills/typesafe-ai",
 ] as const;
 

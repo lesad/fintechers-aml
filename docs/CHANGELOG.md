@@ -7,6 +7,8 @@
 ### Added
 
 - `engine/`: the rules engine. `./gradlew bootRun --args=import` loads the ČNB data into Postgres (amounts in haléře, FX by ČNB fixing, prorated Q2 baseline); `--args=run` runs the CEL rules A1–A3, B1–B2 and C1 (company layer) into hits, alerts (A per client, B per transaction, C per client) and `data/out/alerts-<run>.csv`. July data: A 5,493, B 112, C 1,077. Run instructions in `engine/README.md`.
+- The AML review queue, first page of the UI, built from `docs/design/aml-review-queue` on mock data: header (open cases by rating, open a transaction by ID with ⌘K / Ctrl+K), tabs (the queue plus closable transaction tabs; detail content comes next) and the queue table with search, rating and status filters. The page always fits the window; only the table body scrolls, under a sticky header. Design tokens (MoroSystems palette, risk colours, Inter Tight) live in `src/app/globals.css` as Tailwind `@theme` values.
+- Reusable UI without a component library (ADR-0028): `Tabs` / `Tab` with the `useTabs` hook (`@/hooks`), `Table` (column config, sticky header, own scroll), `Select` (native select with our own chevron), `RatingBadge` (rule rating with the AI rating attached), `StatusLabel`.
 - Vite 8 as the build tool: `index.html` → `src/app/main.tsx` → `src/app/App.tsx`. `pnpm dev` / `pnpm build` / `pnpm preview` replace the Next CLI. React Compiler stays on (Rolldown Babel preset), Tailwind moves to `@tailwindcss/vite`, and the Vitest unit project now lives in `vite.config.ts`.
 - `src/app/ErrorBoundary.tsx`: one top-level error boundary with a retry button, replacing the `error.tsx` / `global-error.tsx` / `global-not-found.tsx` route conventions.
 - ADR-0025 for the move off Next.js.
@@ -33,6 +35,7 @@
 
 ### Removed
 
+- shadcn/ui and its leftovers: `src/components/ui/`, `components.json`, `@base-ui/react`, `class-variance-authority`, `lucide-react`, `shadcn`, `tw-animate-css`, the shadcn MCP server and agent skill (ADR-0028).
 - `pnpm ship` (`scripts/ship.sh`): PRs are no longer required; changes are pushed to `main` directly. ADR-0026.
 - **Next.js** and everything that only served it: `next`, `next.config.ts`, the App Router tree under `src/app/[locale]/`, `src/proxy.ts`, `postcss.config.mjs`, and the `@swc/plugin-react-remove-properties` / `STRIP_TEST_IDS` test-id strip (ADR-0014 — `data-testid` now ships in the bundle).
 - **i18n**: `next-intl`, `messages/en.json`, `src/core/i18n/`, the `global.ts` message-type augmentation, and `@/validation`'s `zodErrorMap`. UI strings are inline English; Zod falls back to its own English defaults.

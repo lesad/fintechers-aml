@@ -16,7 +16,7 @@ This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FI
 - **Vite 8 + React 19 — a client-only SPA. There is no server, no router, no database here** (ADR-0025). `index.html` → `src/app/main.tsx` → `src/app/App.tsx`.
 - TypeScript strict, `noUncheckedIndexedAccess` on
 - Tailwind v4 (CSS-first via `@theme`, through `@tailwindcss/vite`)
-- shadcn/ui (`src/components/ui/`)
+- Own UI components on Tailwind (`src/components/`), no component library — no shadcn/ui (ADR-0028); design tokens from `docs/design/` live in `src/app/globals.css`
 - Data comes from the Kotlin + Spring Boot rules engine over HTTP (ADR-0024) — `fetch`, no client query lib, no axios
 - Vitest (one unit project, config in `vite.config.ts`)
 - Oxlint + Oxfmt (NOT ESLint/Prettier)
@@ -53,18 +53,18 @@ The `rerender-memo`, `rerender-memo-with-default-value`, `rerender-dependencies`
 
 - **Always `pnpm add -E` / `pnpm add -D -E`.** No version ranges (no `^`, no `~`). The repo's `.npmrc` has `save-exact=true` to enforce.
 - **Always run `pnpm check` before claiming work done.**
-- **Object shapes are `type`, never `interface`** (oxlint `typescript/consistent-type-definitions`). The only exemption is `src/components/ui/**` (shadcn output). Files in `src/components/**/*.tsx` are **PascalCase**, `ui/**` excepted. The `ui/**` exemption block must stay **last** in `.oxlintrc.json` `overrides` — oxlint applies overrides in order and the later match wins per rule, so an exemption placed before the rule it exempts is silently dead. `.oxlintrc.json` is parsed as JSONC, so `//` comments are legal in it (a `"//"` _key_ is not — oxlint rejects unknown fields).
+- **Object shapes are `type`, never `interface`** (oxlint `typescript/consistent-type-definitions`). No exemptions. Files in `src/components/**/*.tsx` are **PascalCase**. oxlint applies `.oxlintrc.json` `overrides` in order and the later match wins per rule, so an exemption block must come after the rule it exempts. `.oxlintrc.json` is parsed as JSONC, so `//` comments are legal in it (a `"//"` _key_ is not — oxlint rejects unknown fields).
 - **Lint/format = Oxlint + Oxfmt.** Do not add ESLint or Prettier. Oxfmt also **sorts imports** (`.oxfmtrc.json` `sortImports`) — don't hand-order imports; `pnpm format` groups (external → `@/` internal → relative → type) and alphabetizes them.
 - **Tests co-located** next to source: `*.test.ts(x)`, all unit. When a folder's tests crowd out its source (~3+), group them into a `__tests__/` sibling folder — **keep the suffix** (discovery globs are suffix-based, not folder-based; `__tests__/` avoids collision with the `src/core/test/` harness). All-or-nothing per folder — don't mix co-located and `__tests__/` in the same directory.
 - **Path aliases:** each `src/core/*` module has a **bare alias** — `@/hooks`, `@/utils`, plus deep `@/test/*` (`@/test/ids`, `@/test/render`). `@/features/*` → `src/features/*` for vertical slices, each with an `index.ts` barrel; see ADR-0011. `@/*` → `src/*` covers `@/app` and `@/components`. Aliases live in `tsconfig.json` `paths` and nowhere else — Vite and Vitest both read them from there (`resolve.tsconfigPaths`), so adding a core module = add its alias there. **Never import `@/core/…`** — the bare alias decouples the import from the physical path, so moving a module within `core` doesn't churn importers.
-- **`src/` layout:** exactly `app/`, `components/`, `core/`, `features/`. `app/` is the **application shell**, not a router — `main.tsx` (mount), `App.tsx` (the page), `ErrorBoundary.tsx` (the one class component in the codebase), `globals.css`. `components/` is **purely reusable** UI (shadcn `ui/` + shared); domain code lives in `src/features/<name>/` (its components, zod schema, data access, co-located tests). All shared infrastructure lives in `src/core/`, **one module per concern** — a folder with a deliberate `index.ts` public API (`hooks/`, `test/` incl. `test/ids/`, `utils/`), or a flat `<name>.ts` when it's a single cohesive file that won't grow. Both import the same way via the module's bare alias.
+- **`src/` layout:** exactly `app/`, `components/`, `core/`, `features/`. `app/` is the **application shell**, not a router — `main.tsx` (mount), `App.tsx` (the page), `ErrorBoundary.tsx` (the one class component in the codebase), `globals.css`. `components/` is **purely reusable** UI, exported through `components/index.ts`; domain code lives in `src/features/<name>/` (its components, zod schema, data access, co-located tests). All shared infrastructure lives in `src/core/`, **one module per concern** — a folder with a deliberate `index.ts` public API (`hooks/`, `test/` incl. `test/ids/`, `utils/`), or a flat `<name>.ts` when it's a single cohesive file that won't grow. Both import the same way via the module's bare alias.
 - **Module boundaries — barrels stay bundle-safe (ADR-0012, as narrowed by ADR-0025):** everything ships to the browser now, so the server/client split is gone — but the rule it protected is not. A barrel (`index.ts`) must not re-export anything that drags test-only or node-only dependencies into the app graph. Import a `core` module through its **root alias** (`import { cn } from "@/utils"`), not a deep internal path (`@/utils/cn`); `index.ts` names exports explicitly (no `export *` grab-bags across modules). `test` has no root barrel — import its members by deep alias (`@/test/ids`, `@/test/render`), because `render.tsx` pulls `@testing-library/react`. **`features/` follow the same shape:** each `src/features/<name>/` has an `index.ts` barrel (components, zod schema, type-only re-exports) with the feature's data access alongside it.
 - **Layering (enforced):** `app → features → components → core`; imports may only point **down**. `core/` imports none of the others; `components/` may not import `app/`/`features/` — reusable UI stays presentational and data-free (fetch in the shell or a feature, pass props down); `features/` may not import `app/` or another feature via `@/features/*` (use relative imports within a feature, hoist shared code to `components/`/`core/`). Machine-checked by oxlint `no-restricted-imports` patterns per source zone in `.oxlintrc.json` — a violation fails `pnpm check`. See ADR-0011.
 - **Every lint suppression / unsafe cast carries a rationale comment on the line directly above it** — never a bare `// oxlint-disable*` or unexplained `as unknown as`. State _why_ the rule can't apply (e.g. TS generic-spread limitation, dynamic-key construction). Convention for now, checked at review; once trusted we tighten the rules. (oxlint `reportUndescribedDirectives` will enforce the "reason required" half natively when released — not in 1.62.)
 
 ## Workflow
 
-- New shadcn component: `pnpm dlx shadcn@latest add <name>` (don't hand-write). `components.json` has `rsc: false` — the generated files are plain client components.
+- New reusable component: a PascalCase file in `src/components/`, styled with Tailwind and the `@theme` tokens, exported from `src/components/index.ts`.
 - New feature: create `src/features/<name>/` (components + zod schema + its `fetch`-based data access + co-located tests) with an `index.ts` barrel; `src/app/App.tsx` imports the barrel and stays thin. Reusable, non-domain UI goes in `src/components/`.
 - New UI copy: inline English in the component. There is no message catalog (ADR-0025).
 - Data access: `fetch` against the Kotlin engine, validated with zod at the boundary — never trust a response shape. No client query lib, no axios (ADR-0005).
@@ -98,7 +98,6 @@ Install generic ones: `pnpm dlx skills add <owner/repo> --skill <name> --agent c
 - `dcramer/dex/dex` — live task memory (see ADR-0003; `dex-plan` deliberately skipped)
 - `wshobson/agents/tailwind-design-system` — Tailwind design system
 - `vercel-labs/agent-skills/vercel-react-best-practices` — Vercel React patterns
-- `shadcn/ui/shadcn` — shadcn/ui component library
 - `typesafe-ai/skills/typesafe-ai` — TypeSafe System One typed judgments
 
 Install project ones: `pnpm dlx skills add <owner/repo> --skill <name> --agent claude-code -y`
@@ -113,7 +112,7 @@ Install project ones: `pnpm dlx skills add <owner/repo> --skill <name> --agent c
 
 ## MCPs
 
-`.mcp.json` ships: shadcn, fallow, vercel.
+`.mcp.json` ships: fallow, vercel.
 Fallow MCP ships in the npm `fallow` package — no Rust/cargo needed.
 Context7 is globally installed in user environment — not in `.mcp.json`.
 Vercel MCP at `https://mcp.vercel.com` (HTTP, OAuth auth required on first connect).

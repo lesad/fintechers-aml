@@ -13,7 +13,7 @@
 | react-hook-form / resolvers | 7.75.0 / 5.2.2 | `/react-hook-form/react-hook-form` · `/react-hook-form/resolvers` |
 | Vitest                      | 4.1.5          | `/vitest-dev/vitest` (tag `v4.1.6`)                               |
 
-Runtime: Node ≥24, pnpm 10.30.2. UI utils (docs rarely needed — resolve on demand): @base-ui/react 1.4.1, class-variance-authority 0.7.1, clsx 2.1.1, tailwind-merge 3.5.0, lucide-react 1.14.0. Build plumbing: @tailwindcss/vite 4.2.4, @rolldown/plugin-babel 0.2.4 + babel-plugin-react-compiler 1.0.0 (how the compiler is wired — see ADR-0025).
+Runtime: Node ≥24, pnpm 10.30.2. UI utils (docs rarely needed — resolve on demand): clsx 2.1.1, tailwind-merge 3.5.0 (behind `cn()`). Build plumbing: @tailwindcss/vite 4.2.4, @rolldown/plugin-babel 0.2.4 + babel-plugin-react-compiler 1.0.0 (how the compiler is wired — see ADR-0025).
 
 Rules engine (`engine/`, ADR-0024): JDK 25 (Gradle toolchain), Kotlin 2.4.21, Gradle 9.8.1, Spring Boot 4.1.1 (JDBC, Liquibase, Jackson 3), PostgreSQL 17, `dev.cel:cel` 0.14.0 (CEL for rules), `com.spandigital:cel2sql4j` 0.2.7 (CEL filters to SQL), Testcontainers for tests. Versions live in `engine/build.gradle.kts`.
 

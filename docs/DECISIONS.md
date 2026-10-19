@@ -6,6 +6,10 @@
 
 **Accepted.** The Vite SPA and its whole Node toolchain live in `frontend/`: `src/`, `public/`, `index.html`, `vite.config.ts`, `tsconfig.json`, `package.json`, the pnpm lockfile, workspace file and npm config, and the oxlint, oxfmt and fallow configs. The repo root keeps what serves the whole repo: `docs/`, `reference/`, `data/`, `scripts/` (called from `frontend/package.json` as `../scripts/…`), `.github/`, `.claude/`, `CLAUDE.md` and `README.md`. CI runs the `check` and `build` jobs and fallow in `frontend/`; the pre-commit hook `cd`s there. _Why:_ the repo now holds two apps, the Kotlin engine in `engine/` (ADR-0024) and the web app; giving each its own folder keeps their tooling apart and the root readable. _Trade-off:_ oxfmt refuses paths outside its working directory, so the markdown in `docs/`, `README.md` and `CLAUDE.md` is no longer format-checked. Supersedes the root layout described in ADR-0025.
 
+### ADR-0028 — No component library: own Tailwind components on the design tokens; shadcn/ui is removed
+
+**Accepted.** The UI is built from our own small components in `src/components/` (`Tabs`/`Tab`, `Table`, `RatingBadge`, `StatusLabel`, exported from `components/index.ts`), styled with Tailwind on the `@theme` tokens taken from the Claude Design export (`docs/design/`, mirrored in `src/app/globals.css`). shadcn/ui is removed with everything that served it: `src/components/ui/`, `components.json`, `@base-ui/react`, `class-variance-authority`, `lucide-react`, `shadcn`, `tw-animate-css`, the shadcn MCP server and agent skill, and the `src/components/ui/**` lint and fallow exemptions. `cn()` (clsx + tailwind-merge) stays. _Why:_ the design is plain styled markup on the MoroSystems design system, not shadcn, and the team decided not to use a component library; the generated components were unused once the review queue landed. Supersedes the `ui/**` exemptions in ADR-0019.
+
 ### ADR-0027 — No regulatory rule layer; every monitoring rule is the institution's own
 
 **Accepted.** The rules engine has three layers: company, client segment and client. The regulatory layer from ADR-0024 is dropped, and with it the "regulatory floor" proof. FINREG's rules A, B and C are seeded as company rules. Every rule can be added, changed, suppressed or replaced at its layer, through the checks and an approval. The cel-java verifier stays, as an informative change summary (what a change newly catches and no longer catches) rather than a gate. _Why:_ the team found that in practice monitoring scenarios and thresholds are each institution's own risk-based decision, so a hard-coded regulatory layer would model something that does not exist. Design: `docs/engine/rules-engine-design.md`.
@@ -57,6 +61,8 @@ _Superseded in part by ADR-0021: the database is Postgres on AWS (RDS). Supersed
 **The relaxation block now lists `*.spec` and `*.e2e`, not just `*.test`.** It had covered `*.test`/`*.stories`/`tests/**`/`src/core/test/**`, so this repo's own integration specs and Playwright tests were held to production rules — an oversight, not a policy. `no-await-in-loop` is off there too: sequential awaits are the normal shape of a spec.
 
 _Why:_ each was a real papercut downstream, and lint config is exactly the kind of thing a template should get right once. _Trade-off:_ the `unknown`-routed cast in `tree.ts`, and a per-zone override ordering constraint that is invisible in the file itself (hence the comment on the last block — oxlint parses JSONC, so `//` comments are legal there).
+
+_Superseded in part by ADR-0028: shadcn/ui and its `src/components/ui/**` exemptions are removed._
 
 ### ADR-0018 — Track Next 16's stable conventions: `proxy.ts`, top-level `typedRoutes`, no `globalNotFound` flag
 
