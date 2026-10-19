@@ -13,7 +13,7 @@ import software.amazon.awssdk.services.bedrockruntime.model.SystemContentBlock
 @ConfigurationProperties("bedrock")
 data class BedrockProperties(
     val region: String = "eu-central-1",
-    val modelId: String = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    val modelId: String,
 )
 
 class BedrockException(message: String) : RuntimeException(message)
