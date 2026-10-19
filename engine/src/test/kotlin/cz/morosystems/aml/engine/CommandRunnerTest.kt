@@ -29,7 +29,7 @@ class CommandRunnerTest {
 
     @Test
     fun importCommandRunsImporterAndPrintsReport() {
-        `when`(importer.import()).thenReturn(ImportReport(5493, 397853, 100, 12, 7))
+        `when`(importer.import()).thenReturn(ImportReport(5493, 397853, 100, 12, 7, 0, 0))
         val out = run("import")
         verify(importer).import()
         assertThat(out).contains("5493").contains("397853")

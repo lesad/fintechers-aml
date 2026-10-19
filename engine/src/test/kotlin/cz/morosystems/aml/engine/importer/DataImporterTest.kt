@@ -37,7 +37,7 @@ class DataImporterTest(
     @Test
     fun importsRowsAndReports() {
         val report = importFrom(fixtures)
-        assertThat(report).isEqualTo(ImportReport(clients = 3, transactions = 6, fxRates = 9, listCodes = 4, clientsWithoutQ2 = 1))
+        assertThat(report).isEqualTo(ImportReport(clients = 3, transactions = 6, fxRates = 9, listCodes = 4, clientsWithoutQ2 = 1, negativeVolumes = 0, emptyRequiredFields = 0))
         assertThat(count("client")).isEqualTo(3)
         assertThat(count("transaction")).isEqualTo(6)
     }
@@ -131,5 +131,33 @@ class DataImporterTest(
         assertThatThrownBy { importFrom(bad) }.hasMessageContaining("T000004").hasMessageContaining("K999999")
         assertThat(count("client")).isEqualTo(3)
         assertThat(count("transaction")).isEqualTo(6)
+    }
+
+    @Test
+    fun importsMoreRowsThanOneBatch(@TempDir dir: Path) {
+        val extra = (1..2001).joinToString("") { "X%06d;K000001;04.05.2026;10:15:00;1.00;CZK;CZ;CZ;K000001;ACZ00500;outgoing payment\n".format(it) }
+        val big = variant(dir, "CNB/transactions.csv") { it + extra }
+        assertThat(importFrom(big).transactions).isEqualTo(6 + 2001)
+        assertThat(count("transaction")).isEqualTo(2007)
+    }
+
+    @Test
+    fun duplicateTransactionIdFailsNamingIt(@TempDir dir: Path) {
+        val bad = variant(dir, "CNB/transactions.csv") { it.replace("T000002", "T000001") }
+        assertThatThrownBy { importFrom(bad) }.hasMessageContaining("duplicate transaction id T000001")
+    }
+
+    @Test
+    fun duplicateClientIdFailsNamingIt(@TempDir dir: Path) {
+        val bad = variant(dir, "CNB/clients.csv") { it.replace("K000003;", "K000002;") }
+        assertThatThrownBy { importFrom(bad) }.hasMessageContaining("duplicate client id K000002")
+    }
+
+    @Test
+    fun reportsNegativeVolumesAndEmptyRequiredFields(@TempDir dir: Path) {
+        val bad = variant(dir, "CNB/transactions.csv") { it.replace("2500.50;CZK;CZ;CZ", "-2500.50;CZK;;CZ") }
+        val report = importFrom(bad)
+        assertThat(report.negativeVolumes).isEqualTo(1)
+        assertThat(report.emptyRequiredFields).isEqualTo(1)
     }
 }

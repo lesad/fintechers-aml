@@ -17,6 +17,8 @@ data class ImportReport(
     val fxRates: Int,
     val listCodes: Int,
     val clientsWithoutQ2: Int,
+    val negativeVolumes: Int,
+    val emptyRequiredFields: Int,
 )
 
 private class Row(private val cells: Map<String, String>) {
@@ -31,13 +33,24 @@ class DataImporter(private val jdbc: JdbcClient, private val props: EngineProper
     fun import(): ImportReport {
         jdbc.sql("truncate transaction, client, fx_rate, reference_list").update()
         val clientRows = readCsv(props.dataDir.resolve("CNB/clients.csv"))
+        requireUnique("client", clientRows) { it["client ID"] }
         val clientIds = loadClients(clientRows)
         val fx = FxTable.parse(Files.readAllLines(props.dataDir.resolve("cnb-fx/rok-2026.txt")))
         val fxRates = loadFixings(fx)
-        val transactions = loadTransactions(readCsv(props.dataDir.resolve("CNB/transactions.csv")), clientIds, fx)
+        val transactionRows = readCsv(props.dataDir.resolve("CNB/transactions.csv"))
+        requireUnique("transaction", transactionRows) { it["transaction ID"] }
+        val transactions = loadTransactions(transactionRows, clientIds, fx)
         val listCodes = loadReferenceList()
         val withoutQ2 = clientRows.count { (it["real number of transactions in 2Q2026"].toIntOrNull() ?: 0) == 0 }
-        return ImportReport(clientRows.size, transactions, fxRates, listCodes, withoutQ2)
+        val negativeVolumes = transactionRows.count { BigDecimal(it["volume"]).signum() < 0 }
+        val empty = clientRows.sumOf { r -> CLIENT_REQUIRED.count { r[it].isEmpty() } } +
+            transactionRows.sumOf { r -> TRANSACTION_REQUIRED.count { r[it].isEmpty() } }
+        return ImportReport(clientRows.size, transactions, fxRates, listCodes, withoutQ2, negativeVolumes, empty)
+    }
+
+    private fun requireUnique(entity: String, rows: List<Row>, id: (Row) -> String) {
+        val seen = HashSet<String>()
+        rows.forEach { check(seen.add(id(it))) { "duplicate $entity id ${id(it)}" } }
     }
 
     private fun readCsv(path: Path): List<Row> {
@@ -122,6 +135,11 @@ class DataImporter(private val jdbc: JdbcClient, private val props: EngineProper
     }
 
     private companion object {
-        const val BATCH = 5000
+        const val BATCH = 2000
+        val CLIENT_REQUIRED = listOf("client ID", "country of client", "date of contract", "contract concluded", "PEP", "type of client", "AML risk score")
+        val TRANSACTION_REQUIRED = listOf(
+            "transaction ID", "client ID", "date", "time", "volume", "currency",
+            "country of payer", "country of payee", "type of transaction",
+        )
     }
 }
