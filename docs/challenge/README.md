@@ -19,6 +19,7 @@ Decided 2026-10-19 on the way to the event. The focus is AML, not fraud: it has 
 | [app-rules.md](app-rules.md)                           | **Implementation spec:** the detection rules and the invariants the code enforces, with guidelines      |
 | [company-specific-rules.md](company-specific-rules.md) | Our own 18-scenario monitoring ruleset (S-01…S-18): typology, logic, evidence status, firing rates      |
 | [data-profile.md](data-profile.md)                     | The ČNB dataset as delivered, FX rates, five findings for the build, the rule dry run                   |
+| [mostlyright-data.md](mostlyright-data.md)             | MostlyRight registers: contents, encoding damage, why they don't join, what matching would need         |
 | [data-patterns.md](data-patterns.md)                   | What the synthetic data supports: the generator fingerprint and the verdict on every signal tried       |
 | [aml-pattern-research.md](aml-pattern-research.md)     | Typologies, EU and ČNB guidance on alerts, unsupervised methods; the research behind the data run       |
 | [rule-b-reference-data.md](rule-b-reference-data.md)   | EU and FATF high-risk lists for July 2026 (data in `reference/high-risk-countries-2026-07.json`)        |

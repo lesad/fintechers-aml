@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": [".claude/**", "docs/**/*.html"],
+  "ignorePatterns": [".claude/**", "docs/**/*.html", "docs/design/**"],
   "sortImports": {
     "order": "asc",
     "ignoreCase": true,

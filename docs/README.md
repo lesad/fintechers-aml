@@ -18,6 +18,7 @@ This directory is durable, committed project memory. Live, in-flight work lives 
 | `challenge/`     | Hackathon challenge context (FINREG AML triage): start at `challenge/README.md`                                                 | humans + agents, single source (ADR-0023) |
 | `rules/`         | Rule specifications we iterate on (detect, facts, gates, Jev questions, policy, priority, routing): start at `rules/README.md`  | humans + agents                           |
 | `engine/`        | Design of the Kotlin monitoring rules engine (CEL rules, layers, Z3 checks, alerts): `engine/rules-engine-design.md` (ADR-0024) | humans + agents                           |
+| `design/`        | Saved Claude Design screens, the source of truth for the UI: start at `design/README.md`                                        | humans + agents                           |
 | `UPSTREAM.md`    | Generic changes to contribute back — **consuming forks only**; empty in this template repo                                      | agents + humans (forks)                   |
 | _(live tasks)_   | tracked in **dex** (`.dex/`), not a file here                                                                                   | agents                                    |
 

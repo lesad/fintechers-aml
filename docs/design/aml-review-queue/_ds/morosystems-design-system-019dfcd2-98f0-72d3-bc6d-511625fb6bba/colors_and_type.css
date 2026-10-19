@@ -1,0 +1,331 @@
+/* ==========================================================================
+   MoroSystems — Foundations: Colors & Type
+   Source of truth: assets/MoroSystems_BrandManual.pdf (BrandManuál 2025)
+   ========================================================================== */
+
+/* Webfonts — local TTFs supplied by the brand. */
+@font-face {
+  font-family: 'Boldonse';
+  src: url('fonts/Boldonse-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Inter Tight — variable font covers all weights for upright + italic */
+@font-face {
+  font-family: 'Inter Tight';
+  src: url('fonts/InterTight-VariableFont_wght.ttf') format('truetype-variations'),
+       url('fonts/InterTight-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter Tight';
+  src: url('fonts/InterTight-Italic-VariableFont_wght.ttf') format('truetype-variations'),
+       url('fonts/InterTight-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: only light;
+  /* ----------------------------------------------------------------------
+     CORE PALETTE  (BrandManuál p.10)
+     ---------------------------------------------------------------------- */
+
+  /* Primary: Yellow — brand recognition. Pantone 123 C / CMYK 0-11-82-0 */
+  --ms-yellow:        #ffdc3c;
+  --ms-yellow-80:     #ffe363;
+  --ms-yellow-60:     #ffea8a;
+  --ms-yellow-40:     #fff1b1;
+  --ms-yellow-20:     #fff8d8;
+
+  /* Primary dark: Deep Indigo — CTAs, headlines, dark backgrounds.
+     Pantone 2765 C / CMYK 95-87-40-45 */
+  --ms-indigo:        #252746;
+  --ms-indigo-80:     #51526b;
+  --ms-indigo-60:     #7c7d90;
+  --ms-indigo-40:     #a8a9b5;
+  --ms-indigo-20:     #d3d4da;
+
+  /* Accent: Purple — interactive emphasis, CTAs, highlights.
+     Pantone 2665 C / CMYK 67-75-0-0 */
+  --ms-purple:        #8250be;
+  --ms-purple-80:     #9b73cb;
+  --ms-purple-60:     #b496d8;
+  --ms-purple-40:     #cdb9e5;
+  --ms-purple-20:     #e6dcf2;
+
+  /* Accent: Orange — alert texts and warnings (per BRAND_NOTES). */
+  --ms-orange:        #ff6e32;
+
+  /* Light Purple — info boxes and tinted callouts (per BRAND_NOTES). */
+  --ms-purple-light:  #cdb9e5;
+
+  /* Neutrals */
+  --ms-white:         #ffffff;
+  --ms-paper:         #fafafb; /* off-white page background */
+  --ms-ink:           #101018; /* near-black for max-contrast text */
+
+  /* ----------------------------------------------------------------------
+     SEMANTIC ALIASES
+     ---------------------------------------------------------------------- */
+  --ms-bg:            var(--ms-white);
+  --ms-bg-alt:        var(--ms-paper);
+  --ms-bg-dark:       var(--ms-indigo);
+
+  --ms-fg:            var(--ms-indigo);     /* primary text on light bg */
+  --ms-fg-muted:      var(--ms-indigo-80);  /* secondary text */
+  --ms-fg-subtle:     var(--ms-indigo-60);  /* tertiary, captions */
+  --ms-fg-on-dark:    var(--ms-white);
+  --ms-fg-on-yellow:  var(--ms-indigo);
+
+  --ms-border:        var(--ms-indigo-20);
+  --ms-border-strong: var(--ms-indigo);
+  --ms-border-yellow: var(--ms-yellow);
+
+  --ms-accent:        var(--ms-yellow);     /* hero accent — yellow */
+  --ms-accent-cta:    var(--ms-purple);     /* interactive accent — purple */
+  --ms-link:          var(--ms-indigo);
+  --ms-link-hover:    var(--ms-purple);
+
+  /* Stateful */
+  --ms-focus-ring:    var(--ms-purple);
+  --ms-success:       #2f9e6b;
+  --ms-warning:       var(--ms-orange);
+  --ms-info-bg:       var(--ms-purple-light);
+  --ms-danger:        #d4453d;
+
+  /* ----------------------------------------------------------------------
+     TYPOGRAPHY  (BrandManuál p.17–21)
+     ---------------------------------------------------------------------- */
+  --ms-font-display: 'Boldonse', 'Arial Black', 'Helvetica Neue', sans-serif;
+  --ms-font-body:    'Inter Tight', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ms-font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* The manual works in % of a 1.0 reference (H1 = 100%, H2 = 50%, body = 70%).
+     Translated to a base size of 96px for hero scale. */
+  --ms-h1:   clamp(3rem,  6vw + 1rem, 6rem);    /* Boldonse Regular */
+  --ms-h2:   clamp(2rem,  3vw + 0.75rem, 3rem); /* Boldonse Regular, half H1 */
+  --ms-h3:   clamp(1.25rem, 1.2vw + 0.7rem, 1.5rem); /* Inter Tight SemiBold */
+  --ms-perex: 1.25rem;   /* lede / intro paragraph — Inter Tight Regular */
+  --ms-text:  1rem;      /* body — Inter Tight Regular */
+  --ms-small: 0.875rem;
+  --ms-micro: 0.75rem;
+
+  /* Line-heights — Boldonse runs tight; Inter Tight gets generous leading */
+  --ms-lh-display: 1.25;       /* Boldonse multi-line baseline */
+  --ms-lh-display-marked: 1.4; /* Use when display text contains <mark>/.ms-mark; reserves room so the highlight band can't bleed onto adjacent lines */
+  --ms-lh-heading: 1.3;
+  --ms-lh-body:    1.55;
+  --ms-lh-loose:   1.75;
+
+  /* Letter-spacing */
+  --ms-track-display: -0.01em;
+  --ms-track-caps:    0.08em;
+
+  /* ----------------------------------------------------------------------
+     SPACING & RADII
+     The manual doesn't fix a spacing scale — these match the airy,
+     left-aligned editorial layout shown on the web pages.
+     ---------------------------------------------------------------------- */
+  --ms-space-1: 4px;
+  --ms-space-2: 8px;
+  --ms-space-3: 12px;
+  --ms-space-4: 16px;
+  --ms-space-5: 24px;
+  --ms-space-6: 32px;
+  --ms-space-7: 48px;
+  --ms-space-8: 64px;
+  --ms-space-9: 96px;
+  --ms-space-10: 128px;
+
+  --ms-radius-xs: 4px;
+  --ms-radius-sm: 8px;
+  --ms-radius-md: 12px;
+  --ms-radius-lg: 20px;
+  --ms-radius-pill: 999px;
+
+  /* Shadows — restrained; the brand prefers flat, confident shapes.
+     Used sparingly for hover lift on cards/buttons. */
+  --ms-shadow-sm: 0 1px 2px rgba(37, 39, 70, 0.06);
+  --ms-shadow-md: 0 6px 18px -6px rgba(37, 39, 70, 0.18);
+  --ms-shadow-lg: 0 20px 40px -16px rgba(37, 39, 70, 0.25);
+  --ms-shadow-cta: 0 8px 20px -8px rgba(130, 80, 190, 0.45); /* purple glow on CTA */
+
+  /* Motion */
+  --ms-ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ms-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ms-dur-fast: 120ms;
+  --ms-dur-base: 200ms;
+  --ms-dur-slow: 360ms;
+}
+
+/* ============================================================
+   BASELINE — defeats forced-dark UAs in previewer iframes.
+   These declarations apply unconditionally so preview cards
+   render on white regardless of host page color-scheme.
+   ============================================================ */
+html, body {
+  background: #ffffff !important;
+  color: #252746 !important;
+}
+
+/* ============================================================
+   ELEMENT DEFAULTS — opt in via class="ms-typography" or apply on root
+   ============================================================ */
+.ms-typography,
+.ms-typography * {
+  font-family: var(--ms-font-body);
+  color: var(--ms-fg);
+}
+
+.ms-typography h1, .ms-h1 {
+  font-family: var(--ms-font-display);
+  font-weight: 400;
+  font-size: var(--ms-h1);
+  line-height: var(--ms-lh-display);
+  letter-spacing: var(--ms-track-display);
+  margin: 0 0 0.5em;
+}
+
+.ms-typography h2, .ms-h2 {
+  font-family: var(--ms-font-display);
+  font-weight: 400;
+  font-size: var(--ms-h2);
+  line-height: var(--ms-lh-heading);
+  letter-spacing: var(--ms-track-display);
+  margin: 0 0 0.5em;
+}
+
+.ms-typography h3, .ms-h3 {
+  font-family: var(--ms-font-body);
+  font-weight: 600;
+  font-size: var(--ms-h3);
+  line-height: var(--ms-lh-heading);
+  margin: 0 0 0.5em;
+}
+
+.ms-typography .ms-perex,
+.ms-perex {
+  font-family: var(--ms-font-body);
+  font-weight: 400;
+  font-size: var(--ms-perex);
+  line-height: var(--ms-lh-loose);
+  color: var(--ms-fg);
+}
+
+.ms-typography p, .ms-text {
+  font-family: var(--ms-font-body);
+  font-weight: 400;
+  font-size: var(--ms-text);
+  line-height: var(--ms-lh-body);
+  color: var(--ms-fg);
+  margin: 0 0 1em;
+  text-wrap: pretty;
+}
+
+.ms-typography small, .ms-small {
+  font-size: var(--ms-small);
+  color: var(--ms-fg-muted);
+}
+
+.ms-typography a, .ms-link {
+  color: var(--ms-link);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  transition: color var(--ms-dur-fast) var(--ms-ease-out);
+}
+.ms-typography a:hover, .ms-link:hover { color: var(--ms-link-hover); }
+
+/* CTA-styled inline link — yellow background swatch */
+.ms-link-cta {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--ms-track-caps);
+  color: var(--ms-indigo);
+  background: var(--ms-yellow);
+  padding: 0.1em 0.4em;
+  text-decoration: none;
+  border-radius: 2px;
+}
+
+/* Lists per manual: dot OR yellow arrow; numbered lists w/ colored numerals */
+.ms-typography ul, .ms-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em;
+}
+.ms-typography ul li, .ms-list li {
+  position: relative;
+  padding-left: 1.75em;
+  margin-bottom: 0.5em;
+  line-height: var(--ms-lh-body);
+}
+.ms-typography ul li::before, .ms-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--ms-yellow);
+  font-weight: 700;
+  background: var(--ms-indigo);
+  width: 1.25em;
+  height: 1.25em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-size: 0.85em;
+}
+.ms-list--dot li::before {
+  content: '';
+  width: 0.4em;
+  height: 0.4em;
+  top: 0.6em;
+  left: 0.4em;
+  background: var(--ms-indigo);
+  border-radius: 50%;
+}
+.ms-list--num {
+  counter-reset: ms-num;
+}
+.ms-list--num li {
+  counter-increment: ms-num;
+  padding-left: 2.25em;
+}
+.ms-list--num li::before {
+  content: counter(ms-num);
+  background: transparent;
+  color: var(--ms-yellow);
+  font-family: var(--ms-font-display);
+  font-size: 1.15em;
+  width: 1.5em;
+  text-align: left;
+}
+
+/* ============================================================
+   Yellow highlight mark — reusable across all Boldonse headings.
+   Boldonse glyphs sit low and have tall ascenders/descenders,
+   so a default <mark> wraps the whole loose line-box and visually
+   bleeds into the line above. This class clamps the mark to its
+   own cap-height and offsets it so the highlight ALWAYS sits
+   behind the glyph it's wrapping, never the line above/below.
+   Pair with line-height: 1.4+ on the parent heading.
+   ============================================================ */
+.ms-mark, .ms-typography mark {
+  background: var(--ms-yellow);
+  color: var(--ms-indigo);
+  padding: 0.12em 0.18em 0.18em;
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-0.02em);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Selection */
+::selection { background: var(--ms-yellow); color: var(--ms-indigo); }
