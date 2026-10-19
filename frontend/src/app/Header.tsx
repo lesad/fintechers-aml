@@ -1,5 +1,6 @@
 import { cva } from "class-variance-authority";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router";
 
 import { UserMenu } from "./UserMenu";
 
@@ -16,6 +17,8 @@ type HeaderProps = {
   onUser: (user: User) => void;
   rulesOpen: boolean;
   onToggleRules: () => void;
+  /** The logo: back to the review queue tab. */
+  onHome: () => void;
 };
 
 const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl ";
@@ -44,6 +47,7 @@ export function Header({
   onUser,
   rulesOpen,
   onToggleRules,
+  onHome,
 }: HeaderProps) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
@@ -65,11 +69,13 @@ export function Header({
   return (
     <header className="flex h-11 flex-none items-center gap-4 bg-[linear-gradient(90deg,#252746_0%,#2b2c55_55%,#3a2e66_100%)] px-4 text-white">
       <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
-        <img
-          src="/aml-spotter-logo-white.png"
-          alt="AML spotter"
-          className="block h-7 w-auto flex-none"
-        />
+        <Link
+          to="/"
+          onClick={onHome}
+          className="flex-none rounded outline-none focus-visible:ring-2 focus-visible:ring-yellow"
+        >
+          <img src="/aml-spotter-logo-white.png" alt="AML spotter" className="block h-7 w-auto" />
+        </Link>
         <div
           title="Open cases by rule rating"
           className="flex min-w-0 flex-auto items-center justify-center gap-2.5 overflow-hidden text-xs whitespace-nowrap text-indigo-20 tabular-nums"

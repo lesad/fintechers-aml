@@ -87,6 +87,7 @@ export function App() {
         }}
         rulesOpen={rulesOpen}
         onToggleRules={() => void navigate(rulesOpen ? "/" : "/rules")}
+        onHome={() => tabs.select(null)}
       />
 
       <Routes>

@@ -332,6 +332,17 @@ describe("App", () => {
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
   });
 
+  it("the logo goes to the review queue from the rules page or a transaction tab, tabs kept", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: "AML spotter" }));
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
+    expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
+  });
+
   it("opens the rules page straight from /rules and sends an unknown path back to the overview", async () => {
     const { unmount } = render(<App />, { route: "/rules" });
     expect(screen.getByRole("button", { name: "Rules" })).toHaveAttribute("aria-pressed", "true");
