@@ -1,4 +1,5 @@
 {
+  "ignorePatterns": [".claude/**"],
   "sortImports": {
     "order": "asc",
     "ignoreCase": true,
