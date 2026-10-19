@@ -88,7 +88,7 @@ class RunService(
         lists: Map<String, List<String>>,
     ): List<Hit> {
         val query = queries.build(rule, period, applicable.takeIf { it.size < clientsById.size })
-        val params = rule.params
+        val params = rule.params.mapValues { it.value.value }
         val hits = mutableListOf<Hit>()
         streaming.sql(query.sql).params(query.params).query { rs: ResultSet ->
             val clientId = rs.getString("client_id")

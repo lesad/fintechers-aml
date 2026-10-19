@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0036 — A rule parameter stores its unit
+
+**Accepted.** Each `rule_param` row carries a `unit`: `amount` (haléře), `percent`, `multiple` or `count`, required on save and fixed with the version (ADR-0035). The API sends a parameter as `{value, unit}`; the rule explanation prompt states the unit on each parameter line, and the alert summary input gets a `units` map next to the evidence. _Why:_ every reader of a threshold, both models and the frontend, guessed the unit from the name or the size of the number (the rules page read values from 100,000 up as haléře), and a percentage read as haléře turns "80 %" into "0.80 CZK". Code knows the unit so no model or screen has to infer it.
+
 ### ADR-0035 — Parameter values belong to the immutable rule version
 
 **Accepted.** A rule version fixes its condition, variables and parameter values together: `rule_param` is keyed by `rule_id`, and changing a threshold means saving a new version. A segment or client that needs a different threshold gets its own rule version at that layer that replaces the company rule (`replaces_key`), the way suppression already works; per-parameter overrides are gone. A run fails, naming the client and the rules, when two rules at the same layer replace the same key for one client. _Why:_ a stored explanation, a hit's evidence or an audit entry must describe exactly what ran, and a rule whose thresholds could change under it cannot promise that. Supersedes the parameter-override half of ADR-0027 and the parameter layering in `docs/engine/rules-engine-design.md`.

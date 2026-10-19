@@ -1,13 +1,15 @@
-import { formatCzk, type RuleVersion, type RuleWindow } from "./api";
+import { formatCzk, type RuleParam, type RuleVersion, type RuleWindow } from "./api";
 
-// HACK: shortcut: values from 100,000 up read as haléře amounts, smaller ones as percentages or multiples; add a unit to engine parameters when a rule needs a small amount.
-const AMOUNT_FROM = 100_000;
+const reading: Record<RuleParam["unit"], (value: number) => string> = {
+  amount: (value) => `${value.toLocaleString("en-US")} haléře (${formatCzk(value)})`,
+  percent: (value) => `${value} %`,
+  multiple: (value) => `${value}×`,
+  count: (value) => String(value),
+};
 
-/** `pep_min = 10,000,000 haléře (100,000 CZK)` for amounts, `projected_pct = 25` otherwise. */
-export const paramLabel = (name: string, value: number) =>
-  value >= AMOUNT_FROM
-    ? `${name} = ${value.toLocaleString("en-US")} haléře (${formatCzk(value)})`
-    : `${name} = ${value}`;
+/** `pep_min = 10,000,000 haléře (100,000 CZK)`, `forward_pct = 80 %`, `avg_multiple = 3×`. */
+export const paramLabel = (name: string, { value, unit }: RuleParam) =>
+  `${name} = ${reading[unit](value)}`;
 
 export const scopeLabel = (v: Pick<RuleVersion, "layer" | "scopeSegmentId" | "scopeClientId">) =>
   v.layer === "company"

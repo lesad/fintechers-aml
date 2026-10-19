@@ -39,6 +39,13 @@ describe("RulesPage", () => {
     expect(detail).toHaveTextContent("10,000,000 haléře (100,000 CZK)");
   });
 
+  it("shows a percentage parameter with its unit, not as CZK", async () => {
+    serve();
+    render(<RulesPage author="J. Novák" onBack={() => {}} />);
+    fireEvent.click(within(await list()).getByRole("button", { name: /C1/ }));
+    expect(screen.getByRole("region", { name: "C1 v2" })).toHaveTextContent("forward_pct = 80 %");
+  });
+
   it('shows "No explanation yet" when the explanation is null', async () => {
     serve();
     render(<RulesPage author="J. Novák" onBack={() => {}} />);

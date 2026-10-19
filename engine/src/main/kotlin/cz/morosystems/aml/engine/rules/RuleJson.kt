@@ -8,6 +8,8 @@ import java.time.format.DateTimeParseException
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class WindowJson(val kind: String, val from: String? = null, val to: String? = null)
 
+data class ParamJson(val value: Long?, val unit: String?)
+
 data class VariableJson(val name: String, val agg: String, val field: String, val filter: String, val window: WindowJson)
 
 /** The POST body of `/api/rules`; enums are lowercase, windows ISO-8601 durations. */
@@ -22,7 +24,7 @@ data class RuleBody(
     val condition: String,
     val replacesKey: String? = null,
     val variables: List<VariableJson> = emptyList(),
-    val params: Map<String, Long?> = emptyMap(),
+    val params: Map<String, ParamJson?> = emptyMap(),
     val author: String,
 )
 
@@ -40,7 +42,7 @@ data class RuleVersionJson(
     val condition: String,
     val replacesKey: String?,
     val variables: List<VariableJson>,
-    val params: Map<String, Long>,
+    val params: Map<String, ParamJson>,
     val author: String?,
     val createdAt: OffsetDateTime,
     val explanation: String?,
@@ -67,7 +69,7 @@ fun RuleVersion.toJson() = RuleVersionJson(
         }
         VariableJson(v.name, v.agg.name.lowercase(), v.field, v.filter, window)
     },
-    params = rule.params,
+    params = rule.params.mapValues { (_, p) -> ParamJson(p.value, p.unit.name.lowercase()) },
     author = author,
     createdAt = createdAt,
     explanation = explanation,
@@ -88,7 +90,12 @@ fun RuleBody.toNewRule() = NewRule(
     variables = variables.mapIndexed { i, v ->
         VariableDefinition(i + 1, v.name.trim(), enumOf<Agg>("aggregation", v.agg), v.field.trim(), v.filter.trim().ifEmpty { "true" }, v.window.toWindow(v.name))
     },
-    params = params.mapValues { (name, value) -> value ?: throw InvalidRuleException("parameter $name needs a whole-number value") },
+    params = params.mapValues { (name, p) ->
+        Param(
+            p?.value ?: throw InvalidRuleException("parameter $name needs a whole-number value"),
+            enumOf<ParamUnit>("unit", p.unit ?: throw InvalidRuleException("parameter $name needs a unit: amount, percent, multiple or count")),
+        )
+    },
     author = author.trim(),
 )
 

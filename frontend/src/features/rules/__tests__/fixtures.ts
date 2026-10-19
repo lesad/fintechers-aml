@@ -58,7 +58,7 @@ export const A1: RuleVersion = {
       window: { kind: "day" },
     },
   ],
-  params: { projected_pct: 25 },
+  params: { projected_pct: { value: 25, unit: "percent" } },
   explanation:
     "Flags when the client's total transaction volume for the day is more than 25% of their expected monthly volume.",
 };
@@ -71,7 +71,7 @@ export const B2: RuleVersion = {
   alertType: "B",
   grain: "transaction",
   condition: b2Condition,
-  params: { pep_min: 10_000_000 },
+  params: { pep_min: { value: 10_000_000, unit: "amount" } },
   explanation:
     "Flags outgoing or unknown-direction transactions of more than 100,000 CZK when the client is a politically exposed person.",
 };
@@ -86,7 +86,10 @@ export const C1_V2: RuleVersion = {
   anchor: 'tx.direction == "in"',
   condition: c1Condition,
   variables: c1Variables('tx.direction in ["out", "unknown"] && !(tx.payee_account in payers)'),
-  params: { forward_pct: 80, min_inflow: 10_000_000 },
+  params: {
+    forward_pct: { value: 80, unit: "percent" },
+    min_inflow: { value: 10_000_000, unit: "amount" },
+  },
   explanation:
     "Flags when the client receives more than 100,000 CZK in incoming payments within 24 hours, and then forwards at least 80% of that amount within 6 hours.",
 };
@@ -102,7 +105,10 @@ export const C1_V1: RuleVersion = {
   anchor: 'tx.direction == "in"',
   condition: c1Condition,
   variables: c1Variables('tx.direction == "out" && !(tx.payee_account in payers)'),
-  params: { forward_pct: 80, min_inflow: 10_000_000 },
+  params: {
+    forward_pct: { value: 80, unit: "percent" },
+    min_inflow: { value: 10_000_000, unit: "amount" },
+  },
   explanation: null,
   explanationModel: null,
 };
@@ -116,7 +122,7 @@ export const B2_V2: RuleVersion = {
   status: "draft",
   author: "J. Novák",
   createdAt: "2026-10-19T21:30:00+02:00",
-  params: { pep_min: 5_000_000 },
+  params: { pep_min: { value: 5_000_000, unit: "amount" } },
   explanation:
     "Flags outgoing or unknown-direction transactions of more than 50,000 CZK when the client is a politically exposed person.",
 };

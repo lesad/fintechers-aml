@@ -22,7 +22,7 @@ fun newB2(pepMin: Long = 5_000_000, key: String = "B2") = NewRule(
     condition = """client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]""",
     replacesKey = null,
     variables = emptyList(),
-    params = mapOf("pep_min" to pepMin),
+    params = mapOf("pep_min" to Param(pepMin, ParamUnit.AMOUNT)),
     author = "J. Novák",
 )
 
@@ -41,6 +41,6 @@ fun newC1(key: String = "C9") = NewRule(
         VariableDefinition(2, "payers", Agg.SET, "payer_account", """tx.direction == "in"""", Window.Relative(Duration.ofHours(-24), Duration.ZERO)),
         VariableDefinition(3, "outflow", Agg.SUM, "amount", """tx.direction in ["out", "unknown"] && !(tx.payee_account in payers)""", Window.Relative(Duration.ZERO, Duration.ofHours(6))),
     ),
-    params = mapOf("min_inflow" to 10_000_000L, "forward_pct" to 80L),
+    params = mapOf("min_inflow" to Param(10_000_000, ParamUnit.AMOUNT), "forward_pct" to Param(80, ParamUnit.PERCENT)),
     author = "J. Novák",
 )

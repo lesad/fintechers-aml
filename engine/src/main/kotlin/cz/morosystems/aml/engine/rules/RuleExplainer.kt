@@ -67,8 +67,14 @@ internal fun explanationPrompt(rule: RuleDefinition, segmentName: String?): Stri
     rule.variables.sortedBy { it.position }.forEach {
         add("Variable ${it.name} = ${it.agg.name.lowercase()} of ${it.field} over transactions where ${it.filter}, window: ${windowWords(it.window)}")
     }
-    rule.params.toSortedMap().forEach { (name, value) ->
-        add("Parameter p.$name = $value (if this is an amount in haléře: ${String.format(Locale.US, "%,d", value / 100)} CZK)")
+    rule.params.toSortedMap().forEach { (name, p) ->
+        val reading = when (p.unit) {
+            ParamUnit.AMOUNT -> "${p.value} haléře (${String.format(Locale.US, "%,d", p.value / 100)} CZK)"
+            ParamUnit.PERCENT -> "${p.value} percent"
+            ParamUnit.MULTIPLE -> "${p.value} times"
+            ParamUnit.COUNT -> "${p.value}"
+        }
+        add("Parameter p.$name = $reading")
     }
 }.joinToString("\n")
 

@@ -11,7 +11,14 @@ import {
 
 import { Select } from "@/components";
 
-import { formatCzk, type NewRule, type RuleVersion, saveRule } from "./api";
+import {
+  formatCzk,
+  type NewRule,
+  PARAM_UNITS,
+  type RuleParam,
+  type RuleVersion,
+  saveRule,
+} from "./api";
 import { isoHours } from "./format";
 
 import type { ReactNode } from "react";
@@ -25,7 +32,7 @@ type FormValues = {
   grain: RuleVersion["grain"];
   anchor: string;
   condition: string;
-  params: { name: string; value: string }[];
+  params: { name: string; value: string; unit: RuleParam["unit"] | "" }[];
   variables: {
     name: string;
     agg: RuleVersion["variables"][number]["agg"];
@@ -92,9 +99,10 @@ function defaults(from: RuleVersion | null): FormValues {
     grain: from.grain,
     anchor: from.anchor ?? "",
     condition: from.condition,
-    params: Object.entries(from.params).map(([name, value]) => ({
+    params: Object.entries(from.params).map(([name, { value, unit }]) => ({
       name,
       value: String(value),
+      unit,
     })),
     variables: from.variables.map((v) => ({
       name: v.name,
@@ -129,7 +137,13 @@ function toNewRule(values: FormValues, from: RuleVersion | null, author: string)
           ? { kind: "day" }
           : { kind: "relative", from: `PT${Number(v.from)}H`, to: `PT${Number(v.to)}H` },
     })),
-    params: Object.fromEntries(values.params.map((p) => [p.name.trim(), Number(p.value)])),
+    params: Object.fromEntries(
+      values.params.map((p) => [
+        p.name.trim(),
+        // NOTE: the unit select is required, so "" never reaches here.
+        { value: Number(p.value), unit: p.unit as RuleParam["unit"] },
+      ]),
+    ),
     author,
   };
 }
@@ -140,6 +154,13 @@ type FieldsProps = { control: Control<FormValues>; register: UseFormRegister<For
 
 const legend = "mb-1 text-[11px] tracking-[0.04em] text-fg-subtle uppercase";
 
+function ParamHint({ error, param }: { error?: string; param?: FormValues["params"][number] }) {
+  if (error) return <span className="text-xs text-high">{error}</span>;
+  const value = Number(param?.value);
+  if (param?.unit !== "amount" || !(value > 0)) return null;
+  return <span className="text-xs text-fg-subtle">= {formatCzk(value)}</span>;
+}
+
 function ParamFields({ control, register }: FieldsProps) {
   const params = useFieldArray({ control, name: "params" });
   const paramValues = useWatch({ control, name: "params" });
@@ -148,7 +169,7 @@ function ParamFields({ control, register }: FieldsProps) {
     <fieldset className="flex flex-col gap-1.5">
       <legend className={legend}>Parameters</legend>
       {params.fields.map((field, i) => {
-        const value = Number(paramValues[i]?.value);
+        const error = errors.params?.[i]?.value ?? errors.params?.[i]?.unit;
         return (
           <div key={field.id} className="flex items-center gap-2">
             <input
@@ -165,14 +186,18 @@ function ParamFields({ control, register }: FieldsProps) {
               inputMode="numeric"
               className={input({ mono: true })}
             />
-            {errors.params?.[i]?.value ? (
-              <span className="text-xs text-high">{errors.params[i].value.message}</span>
-            ) : (
-              Number.isFinite(value) &&
-              value > 0 && (
-                <span className="text-xs text-fg-subtle">= {formatCzk(value)} if an amount</span>
-              )
-            )}
+            <Select
+              {...register(`params.${i}.unit`, { required: "Pick a unit" })}
+              aria-label={`Unit of parameter ${i + 1}`}
+            >
+              <option value="">unit…</option>
+              {PARAM_UNITS.map((unit) => (
+                <option key={unit} value={unit}>
+                  {unit === "amount" ? "amount (haléře)" : unit}
+                </option>
+              ))}
+            </Select>
+            <ParamHint error={error?.message} param={paramValues[i]} />
             <button
               type="button"
               aria-label={`Remove parameter ${i + 1}`}
@@ -186,7 +211,7 @@ function ParamFields({ control, register }: FieldsProps) {
       })}
       <button
         type="button"
-        onClick={() => params.append({ name: "", value: "" })}
+        onClick={() => params.append({ name: "", value: "", unit: "" })}
         className="self-start text-xs text-fg-muted hover:text-fg"
       >
         + parameter

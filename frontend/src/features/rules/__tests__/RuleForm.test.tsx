@@ -35,12 +35,33 @@ describe("RuleForm", () => {
     ).toEqual(["company", "client"]);
   });
 
-  it("shows the CZK reading next to a parameter value", () => {
+  it("pre-fills each parameter's unit", () => {
+    form();
+    expect(screen.getByLabelText("Unit of parameter 1")).toHaveValue("amount");
+  });
+
+  it("shows the CZK reading next to an amount parameter only", () => {
     form();
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), {
       target: { value: "5000000" },
     });
-    expect(screen.getByText("= 50,000 CZK if an amount")).toBeInTheDocument();
+    expect(screen.getByText("= 50,000 CZK")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Unit of parameter 1"), {
+      target: { value: "percent" },
+    });
+    expect(screen.queryByText("= 50,000 CZK")).not.toBeInTheDocument();
+  });
+
+  it("a new parameter without a unit blocks the save", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    form();
+    fireEvent.click(screen.getByRole("button", { name: "+ parameter" }));
+    fireEvent.change(screen.getByLabelText("Name of parameter 2"), { target: { value: "max_n" } });
+    fireEvent.change(screen.getByLabelText("Value of parameter 2"), { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    expect(await screen.findByText("Pick a unit")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("a blank or non-numeric parameter value blocks the save", async () => {
@@ -130,7 +151,7 @@ describe("saving from the rules page", () => {
     expect(calls[0]?.body).toMatchObject({
       key: "B2",
       author: "J. Novák",
-      params: { pep_min: 5_000_000 },
+      params: { pep_min: { value: 5_000_000, unit: "amount" } },
     });
   });
 });

@@ -68,9 +68,9 @@ export function RuleDetail({ version: v, siblings, onSelectVersion, actions }: R
       </Field>
       <Field label="Parameters">
         {Object.keys(v.params).length ? (
-          Object.entries(v.params).map(([name, value]) => (
+          Object.entries(v.params).map(([name, param]) => (
             <code key={name} className={code}>
-              {paramLabel(name, value)}
+              {paramLabel(name, param)}
             </code>
           ))
         ) : (

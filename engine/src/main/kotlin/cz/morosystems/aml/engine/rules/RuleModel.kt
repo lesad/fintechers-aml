@@ -9,6 +9,11 @@ enum class Agg { SUM, MAX, MIN, COUNT, SET }
 
 enum class Layer { COMPANY, SEGMENT, CLIENT }
 
+/** What a parameter's value counts: [AMOUNT] is haléře (CZK × 100), the others are plain numbers. */
+enum class ParamUnit { AMOUNT, PERCENT, MULTIPLE, COUNT }
+
+data class Param(val value: Long, val unit: ParamUnit)
+
 sealed interface Window {
     data object Day : Window
 
@@ -38,7 +43,7 @@ data class RuleDefinition(
     val condition: String,
     val replacesKey: String?,
     val variables: List<VariableDefinition>,
-    val params: Map<String, Long> = emptyMap(),
+    val params: Map<String, Param> = emptyMap(),
 )
 
 /** A stored rule version with its lifecycle and explanation; [status] is `draft`, `approved`, `active` or `retired`. */
@@ -62,7 +67,7 @@ data class NewRule(
     val condition: String,
     val replacesKey: String?,
     val variables: List<VariableDefinition>,
-    val params: Map<String, Long>,
+    val params: Map<String, Param>,
     val author: String,
 )
 

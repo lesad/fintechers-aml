@@ -64,8 +64,9 @@ class RuleRepository(private val jdbc: JdbcClient) {
                 """,
             ).params(listOf(id, v.position, v.name, v.agg.name.lowercase(), v.field, v.filter, kind, from, to)).update()
         }
-        rule.params.forEach { (name, value) ->
-            jdbc.sql("insert into rule_param (rule_id, name, value) values (?, ?, ?)").params(id, name, value).update()
+        rule.params.forEach { (name, param) ->
+            jdbc.sql("insert into rule_param (rule_id, name, value, unit) values (?, ?, ?, ?)")
+                .params(id, name, param.value, param.unit.name.lowercase()).update()
         }
         return id
     }
@@ -89,9 +90,11 @@ class RuleRepository(private val jdbc: JdbcClient) {
             """,
         ).params(*args).query { rs, _ -> rs.getLong("rule_id") to variable(rs) }.list().groupBy({ it.first }, { it.second })
 
-        val params = jdbc.sql("select p.rule_id, p.name, p.value from rule_param p join rule r on r.id = p.rule_id where $where")
+        val params = jdbc.sql("select p.rule_id, p.name, p.value, p.unit from rule_param p join rule r on r.id = p.rule_id where $where")
             .params(*args)
-            .query { rs, _ -> Triple(rs.getLong("rule_id"), rs.getString("name"), rs.getLong("value")) }.list()
+            .query { rs, _ ->
+                Triple(rs.getLong("rule_id"), rs.getString("name"), Param(rs.getLong("value"), ParamUnit.valueOf(rs.getString("unit").uppercase())))
+            }.list()
             .groupBy({ it.first }, { it.second to it.third }).mapValues { it.value.toMap() }
 
         return jdbc.sql(

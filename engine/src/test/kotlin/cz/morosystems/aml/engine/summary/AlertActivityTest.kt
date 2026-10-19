@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 class AlertActivityTest {
     private fun hit(day: String, volume: Long) =
-        RuleHitRow("A1", "day_volume > 25 * p.pct", day, mapOf("day_volume" to volume, "p.pct" to 25, "payers" to listOf(day)))
+        RuleHitRow("A1", "day_volume > 25 * p.pct", day, mapOf("day_volume" to volume, "p.pct" to 25, "payers" to listOf(day)), mapOf("p.pct" to "percent"))
 
     @Test
     fun countsHitsAndGivesRangesInCode() {
@@ -18,6 +18,11 @@ class AlertActivityTest {
         assertThat(evidence["day_volume"]).isEqualTo(mapOf("min" to 100L, "max" to 300L))
         assertThat(evidence["p.pct"]).isEqualTo(25)
         assertThat(evidence["payers"]).isEqualTo(listOf(listOf("2026-07-01"), listOf("2026-07-02"), listOf("2026-07-03")))
+    }
+
+    @Test
+    fun namesTheUnitOfEachParameter() {
+        assertThat(ruleActivity("A1", listOf(hit("2026-07-01", 300))).data["units"]).isEqualTo(mapOf("p.pct" to "percent"))
     }
 
     @Test

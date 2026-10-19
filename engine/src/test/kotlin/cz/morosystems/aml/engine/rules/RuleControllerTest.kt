@@ -52,7 +52,9 @@ class RuleControllerTest {
         val list = assertThat(mvc.get().uri("/api/rules")).hasStatusOk().bodyJson()
         list.extractingPath("$.length()").isEqualTo(7)
         list.extractingPath("$[4].key").isEqualTo("B2")
-        list.extractingPath("$[4].params.pep_min").isEqualTo(10_000_000)
+        list.extractingPath("$[4].params.pep_min.value").isEqualTo(10_000_000)
+        list.extractingPath("$[4].params.pep_min.unit").isEqualTo("amount")
+        list.extractingPath("$[0].params.projected_pct.unit").isEqualTo("percent")
         list.extractingPath("$[4].grain").isEqualTo("transaction")
         list.extractingPath("$[4].layer").isEqualTo("company")
         list.extractingPath("$[5].variables[0].window.kind").isEqualTo("relative")
@@ -66,7 +68,7 @@ class RuleControllerTest {
         saved.extractingPath("$.version").isEqualTo(2)
         saved.extractingPath("$.status").isEqualTo("draft")
         saved.extractingPath("$.author").isEqualTo("J. Novák")
-        saved.extractingPath("$.params.pep_min").isEqualTo(5_000_000)
+        saved.extractingPath("$.params.pep_min").isEqualTo(mapOf("value" to 5_000_000, "unit" to "amount"))
         saved.extractingPath("$.explanation").isEqualTo(LOWER_B2)
         saved.extractingPath("$.explanationModel").isEqualTo("eu.anthropic.claude-opus-4-5-20251101-v1:0")
     }
@@ -101,7 +103,7 @@ class RuleControllerTest {
 
     @Test
     fun rejectsAConditionUsingAMissingParameter() {
-        assertThat(post(b2Body().replace(""""pep_min": 5000000""", ""))).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(post(b2Body().replace(""""pep_min": { "value": 5000000, "unit": "amount" }""", ""))).hasStatus(HttpStatus.BAD_REQUEST)
     }
 
     @Test
@@ -124,7 +126,19 @@ class RuleControllerTest {
 
     @Test
     fun rejectsAParameterWithoutAValue() {
-        assertThat(post(b2Body().replace(""""pep_min": 5000000""", """"pep_min": null""")))
+        assertThat(post(b2Body().replace(""""value": 5000000""", """"value": null""")))
+            .hasStatus(HttpStatus.BAD_REQUEST).bodyJson().extractingPath("$.detail").asString().contains("pep_min")
+    }
+
+    @Test
+    fun rejectsAParameterWithAnUnknownUnit() {
+        assertThat(post(b2Body(unit = "euros")))
+            .hasStatus(HttpStatus.BAD_REQUEST).bodyJson().extractingPath("$.detail").asString().contains("unknown unit 'euros'")
+    }
+
+    @Test
+    fun rejectsAParameterWithoutAUnit() {
+        assertThat(post(b2Body().replace(""", "unit": "amount"""", "")))
             .hasStatus(HttpStatus.BAD_REQUEST).bodyJson().extractingPath("$.detail").asString().contains("pep_min")
     }
 
@@ -153,12 +167,12 @@ class RuleControllerTest {
 
     private fun post(body: String) = mvc.post().uri("/api/rules").contentType(MediaType.APPLICATION_JSON).content(body)
 
-    private fun b2Body(pepMin: Long = 5_000_000, key: String = "B2") = """
+    private fun b2Body(pepMin: Long = 5_000_000, key: String = "B2", unit: String = "amount") = """
         {
           "key": "$key", "alertType": "B", "layer": "company", "scopeSegmentId": null, "scopeClientId": null,
           "grain": "transaction", "anchor": null,
           "condition": "client.pep && tx.amount > p.pep_min && tx.direction in [\"out\", \"unknown\"]",
-          "replacesKey": null, "variables": [], "params": { "pep_min": $pepMin }, "author": "J. Novák"
+          "replacesKey": null, "variables": [], "params": { "pep_min": { "value": $pepMin, "unit": "$unit" } }, "author": "J. Novák"
         }
     """.trimIndent()
 
@@ -179,7 +193,7 @@ class RuleControllerTest {
                 { "name": "outflow", "agg": "sum", "field": "amount", "filter": "tx.direction == \"out\" && !(tx.payee_account in payers)",
                   "window": { "kind": "relative", "from": "PT0S", "to": "PT6H" } }
               ],
-              "params": { "min_inflow": 10000000, "forward_pct": 80 },
+              "params": { "min_inflow": { "value": 10000000, "unit": "amount" }, "forward_pct": { "value": 80, "unit": "percent" } },
               "author": "J. Novák"
             }
         """.trimIndent()

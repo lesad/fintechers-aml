@@ -17,12 +17,16 @@ class AlertActivity(private val jdbc: JdbcClient) {
     private fun ruleHits(alertId: Long): List<Activity> =
         jdbc.sql(
             """
-            select r.key, r.condition, h.grain_key, h.evidence::text
+            select r.key, r.condition, h.grain_key, h.evidence::text,
+                   (select coalesce(jsonb_object_agg('p.' || p.name, p.unit), '{}') from rule_param p where p.rule_id = r.id)::text
             from alert_hit ah join rule_hit h on h.id = ah.hit_id join rule r on r.id = h.rule_id
             where ah.alert_id = ? order by r.key, h.id
             """.trimIndent(),
         ).param(alertId).query { rs, _ ->
-            RuleHitRow(rs.getString(1), rs.getString(2), rs.getString(3), json.readValue(rs.getString(4), Map::class.java))
+            RuleHitRow(
+                rs.getString(1), rs.getString(2), rs.getString(3),
+                json.readValue(rs.getString(4), Map::class.java), json.readValue(rs.getString(5), Map::class.java),
+            )
         }.list().groupBy { it.rule }.map { (rule, hits) -> ruleActivity(rule, hits) }
 
     /** The triage decision as `triage:decision`, then each scoring reason as `triage:<code>`; the reasons' points sum to the score. */
@@ -47,11 +51,11 @@ class AlertActivity(private val jdbc: JdbcClient) {
     }
 }
 
-internal data class RuleHitRow(val rule: String, val condition: String, val grainKey: String, val evidence: Map<*, *>)
+internal data class RuleHitRow(val rule: String, val condition: String, val grainKey: String, val evidence: Map<*, *>, val units: Map<*, *>)
 
 /**
  * All hits of one rule as `rule:<key>`, aggregated in code so the model never counts or compares:
- * the hit count, the grain keys, and per evidence field its one value, or min and max when it varies.
+ * the hit count, the grain keys, per evidence field its one value, or min and max when it varies, and the unit of each `p.` parameter.
  */
 internal fun ruleActivity(rule: String, hits: List<RuleHitRow>): Activity {
     val fields = hits.flatMap { it.evidence.keys }.map { it.toString() }.distinct().sorted()
@@ -73,6 +77,7 @@ internal fun ruleActivity(rule: String, hits: List<RuleHitRow>): Activity {
             "hits" to hits.size,
             "grainKeys" to hits.map { it.grainKey },
             "evidence" to evidence,
+            "units" to hits.fold(emptyMap<Any?, Any?>()) { units, hit -> units + hit.units },
         ),
     )
 }

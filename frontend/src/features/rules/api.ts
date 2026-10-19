@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// NOTE: parameter values are integers; the amounts among them are in haléře.
-
 const window = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("day") }),
   z.object({ kind: z.literal("relative"), from: z.string(), to: z.string() }),
@@ -15,6 +13,11 @@ const variable = z.object({
   window,
 });
 
+export const PARAM_UNITS = ["amount", "percent", "multiple", "count"] as const;
+
+/** An integer threshold; an `amount` is in haléře. */
+const param = z.object({ value: z.number(), unit: z.enum(PARAM_UNITS) });
+
 const ruleFields = {
   key: z.string(),
   alertType: z.string(),
@@ -26,7 +29,7 @@ const ruleFields = {
   condition: z.string(),
   replacesKey: z.string().nullable(),
   variables: z.array(variable),
-  params: z.record(z.string(), z.number()),
+  params: z.record(z.string(), param),
 };
 
 const ruleVersion = z.object({
@@ -42,6 +45,7 @@ const ruleVersion = z.object({
 
 export type RuleWindow = z.infer<typeof window>;
 export type RuleVariable = z.infer<typeof variable>;
+export type RuleParam = z.infer<typeof param>;
 export type RuleVersion = z.infer<typeof ruleVersion>;
 export type NewRule = z.infer<z.ZodObject<typeof ruleFields>> & { author: string };
 
