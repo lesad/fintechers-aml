@@ -1,0 +1,51 @@
+package cz.morosystems.aml.engine.rules
+
+import java.time.Duration
+
+enum class Grain { TRANSACTION, CLIENT_DAY, CLIENT_ANCHOR }
+
+enum class Agg { SUM, MAX, MIN, COUNT, SET }
+
+enum class Layer { COMPANY, SEGMENT, CLIENT }
+
+sealed interface Window {
+    data object Day : Window
+
+    /** Window `(anchor + from, anchor + to]`: start exclusive, end inclusive. */
+    data class Relative(val from: Duration, val to: Duration) : Window
+}
+
+data class VariableDefinition(
+    val position: Int,
+    val name: String,
+    val agg: Agg,
+    val field: String,
+    val filter: String,
+    val window: Window,
+)
+
+data class RuleDefinition(
+    val id: Long,
+    val key: String,
+    val version: Int,
+    val alertType: String,
+    val layer: Layer,
+    val scopeSegmentId: Long?,
+    val scopeClientId: String?,
+    val grain: Grain,
+    val anchor: String?,
+    val condition: String,
+    val replacesKey: String?,
+    val variables: List<VariableDefinition>,
+)
+
+data class ParamRow(
+    val ruleKey: String,
+    val name: String,
+    val layer: Layer,
+    val scopeSegmentId: Long?,
+    val scopeClientId: String?,
+    val value: Long,
+)
+
+data class Segment(val id: Long, val name: String, val predicate: String)

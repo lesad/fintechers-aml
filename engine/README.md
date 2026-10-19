@@ -45,3 +45,5 @@ Run from `engine/`:
 `./gradlew bootRun --args=run` (run the rules, output to `data/out/`) arrives with the rule runner; until then it prints the usage line.
 
 Schema changes are Liquibase SQL files in `src/main/resources/db/migrations/`, listed in `db/changelog-master.xml`.
+
+Rule CEL declares every field as a qualified name (`tx.amount`, `client.pep`, `p.min_inflow`) with a concrete type; the vocabulary is in `src/main/kotlin/.../cel/Vocabulary.kt`.
