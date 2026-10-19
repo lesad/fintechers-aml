@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { cva } from "class-variance-authority";
+import { useId, useRef, useState } from "react";
 
-import { Popover, Select } from "@/components";
+import { Popover } from "@/components";
 
 import type { User } from "@/user";
 
@@ -15,7 +16,12 @@ const initials = (name: string) =>
 
 const ROLE_LABEL: Record<User["role"], string> = { REVIEWER: "Reviewer", MANAGER: "Manager" };
 
-/** The signed-in user's name and avatar; the avatar opens a select to switch to another user. */
+const choice = cva(
+  "flex w-full cursor-pointer items-baseline gap-1 rounded px-2 py-1.5 text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-purple/40",
+  { variants: { checked: { true: "bg-sel font-semibold", false: "hover:bg-hover" } } },
+);
+
+/** The signed-in user's name and avatar; the avatar opens the list of users, one click switches. */
 export function UserMenu({
   user,
   users,
@@ -27,6 +33,7 @@ export function UserMenu({
 }) {
   const [open, setOpen] = useState(false);
   const avatar = useRef<HTMLButtonElement>(null);
+  const label = useId();
 
   return (
     <div className="relative flex items-center gap-2">
@@ -43,24 +50,27 @@ export function UserMenu({
       </button>
       {open && (
         <Popover anchor={avatar} onClose={() => setOpen(false)} className="w-56">
-          <label htmlFor="user-switch" className="text-[11px] text-fg-subtle">
+          <span id={label} className="px-2 text-[11px] text-fg-subtle">
             Signed in as
-          </label>
-          <Select
-            id="user-switch"
-            value={user?.id ?? ""}
-            onChange={(e) => {
-              const next = users.find((u) => u.id === Number(e.target.value));
-              if (next) onUser(next);
-              setOpen(false);
-            }}
-          >
+          </span>
+          <div role="radiogroup" aria-labelledby={label} className="flex flex-col">
             {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} · {ROLE_LABEL[u.role]}
-              </option>
+              <button
+                key={u.id}
+                type="button"
+                role="radio"
+                aria-checked={u.id === user?.id}
+                onClick={() => {
+                  if (u.id !== user?.id) onUser(u);
+                  setOpen(false);
+                }}
+                className={choice({ checked: u.id === user?.id })}
+              >
+                {u.name}
+                <span className="font-normal text-fg-subtle">· {ROLE_LABEL[u.role]}</span>
+              </button>
             ))}
-          </Select>
+          </div>
         </Popover>
       )}
     </div>

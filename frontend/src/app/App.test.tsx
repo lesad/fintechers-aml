@@ -230,10 +230,9 @@ const users = [
 /** Opens the avatar menu and signs in as `name`, once the users have loaded. */
 const switchUser = async (name: string) => {
   fireEvent.click(screen.getByRole("button", { name: "Switch user" }));
-  const select = screen.getByRole("combobox", { name: "Signed in as" });
-  await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(2));
-  const id = users.find((u) => u.name === name)?.id;
-  fireEvent.change(select, { target: { value: String(id) } });
+  const list = screen.getByRole("radiogroup", { name: "Signed in as" });
+  await waitFor(() => expect(within(list).getAllByRole("radio")).toHaveLength(2));
+  fireEvent.click(within(list).getByRole("radio", { name: new RegExp(name) }));
 };
 
 /** The latest request for a queue page. */
@@ -286,18 +285,27 @@ describe("App", () => {
     );
   });
 
+  it("one click on the avatar lists every user, the signed-in one checked", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Switch user" }));
+    const list = screen.getByRole("radiogroup", { name: "Signed in as" });
+    await waitFor(() => expect(within(list).getAllByRole("radio")).toHaveLength(2));
+    expect(within(list).getByRole("radio", { name: /J\. Novák/ })).toBeChecked();
+    expect(within(list).getByRole("radio", { name: /M\. Svobodová · Manager/ })).not.toBeChecked();
+  });
+
   it("closes the user panel on a click elsewhere or Escape, not on the avatar's own click", async () => {
     render(<App />);
     const avatar = screen.getByRole("button", { name: "Switch user" });
     fireEvent.click(avatar);
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("combobox", { name: "Signed in as" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: "Signed in as" })).not.toBeInTheDocument();
 
     fireEvent.pointerDown(avatar);
     fireEvent.click(avatar);
-    expect(screen.getByRole("combobox", { name: "Signed in as" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Signed in as" })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByRole("combobox", { name: "Signed in as" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: "Signed in as" })).not.toBeInTheDocument();
   });
 
   it("remembers the chosen user across a reload", async () => {

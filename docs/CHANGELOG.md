@@ -14,6 +14,7 @@
 
 ### Added
 
+- User switch: one click on the avatar lists every user under "Signed in as" (the signed-in one checked); one more click switches. The select in the panel is gone.
 - Transaction detail: the client's transactions read oldest first, two before and two after the open one; "Load earlier" sits under the column header and "Load later" under the rows, ten more per click (`fetchHistory` takes the page size).
 - `react-router` (ADR-0039): `/` is the review overview and `/rules` the rules page, so a refresh or a link keeps the page and the back button works; other paths go to `/`. Open transaction tabs survive the switch, but are not in the URL yet.
 - The triage breakdown modal no longer has the AI explanation section; `Modal` keeps its `footer` option.
