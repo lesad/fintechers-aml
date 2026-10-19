@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchRules, formatCzk, groupByKey, RuleRejectedError, saveRule } from "../api";
+import {
+  explainRule,
+  fetchRules,
+  formatCzk,
+  groupByKey,
+  RuleRejectedError,
+  saveRule,
+} from "../api";
 import { A1, B2, B2_V2, C1_V1, C1_V2, json, SEEDED } from "./fixtures";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -75,5 +82,27 @@ describe("groupByKey", () => {
 describe("formatCzk", () => {
   it("formats an amount as CZK", () => {
     expect(formatCzk(50_000)).toBe("50,000 CZK");
+  });
+});
+
+describe("explainRule", () => {
+  const body = { ...B2, name: B2.name, author: "J. Novák" };
+
+  it("posts the rule to the explanation endpoint", async () => {
+    const fetch = vi.fn(async () => json({ explanation: "Flags it.", model: "m" }));
+    vi.stubGlobal("fetch", fetch);
+    expect(await explainRule(body)).toEqual({ explanation: "Flags it.", model: "m" });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/rules/explanation",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("a model failure carries the engine's reason", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json({ status: 502, detail: "try again" }, 502)),
+    );
+    await expect(explainRule(body)).rejects.toEqual(new RuleRejectedError("try again"));
   });
 });

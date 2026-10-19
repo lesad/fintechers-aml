@@ -33,6 +33,8 @@ export type Issue = {
   section: "identity" | "condition" | "params" | "variables";
   level: "error" | "warn";
   text: string;
+  /** The empty field this issue asks for, e.g. `name` or `params.0.value`; shown once the user has edited it. */
+  field?: string;
   fix?: { label: string; apply: (d: Draft) => Draft };
 };
 
@@ -156,7 +158,12 @@ function identityIssues(d: Draft, isNew: boolean, existingKeys: Set<string>): Is
   const issues: Issue[] = [];
   const key = d.key.trim().toUpperCase();
   if (isNew && !key)
-    issues.push({ section: "identity", level: "error", text: "Rule code is required." });
+    issues.push({
+      section: "identity",
+      level: "error",
+      text: "Rule code is required.",
+      field: "key",
+    });
   if (isNew && existingKeys.has(key)) {
     issues.push({
       section: "identity",
@@ -165,19 +172,25 @@ function identityIssues(d: Draft, isNew: boolean, existingKeys: Set<string>): Is
     });
   }
   if (!d.name.trim())
-    issues.push({ section: "identity", level: "error", text: "Name is required." });
+    issues.push({ section: "identity", level: "error", text: "Name is required.", field: "name" });
   return issues;
 }
 
 function conditionIssues(d: Draft): Issue[] {
   const issues: Issue[] = [];
   if (!d.condition.trim())
-    issues.push({ section: "condition", level: "error", text: "Condition is required." });
+    issues.push({
+      section: "condition",
+      level: "error",
+      text: "Condition is required.",
+      field: "condition",
+    });
   if (d.grain === "client_anchor" && !d.anchor.trim()) {
     issues.push({
       section: "condition",
       level: "error",
       text: "Say which transactions anchor the rule.",
+      field: "anchor",
     });
   }
   for (const name of unknownNames(d)) {
@@ -208,15 +221,30 @@ const missingParam = (name: string): Issue => ({
 
 const valueProblem = ({ value }: DraftParam) => (NUMBER.test(value) ? null : "needs a number");
 
-function oneParamIssues(p: DraftParam, used: string[]): Issue[] {
+function oneParamIssues(p: DraftParam, i: number, used: string[]): Issue[] {
   const name = p.name.trim();
-  if (!name) return [{ section: "params", level: "error", text: "A parameter has no name." }];
+  const at = `params.${i}`;
+  if (!name) {
+    return [
+      { section: "params", level: "error", text: "A parameter has no name.", field: `${at}.name` },
+    ];
+  }
   const issues: Issue[] = [];
   if (!used.includes(name))
     issues.push({ section: "params", level: "warn", text: `p.${name} is defined but not used.` });
   const problem = valueProblem(p);
-  if (problem) issues.push({ section: "params", level: "error", text: `p.${name} ${problem}.` });
-  if (!p.unit) issues.push({ section: "params", level: "error", text: `p.${name} needs a unit.` });
+  if (problem) {
+    const field = p.value.trim() ? undefined : `${at}.value`;
+    issues.push({ section: "params", level: "error", text: `p.${name} ${problem}.`, field });
+  }
+  if (!p.unit) {
+    issues.push({
+      section: "params",
+      level: "error",
+      text: `p.${name} needs a unit.`,
+      field: `${at}.unit`,
+    });
+  }
   return issues;
 }
 
@@ -225,32 +253,34 @@ function paramIssues(d: Draft): Issue[] {
   const defined = new Set(d.params.map((p) => p.name.trim()).filter(Boolean));
   return [
     ...used.filter((n) => !defined.has(n)).map(missingParam),
-    ...d.params.flatMap((p) => oneParamIssues(p, used)),
+    ...d.params.flatMap((p, i) => oneParamIssues(p, i, used)),
   ];
 }
 
 const HOURS = /^-?\d+$/;
 
-const variableIssue = (level: Issue["level"], text: string): Issue => ({
+const variableIssue = (level: Issue["level"], text: string, field?: string): Issue => ({
   section: "variables",
   level,
   text,
+  field,
 });
 
-function oneVariableIssues(d: Draft, x: DraftVariable): Issue[] {
+function oneVariableIssues(d: Draft, x: DraftVariable, index: number): Issue[] {
   const name = x.name.trim();
   const label = name || "A variable";
   return [
-    !name && variableIssue("error", "A variable has no name."),
+    !name && variableIssue("error", "A variable has no name.", `variables.${index}.name`),
     name && !mentions(d, name) && variableIssue("warn", `${name} is defined but not used.`),
-    !x.field.trim() && variableIssue("error", `${label} needs a field.`),
+    !x.field.trim() &&
+      variableIssue("error", `${label} needs a field.`, `variables.${index}.field`),
     x.kind === "relative" &&
       !(HOURS.test(x.from) && HOURS.test(x.to)) &&
       variableIssue("error", `${label}: window hours must be whole numbers.`),
   ].filter((i): i is Issue => Boolean(i));
 }
 
-const variableIssues = (d: Draft) => d.variables.flatMap((x) => oneVariableIssues(d, x));
+const variableIssues = (d: Draft) => d.variables.flatMap((x, i) => oneVariableIssues(d, x, i));
 
 /** Everything that blocks a save (`error`) or deserves a look (`warn`), in the order the sections appear. */
 export const draftIssues = (d: Draft, isNew: boolean, existingKeys: Set<string>): Issue[] => [
@@ -271,4 +301,30 @@ export function changedSections(d: Draft, base: Draft): Set<DraftSection> {
   if (!same(d.params, base.params)) changed.add("params");
   if (!same(d.variables, base.variables)) changed.add("variables");
   return changed;
+}
+
+const rowEdits = <T extends object>(name: string, before: T[], after: T[]) =>
+  after.flatMap((row, i) => {
+    const old = before[i];
+    if (!old) return [];
+    // NOTE: Object.keys widens to string[]; the rows are plain objects with exactly T's keys.
+    return (Object.keys(row) as (keyof T)[])
+      .filter((k) => row[k] !== old[k])
+      .map((k) => `${name}.${i}.${String(k)}`);
+  });
+
+/**
+ * The fields the user changed between two drafts, in the paths {@link Issue.field} uses.
+ *
+ * @remarks A row that was just added counts as untouched until one of its fields changes.
+ */
+export function editedFields(before: Draft, after: Draft): string[] {
+  const scalars = (["key", "name", "condition", "anchor"] as const).filter(
+    (k) => before[k] !== after[k],
+  );
+  return [
+    ...scalars,
+    ...rowEdits("params", before.params, after.params),
+    ...rowEdits("variables", before.variables, after.variables),
+  ];
 }

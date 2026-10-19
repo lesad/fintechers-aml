@@ -29,6 +29,8 @@ data class RuleBody(
     val name: String? = null,
 )
 
+data class ExplanationJson(val explanation: String, val model: String)
+
 data class RuleVersionJson(
     val id: Long,
     val key: String,
@@ -96,7 +98,7 @@ fun RuleBody.toNewRule() = NewRule(
     params = params.mapValues { (name, p) ->
         Param(
             p?.value ?: throw InvalidRuleException("parameter $name needs a numeric value"),
-            enumOf<ParamUnit>("unit", p.unit ?: throw InvalidRuleException("parameter $name needs a unit: amount, percent, multiple or count")),
+            enumOf<ParamUnit>("unit", p.unit ?: throw InvalidRuleException("parameter $name needs a unit: amount, percent or multiple")),
         )
     },
     author = author.trim(),

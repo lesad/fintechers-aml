@@ -13,7 +13,7 @@ const variable = z.object({
   window,
 });
 
-export const PARAM_UNITS = ["amount", "percent", "multiple", "count"] as const;
+export const PARAM_UNITS = ["amount", "percent", "multiple"] as const;
 
 /** A numeric threshold; an `amount` is in CZK. */
 const param = z.object({ value: z.number(), unit: z.enum(PARAM_UNITS) });
@@ -54,7 +54,7 @@ export type NewRule = z.infer<z.ZodObject<typeof ruleFields>> & {
   name: string | null;
 };
 
-/** The engine refused a save (400 or 409); the message is its reason. */
+/** The engine refused a rule (400, 409) or could not explain it (502); the message is its reason. */
 export class RuleRejectedError extends Error {}
 
 const problem = z.object({ detail: z.string() });
@@ -65,19 +65,29 @@ export async function fetchRules(signal?: AbortSignal): Promise<RuleVersion[]> {
   return z.array(ruleVersion).parse(await res.json());
 }
 
-export async function saveRule(body: NewRule): Promise<RuleVersion> {
-  const res = await fetch("/api/rules", {
+/** POSTs a rule; a 400, 409 or 502 becomes a {@link RuleRejectedError} carrying the engine's reason. */
+async function postRule(path: string, body: NewRule): Promise<unknown> {
+  const res = await fetch(path, {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (res.status === 400 || res.status === 409) {
+  if (res.status === 400 || res.status === 409 || res.status === 502) {
     const parsed = problem.safeParse(await res.json().catch(() => null));
     throw new RuleRejectedError(parsed.success ? parsed.data.detail : `HTTP ${res.status}`);
   }
-  if (!res.ok) throw new Error(`/api/rules: HTTP ${res.status}`);
-  return ruleVersion.parse(await res.json());
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+  return res.json();
 }
+
+export const saveRule = async (body: NewRule): Promise<RuleVersion> =>
+  ruleVersion.parse(await postRule("/api/rules", body));
+
+const explanation = z.object({ explanation: z.string(), model: z.string() });
+
+/** Asks the engine to explain a rule as it would be saved, without saving it. */
+export const explainRule = async (body: NewRule) =>
+  explanation.parse(await postRule("/api/rules/explanation", body));
 
 /** Rule versions per key: keys alphabetical, newest version first. */
 export function groupByKey(versions: RuleVersion[]): { key: string; versions: RuleVersion[] }[] {

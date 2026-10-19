@@ -4,7 +4,6 @@ const unitSuffix: Record<RuleParam["unit"], string> = {
   amount: "CZK",
   percent: "%",
   multiple: "×",
-  count: "",
 };
 
 /** A parameter's display value and unit: an amount is CZK already (ADR-0037), the rest as stored. */

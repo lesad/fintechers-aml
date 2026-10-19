@@ -48,12 +48,12 @@ class RuleResolverTest {
 
     @Test
     fun segmentReplacementBringsItsOwnParameters() {
-        val company = rule("V1", Layer.COMPANY, params = mapOf("limit" to Param(10.0, ParamUnit.COUNT)))
-        val stricter = rule("S1", Layer.SEGMENT, scopeSegmentId = 2, replacesKey = "V1", params = mapOf("limit" to Param(7.0, ParamUnit.COUNT)))
+        val company = rule("V1", Layer.COMPANY, params = mapOf("limit" to Param(10.0, ParamUnit.MULTIPLE)))
+        val stricter = rule("S1", Layer.SEGMENT, scopeSegmentId = 2, replacesKey = "V1", params = mapOf("limit" to Param(7.0, ParamUnit.MULTIPLE)))
         val resolved = resolver.resolve(listOf(company, stricter), listOf(huge), clients)
         assertThat(resolved.clientsByRule[stricter]).containsExactly("K1")
         assertThat(resolved.clientsByRule[company]).containsExactlyInAnyOrder("K2", "K3")
-        assertThat(stricter.params).isEqualTo(mapOf("limit" to Param(7.0, ParamUnit.COUNT)))
+        assertThat(stricter.params).isEqualTo(mapOf("limit" to Param(7.0, ParamUnit.MULTIPLE)))
     }
 
     @Test

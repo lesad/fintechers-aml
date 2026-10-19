@@ -10,7 +10,7 @@ enum class Agg { SUM, MAX, MIN, COUNT, SET }
 enum class Layer { COMPANY, SEGMENT, CLIENT }
 
 /** What a parameter's value counts: [AMOUNT] is CZK (ADR-0037), the others are plain numbers. */
-enum class ParamUnit { AMOUNT, PERCENT, MULTIPLE, COUNT }
+enum class ParamUnit { AMOUNT, PERCENT, MULTIPLE }
 
 data class Param(val value: Double, val unit: ParamUnit)
 

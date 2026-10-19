@@ -47,12 +47,19 @@ describe("RuleForm", () => {
     expect(save(2)).toBeEnabled();
   });
 
-  it("a blank new rule lists what is missing and cannot be saved", () => {
+  it("a blank new rule shows no issues until the user types", () => {
     form(null);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("New rule");
-    expect(screen.getByText("Rule code is required.")).toBeInTheDocument();
-    expect(screen.getByText("3 issues to fix")).toBeInTheDocument();
+    expect(screen.queryByText("Rule code is required.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Name is required.")).not.toBeInTheDocument();
+    expect(screen.getByText("Fill in the required fields")).toBeInTheDocument();
     expect(save(1)).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText("e.g. C2"), { target: { value: "C" } });
+    fireEvent.change(screen.getByPlaceholderText("e.g. C2"), { target: { value: "" } });
+    expect(screen.getByText("Rule code is required.")).toBeInTheDocument();
+    expect(screen.queryByText("Name is required.")).not.toBeInTheDocument();
+    expect(screen.getByText("1 issue to fix")).toBeInTheDocument();
   });
 
   it("offers to add a parameter the condition uses", () => {
@@ -62,6 +69,8 @@ describe("RuleForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Add p.cap" }));
     expect(screen.getByLabelText("Name of parameter 2")).toHaveValue("cap");
+    expect(screen.queryByText("p.cap needs a number.")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Value of parameter 2"), { target: { value: "lots" } });
     expect(screen.getByText("p.cap needs a number.")).toBeInTheDocument();
   });
 
@@ -70,6 +79,31 @@ describe("RuleForm", () => {
     expect(screen.queryByLabelText("Anchor")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "Per anchor transaction" }));
     expect(screen.getByLabelText("Anchor")).toBeInTheDocument();
+  });
+});
+
+describe("What it flags", () => {
+  it("writes the explanation on click and says when the rule changed since", async () => {
+    const fetch = vi.fn(async () =>
+      json({ explanation: "Flags PEP payments over 100,000 CZK.", model: "m" }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    form();
+    fireEvent.click(screen.getByRole("button", { name: "Write explanation" }));
+    expect(await screen.findByText("Flags PEP payments over 100,000 CZK.")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/rules/explanation",
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "50000" } });
+    expect(screen.getByText(/The rule changed since/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Write again" })).toBeEnabled();
+  });
+
+  it("cannot be written while the rule is incomplete", () => {
+    form(null);
+    expect(screen.getByRole("button", { name: "Write explanation" })).toBeDisabled();
   });
 });
 

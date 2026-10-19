@@ -33,14 +33,13 @@ describe("conditionTokens", () => {
 });
 
 describe("paramParts", () => {
-  it("shows an amount in CZK, a percentage, a multiple and a count by unit", () => {
+  it("shows an amount in CZK, a percentage and a multiple by unit", () => {
     expect(paramParts({ value: 100_000, unit: "amount" })).toEqual({
       value: "100,000",
       unit: "CZK",
     });
     expect(paramParts({ value: 80, unit: "percent" })).toEqual({ value: "80", unit: "%" });
     expect(paramParts({ value: 3, unit: "multiple" })).toEqual({ value: "3", unit: "×" });
-    expect(paramParts({ value: 5, unit: "count" })).toEqual({ value: "5", unit: "" });
   });
 });
 

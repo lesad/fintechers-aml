@@ -5,6 +5,7 @@ import { cn } from "@/utils";
 
 import { type RuleVersion, saveRule } from "./api";
 import { ConditionLegend, token } from "./ConditionLegend";
+import { ExplanationPreview } from "./ExplanationPreview";
 import { ChangedBadge, field, Issues, SectionTitle, Segmented } from "./form-parts";
 import { conditionTokens, grainLabel } from "./format";
 import {
@@ -12,6 +13,7 @@ import {
   type Draft,
   draftFrom,
   draftIssues,
+  editedFields,
   type DraftSection,
   type Issue,
   toNewRule,
@@ -58,8 +60,11 @@ const plural = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}
 
 type Status = { tone: "error" | "idle" | "ready"; text: string };
 
-function statusOf(errors: number, changed: number, base: number | null): Status {
-  if (errors) return { tone: "error", text: `${plural(errors, "issue")} to fix` };
+type Counts = { shown: number; hidden: number; changed: number };
+
+function statusOf({ shown, hidden, changed }: Counts, base: number | null): Status {
+  if (shown) return { tone: "error", text: `${plural(shown, "issue")} to fix` };
+  if (hidden) return { tone: "idle", text: "Fill in the required fields" };
   if (base !== null && !changed) return { tone: "idle", text: `No changes from v${base} yet` };
   if (base === null) return { tone: "ready", text: "Ready to save" };
   return { tone: "ready", text: `${plural(changed, "section")} changed · ready to save` };
@@ -77,13 +82,20 @@ export function RuleForm({
   const [draft, setDraft] = useState(() => draftFrom(from));
   const [saving, setSaving] = useState(false);
   const [rejected, setRejected] = useState<string | null>(null);
+  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
 
   const baseVersion = from?.version ?? null;
-  const issues = draftIssues(draft, from === null, new Set(existingKeys));
-  const errors = issues.filter((i) => i.level === "error").length;
+  const all = draftIssues(draft, from === null, new Set(existingKeys));
+  const issues = all.filter((i) => !i.field || touched.has(i.field));
+  const errors = all.filter((i) => i.level === "error").length;
+  const shown = issues.filter((i) => i.level === "error").length;
   const changed = base ? changedSections(draft, base) : new Set<DraftSection>();
 
-  const set = (change: Partial<Draft>) => setDraft((d) => ({ ...d, ...change }));
+  const set = (change: Partial<Draft>) => {
+    const next = { ...draft, ...change };
+    setTouched((t) => new Set([...t, ...editedFields(draft, next)]));
+    setDraft(next);
+  };
   const fix = (issue: Issue) => issue.fix && setDraft(issue.fix.apply);
   const of = (s: Issue["section"]) => issues.filter((i) => i.section === s);
   const badge = (s: DraftSection) => <ChangedBadge show={changed.has(s)} base={baseVersion} />;
@@ -150,14 +162,12 @@ export function RuleForm({
 
         <section className={section}>
           <SectionTitle title="What it flags" hint="Plain language, shown to reviewers" />
-          <p className="rounded-md border border-ai-line bg-ai-bg px-3 py-2.5 text-fg-muted">
-            Written by AI from this rule when you save the draft.
-          </p>
+          <ExplanationPreview rule={toNewRule(draft, from, author)} blocked={errors > 0} />
         </section>
       </div>
 
       <Footer
-        status={statusOf(errors, changed.size, baseVersion)}
+        status={statusOf({ shown, hidden: errors - shown, changed: changed.size }, baseVersion)}
         saving={saving}
         disabled={saving || errors > 0 || (base !== null && changed.size === 0)}
         nextVersion={nextVersion}

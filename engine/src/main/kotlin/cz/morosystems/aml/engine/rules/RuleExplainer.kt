@@ -72,7 +72,6 @@ internal fun explanationPrompt(rule: RuleDefinition, segmentName: String?): Stri
             ParamUnit.AMOUNT -> "${plain(p.value)} CZK"
             ParamUnit.PERCENT -> "${plain(p.value)} percent"
             ParamUnit.MULTIPLE -> "${plain(p.value)} times"
-            ParamUnit.COUNT -> plain(p.value)
         }
         add("Parameter p.$name = $reading")
     }

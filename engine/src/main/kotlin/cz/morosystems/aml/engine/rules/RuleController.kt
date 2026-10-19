@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 
+class ExplanationUnavailableException : RuntimeException("the model gave no usable explanation; try again")
+
 @RestController
 @RequestMapping("/api/rules")
 class RuleController(private val rules: RuleService) {
@@ -29,6 +31,17 @@ class RuleController(private val rules: RuleService) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun save(@RequestBody body: RuleBody): RuleVersionJson = rules.save(body.toNewRule()).toJson()
+
+    /** Explains a rule as it would be saved, without saving it; 400 like a save, 502 when the model gives no usable answer. */
+    @PostMapping("/explanation")
+    fun explain(@RequestBody body: RuleBody): ExplanationJson {
+        val explanation = rules.preview(body.toNewRule()) ?: throw ExplanationUnavailableException()
+        return ExplanationJson(explanation.text, explanation.modelId)
+    }
+
+    @ExceptionHandler(ExplanationUnavailableException::class)
+    fun badGateway(e: ExplanationUnavailableException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, e.message)
 
     @ExceptionHandler(InvalidRuleException::class, RuleCompileException::class)
     fun badRequest(e: RuntimeException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.message)

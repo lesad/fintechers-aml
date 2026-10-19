@@ -33,6 +33,19 @@ class RuleService(
         return rules.find(id)!!
     }
 
+    /**
+     * Explains [rule] as its next version would read, without storing anything.
+     *
+     * @return null when the model gave no usable explanation
+     * @throws InvalidRuleException when the rule could not be saved either
+     * @throws cz.morosystems.aml.engine.cel.RuleCompileException when a CEL expression does not type-check
+     */
+    fun preview(rule: NewRule): Explanation? {
+        validate(rule)
+        val version = (rules.latestOf(rule.key)?.version ?: 0) + 1
+        return explainer.explain(rule.definition(version), rule.scopeSegmentId?.let(rules::segmentName))
+    }
+
     /** Writes the explanation of every version that has none; never overwrites one. */
     fun explainMissing(): ExplainReport {
         val filled = rules.missingExplanations().count(::explain)
@@ -71,12 +84,10 @@ class RuleService(
             keeps("client", earlier.scopeClientId, rule.scopeClientId)
             keeps("replaces", earlier.replacesKey, rule.replacesKey)
         }
-        compiler.compile(
-            RuleDefinition(
-                0, rule.key, 0, rule.alertType, rule.layer, rule.scopeSegmentId, rule.scopeClientId, rule.grain, rule.anchor,
-                rule.condition, rule.replacesKey, rule.variables, rule.params,
-            ),
-            rule.params.keys,
-        )
+        compiler.compile(rule.definition(0), rule.params.keys)
     }
 }
+
+private fun NewRule.definition(version: Int) = RuleDefinition(
+    0, key, version, alertType, layer, scopeSegmentId, scopeClientId, grain, anchor, condition, replacesKey, variables, params,
+)

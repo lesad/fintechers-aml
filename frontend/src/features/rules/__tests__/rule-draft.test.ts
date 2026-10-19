@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { changedSections, type Draft, draftFrom, draftIssues, toNewRule } from "../rule-draft";
+import {
+  changedSections,
+  type Draft,
+  draftFrom,
+  draftIssues,
+  editedFields,
+  toNewRule,
+} from "../rule-draft";
 import { B2, C1_V2 } from "./fixtures";
 
 const empty = draftFrom(null);
@@ -111,5 +118,41 @@ describe("changedSections", () => {
     };
     expect([...changedSections(edited, base)]).toEqual(["params"]);
     expect(changedSections(base, base).size).toBe(0);
+  });
+});
+
+describe("editedFields", () => {
+  it("names the edited fields, rows by position", () => {
+    const base = draftFrom(B2);
+    const edited = {
+      ...base,
+      name: "x",
+      params: [{ name: "pep_min", value: "1", unit: "amount" as const }],
+    };
+    expect(editedFields(base, edited)).toEqual(["name", "params.0.value"]);
+  });
+
+  it("a row just added is not edited yet", () => {
+    const base = draftFrom(B2);
+    expect(
+      editedFields(base, { ...base, params: [...base.params, { name: "", value: "", unit: "" }] }),
+    ).toEqual([]);
+  });
+});
+
+describe("issue fields", () => {
+  it("ties an empty required field's issue to that field", () => {
+    const fields = draftIssues(draftFrom(null), true, new Set()).map((i) => i.field);
+    expect(fields).toEqual(["key", "name", "condition"]);
+  });
+
+  it("a value typed wrong is not tied to a field, so it shows at once", () => {
+    const draft = {
+      ...draftFrom(B2),
+      params: [{ name: "pep_min", value: "1 000", unit: "amount" as const }],
+    };
+    expect(
+      draftIssues(draft, false, new Set()).find((i) => i.text.includes("needs a number"))?.field,
+    ).toBeUndefined();
   });
 });

@@ -13,7 +13,6 @@ const UNIT_LABEL: Record<(typeof PARAM_UNITS)[number], string> = {
   amount: "CZK",
   percent: "%",
   multiple: "×",
-  count: "count",
 };
 
 const AGGS: RuleVariable["agg"][] = ["sum", "count", "set", "max", "min"];

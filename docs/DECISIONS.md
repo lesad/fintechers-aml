@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0038 — Parameter units are amount, percent and multiple
+
+**Accepted.** The `count` unit is gone (migration `0016`); a parameter is an `amount` (CZK), a `percent` or a `multiple` of a client figure. _Why:_ no rule used `count`, and an option nobody picks only invites the wrong pick: a factor saved as `count` would read as "5 payers" instead of "5 times". A future rule that needs a plain number of things brings the unit back with its first use. Supersedes the `count` unit of ADR-0036.
+
 ### ADR-0037 — Money is CZK as a double, end to end; haléře are gone
 
 **Accepted.** Every amount in the system is CZK as a floating-point number, the unit and shape the source CSV already delivers: `transaction.amount`, `client.expected_monthly_volume`, `client.q2_volume`, `client.q2_max_tx` and `rule_param.value` are `double precision` (migration `0015`), the importer stops multiplying by 100, the CEL vocabulary types amounts and parameters as `double`, triage carries `Double` and the API hands the browser plain CZK (`amount`, `expectedMonthly`, `q2Volume`, `q2MaxTx`) with no conversion left in the UI. Thresholds keep their value in the new unit: `pep_min` is 100 000, `country_min` 10 000, `min_inflow` 100 000, and the triage amount bands are 1 000 000 / 250 000 / 50 000 CZK, so no alert changes its outcome. _Why:_ one unit from the CSV to the screen. The haléře integer existed to keep arithmetic exact, but it was converted back for every reader — the UI, the rule form, both prompts, the summary number check — and each conversion was a place to be wrong; the thresholds the business states are CZK too.
@@ -10,7 +14,7 @@
 
 ### ADR-0036 — A rule parameter stores its unit
 
-**Accepted.** Each `rule_param` row carries a `unit`: `amount` (haléře), `percent`, `multiple` or `count`, required on save and fixed with the version (ADR-0035). The API sends a parameter as `{value, unit}`; the rule explanation prompt states the unit on each parameter line, and the alert summary input gets a `units` map next to the evidence. _Why:_ every reader of a threshold, both models and the frontend, guessed the unit from the name or the size of the number (the rules page read values from 100,000 up as haléře), and a percentage read as haléře turns "80 %" into "0.80 CZK". _(The `amount` unit is CZK since ADR-0037.)_ Code knows the unit so no model or screen has to infer it.
+**Accepted.** Each `rule_param` row carries a `unit`: `amount` (haléře), `percent`, `multiple` or `count`, required on save and fixed with the version (ADR-0035). The API sends a parameter as `{value, unit}`; the rule explanation prompt states the unit on each parameter line, and the alert summary input gets a `units` map next to the evidence. _Why:_ every reader of a threshold, both models and the frontend, guessed the unit from the name or the size of the number (the rules page read values from 100,000 up as haléře), and a percentage read as haléře turns "80 %" into "0.80 CZK". _(The `amount` unit is CZK since ADR-0037; `count` is gone since ADR-0038.)_ Code knows the unit so no model or screen has to infer it.
 
 ### ADR-0035 — Parameter values belong to the immutable rule version
 

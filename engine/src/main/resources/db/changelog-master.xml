@@ -19,4 +19,5 @@
     <include file="db/migrations/0013-rule-explanation.sql" />
     <include file="db/migrations/0014-param-unit.sql" />
     <include file="db/migrations/0015-amounts-in-czk.sql" />
+    <include file="db/migrations/0016-no-count-unit.sql" />
 </databaseChangeLog>

@@ -166,6 +166,29 @@ class RuleControllerTest {
         assertThat(mvc.get().uri("/api/rules/$id")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("retired")
     }
 
+    @Test
+    fun explainsARuleWithoutSavingIt() {
+        val explained = assertThat(explain(b2Body())).hasStatusOk().bodyJson()
+        explained.extractingPath("$.explanation").isEqualTo(LOWER_B2)
+        explained.extractingPath("$.model").isEqualTo("eu.anthropic.claude-opus-4-5-20251101-v1:0")
+        assertThat(mvc.get().uri("/api/rules")).hasStatusOk().bodyJson().extractingPath("$.length()").isEqualTo(7)
+    }
+
+    @Test
+    fun explainingAnInvalidRuleIs400() {
+        assertThat(explain(b2Body().replace("tx.direction in", "tx.direcion in"))).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun explainingWithoutAUsableAnswerIs502() {
+        bedrock.failure = BedrockException("The SSO session has expired")
+        assertThat(explain(b2Body())).hasStatus(HttpStatus.BAD_GATEWAY)
+            .bodyJson().extractingPath("$.detail").asString().contains("try again")
+    }
+
+    private fun explain(body: String) =
+        mvc.post().uri("/api/rules/explanation").contentType(MediaType.APPLICATION_JSON).content(body)
+
     private fun post(body: String) = mvc.post().uri("/api/rules").contentType(MediaType.APPLICATION_JSON).content(body)
 
     private fun b2Body(pepMin: Double = 50_000.0, key: String = "B2", unit: String = "amount") = """
