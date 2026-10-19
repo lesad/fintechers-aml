@@ -1,12 +1,16 @@
 import { cva } from "class-variance-authority";
 import { useEffect, useRef, useState } from "react";
 
+import { CURRENT_USER } from "./user";
+
 import type { RiskLevel } from "@/components";
 
 type HeaderProps = {
   openByRating: Record<RiskLevel, number>;
   /** Opens the transaction if it exists; resolves to false when the id is unknown. */
   onJump: (id: string) => Promise<boolean>;
+  rulesOpen: boolean;
+  onToggleRules: () => void;
 };
 
 const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl ";
@@ -20,11 +24,23 @@ const dot = cva("size-[7px] rounded-[2px]", {
   },
 });
 
+const cog = cva(
+  "flex size-7 items-center justify-center rounded-md text-base leading-none outline-none focus-visible:ring-2 focus-visible:ring-yellow",
+  {
+    variants: {
+      active: {
+        true: "bg-white/15 text-yellow shadow-[inset_0_-2px_0_var(--color-yellow)]",
+        false: "text-indigo-20 hover:bg-white/10 hover:text-white",
+      },
+    },
+  },
+);
+
 const hint = cva("pointer-events-none absolute right-2 text-[11px]", {
   variants: { miss: { true: "text-header-miss", false: "text-indigo-60" } },
 });
 
-export function Header({ openByRating, onJump }: HeaderProps) {
+export function Header({ openByRating, onJump, rulesOpen, onToggleRules }: HeaderProps) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
@@ -101,7 +117,17 @@ export function Header({ openByRating, onJump }: HeaderProps) {
       </form>
 
       <div className="flex flex-1 items-center justify-end gap-2 whitespace-nowrap">
-        <span className="text-xs text-indigo-20">J. Novák</span>
+        <button
+          type="button"
+          aria-label="Rules"
+          title="Rules"
+          aria-pressed={rulesOpen}
+          onClick={onToggleRules}
+          className={cog({ active: rulesOpen })}
+        >
+          ⚙
+        </button>
+        <span className="text-xs text-indigo-20">{CURRENT_USER}</span>
         <div className="flex size-[26px] items-center justify-center rounded-full bg-indigo-80 text-[11px] font-semibold">
           JN
         </div>

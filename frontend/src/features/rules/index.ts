@@ -1,1 +1,1 @@
-export type { RuleVersion } from "./api";
+export { RulesPage } from "./RulesPage";
