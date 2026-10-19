@@ -2,7 +2,7 @@
 
 > **Intended use:** the project's **external memory** and the map to it. A fresh agent (or human) reads this file first, then follows the Agent loop below. Keep it current as the doc set grows.
 
-This directory is durable, committed project memory. Live, in-flight work lives in **dex**, not here.
+This directory is durable, committed project memory. Live, in-flight work lives in the session and in the gitignored `superpowers/` drafts, not here (ADR-0030).
 
 ## Map
 
@@ -13,20 +13,18 @@ This directory is durable, committed project memory. Live, in-flight work lives 
 | `DECISIONS.md`   | Architecture decision records (ADRs)                                                                                            | whoever makes the call                    |
 | `STACK.md`       | Pinned stack versions + context7 doc IDs                                                                                        | agents, on dependency change              |
 | `QUICKSTART.md`  | Local / preview / production setup runbook                                                                                      | humans                                    |
-| `FORKING.md`     | One-time "make it yours" checklist for a new fork                                                                               | humans (new forks)                        |
 | `ENVIRONMENT.md` | Env-var manifest + secure-handling guide                                                                                        | humans + agents                           |
 | `challenge/`     | Hackathon challenge context (FINREG AML triage): start at `challenge/README.md`                                                 | humans + agents, single source (ADR-0023) |
 | `rules/`         | Rule specifications we iterate on (detect, facts, gates, Jev questions, policy, priority, routing): start at `rules/README.md`  | humans + agents                           |
 | `engine/`        | Design of the Kotlin monitoring rules engine (CEL rules, layers, Z3 checks, alerts): `engine/rules-engine-design.md` (ADR-0024) | humans + agents                           |
 | `design/`        | Saved Claude Design screens, the source of truth for the UI: start at `design/README.md`                                        | humans + agents                           |
-| `UPSTREAM.md`    | Generic changes to contribute back — **consuming forks only**; empty in this template repo                                      | agents + humans (forks)                   |
-| _(live tasks)_   | tracked in **dex** (`.dex/`), not a file here                                                                                   | agents                                    |
+| `superpowers/`   | Gitignored plan, spec and handoff drafts (ADR-0004)                                                                             | agents                                    |
 
 ## Memory model
 
 Two layers, on purpose:
 
-- **dex** = _live, ephemeral_ work — tasks, subtasks, progress, next steps, cross-session handoff context. JSONL in `.dex/`. Use `dex` (global binary, on PATH). **Never put dex task IDs in commits/PRs/docs** — they're meaningless once done; describe the work instead.
+- **live work** = the session, the gitignored `docs/superpowers/` drafts and the commit history. Nothing ephemeral is committed; describe the work in the commit and the changelog instead.
 - **committed docs** = _durable_ record — decisions (`DECISIONS.md`), releases (`CHANGELOG.md`), plan shape (`ROADMAP.md`), stack (`STACK.md`).
 
 Canonical specs belong committed under `docs/`; working drafts stay out of git (see ADR-0004).
@@ -36,9 +34,9 @@ Canonical specs belong committed under `docs/`; working drafts stay out of git (
 A fresh agent (new session / cold start) does:
 
 1. Read `CLAUDE.md`, this file, and `docs/STACK.md`.
-2. `dex list --ready` → pick the next unblocked task; `dex show <id>` for context.
+2. Read `docs/challenge/README.md` and the spec for the feature at hand (`docs/rules/`, `docs/engine/`, `docs/design/`).
 3. Do the work under the repo conventions (see `CLAUDE.md`).
 4. Verify: `pnpm check` (typecheck + lint + format:check + unit) before claiming done.
-5. Record: `dex complete <id> --result "…"`; append to `CHANGELOG.md`; add an ADR to `DECISIONS.md` if a real decision was made; if the change is generic (not app-specific), log it in `UPSTREAM.md`.
+5. Record: append to `CHANGELOG.md`; add an ADR to `DECISIONS.md` if a real decision was made.
 
 The **Documentation discipline** section in `CLAUDE.md` states when each doc must be updated.

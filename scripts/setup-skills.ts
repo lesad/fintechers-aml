@@ -9,9 +9,6 @@ const USER_SKILLS = [
 
 // Stack-specific skills — only relevant here, install project-scoped (no -g)
 const PROJECT_SKILLS = [
-  // dex — live task memory. Install only the `dex` skill; the repo's `dex-plan`
-  // is Critical-flagged and unused here, so the 3-part form skips it (no prune needed).
-  "dcramer/dex/dex",
   "wshobson/agents/tailwind-design-system",
   "vercel-labs/agent-skills/vercel-react-best-practices",
   "typesafe-ai/skills/typesafe-ai",

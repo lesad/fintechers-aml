@@ -75,7 +75,6 @@ Keep `docs/` current _as you work_, not deferred. Before finishing a change, syn
 
 - Real decision made → new/superseding ADR in `docs/DECISIONS.md` (**never edit an accepted ADR** — supersede + annotate).
 - Behavioral change → an entry under `[Unreleased]` in `docs/CHANGELOG.md`.
-- Change is **generic** (would help any app on the template) → this only applies in a **consuming fork**, where you'd log it in `docs/UPSTREAM.md`. This repo _is_ the template, so its own `UPSTREAM.md` stays empty.
 - Dependency bump → update `docs/STACK.md`.
 
 Read `docs/README.md` first (the memory map).
@@ -93,7 +92,6 @@ Install generic ones: `pnpm dlx skills add <owner/repo> --skill <name> --agent c
 
 **Project-scoped** (`.claude/skills/` — this stack only, run `pnpm setup:agentic`):
 
-- `dcramer/dex/dex` — live task memory (see ADR-0003; `dex-plan` deliberately skipped)
 - `wshobson/agents/tailwind-design-system` — Tailwind design system
 - `vercel-labs/agent-skills/vercel-react-best-practices` — Vercel React patterns
 - `typesafe-ai/skills/typesafe-ai` — TypeSafe System One typed judgments

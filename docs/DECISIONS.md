@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0030 — No dex; the template docs are retired
+
+**Accepted.** Live, in-flight work is not tracked in a tool: it lives in the session, in the gitignored `docs/superpowers/` drafts (ADR-0004) and in the commit history. dex is removed from the skill list, `scripts/setup-skills.ts` and `skills-lock.json`. The template-era docs go with it: `docs/FORKING.md` and `docs/UPSTREAM.md` are deleted, and the "generic change → UPSTREAM" rule in `CLAUDE.md` is gone. The durable record stays as it is: `DECISIONS.md`, `CHANGELOG.md`, `STACK.md`, `ROADMAP.md`. _Why:_ `.dex/` never appeared in 40+ hackathon commits and the skill was never installed, so the docs described a loop nobody ran. This repo is the hackathon entry, not a template anyone forks; docs that address a fork consumer mislead the agents that read them. Supersedes ADR-0003.
+
 ### ADR-0029 — The frontend moves into `frontend/`, next to `engine/`
 
 **Accepted.** The Vite SPA and its whole Node toolchain live in `frontend/`: `src/`, `public/`, `index.html`, `vite.config.ts`, `tsconfig.json`, `package.json`, the pnpm lockfile, workspace file and npm config, and the oxlint, oxfmt and fallow configs. The repo root keeps what serves the whole repo: `docs/`, `reference/`, `data/`, `scripts/` (called from `frontend/package.json` as `../scripts/…`), `.github/`, `.claude/`, `CLAUDE.md` and `README.md`. CI runs the `check` and `build` jobs and fallow in `frontend/`; the pre-commit hook `cd`s there. _Why:_ the repo now holds two apps, the Kotlin engine in `engine/` (ADR-0024) and the web app; giving each its own folder keeps their tooling apart and the root readable. _Trade-off:_ oxfmt refuses paths outside its working directory, so the markdown in `docs/`, `README.md` and `CLAUDE.md` is no longer format-checked. Supersedes the root layout described in ADR-0025.
@@ -217,6 +221,8 @@ _Superseded by ADR-0025 for the frontend: there is no server in a client-only SP
 ### ADR-0003 — dex for live task memory; ROADMAP/CHANGELOG/DECISIONS as files
 
 **Accepted.** Live tasks/progress/next-steps/issues are tracked in **dex** (`.dex/` JSONL), not hand-rolled `PROGRESS.md`/`ISSUES.md`. Durable narrative (roadmap, releases, decisions) stays as committed markdown. _Why:_ dex already does multi-session task memory with rich context and conflict-free merges; don't rebuild it. dex task IDs are never referenced in commits/PRs (ephemeral).
+
+_Superseded by ADR-0030: dex was never used here and is removed._
 
 ### ADR-0002 — React Compiler; ban `useMemo`/`useCallback`/`memo`
 

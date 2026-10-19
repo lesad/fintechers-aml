@@ -1,12 +1,6 @@
 {
   "version": 1,
   "skills": {
-    "dex": {
-      "source": "dcramer/dex",
-      "sourceType": "github",
-      "skillPath": "plugins/dex/skills/dex/SKILL.md",
-      "computedHash": "2f83595ac5616137a66109de802c94a90ce02714a8913be19e096cff730bbe45"
-    },
     "tailwind-design-system": {
       "source": "wshobson/agents",
       "sourceType": "github",

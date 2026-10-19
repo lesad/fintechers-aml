@@ -15,9 +15,7 @@ Before the event, this repo held only a generic Next.js app template (`agentic-n
 5. Load the data into the engine's local Postgres (needs Docker), from the repo root: `docker compose -f engine/compose.yaml up -d --wait`, then `cd engine && ./gradlew bootRun --args=import`. Details and the expected output: [`engine/README.md`](engine/README.md).
 6. Read `docs/challenge/README.md` for the challenge, the data findings and the decision design.
 
-## Template notes
-
-The sections below come from the template and describe its tooling.
+## Tooling
 
 ## 30-second start
 
@@ -28,8 +26,6 @@ pnpm dev                            # http://localhost:5173
 ```
 
 No environment file and no database: the app is a client-only SPA. Persistence and the monitoring rules live in the Kotlin engine (ADR-0024).
-
-> **Forking this for a new app?** See [`docs/FORKING.md`](docs/FORKING.md) for the one-time "make it yours" steps.
 
 ## Stack
 
