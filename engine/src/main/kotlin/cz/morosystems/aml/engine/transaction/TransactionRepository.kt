@@ -1,5 +1,7 @@
 package cz.morosystems.aml.engine.transaction
 
+import cz.morosystems.aml.engine.ai.promptHash
+import cz.morosystems.aml.engine.assessment.AssessmentService
 import cz.morosystems.aml.engine.user.AppUser
 import java.sql.ResultSet
 import java.time.LocalDate
@@ -126,7 +128,10 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 score = rs.getInt("score"),
                 flaggedAt = rs.getObject("flagged_at", OffsetDateTime::class.java),
             )
-        }.list()
+        }.list().let { rows ->
+            val aiRatings = aiRatings(rows.map(FlaggedTransaction::id))
+            rows.map { it.copy(aiRating = aiRatings[it.id]) }
+        }
 
         val total = jdbc.sql("$QUEUE select count(*) from queue q join transaction t on t.id = q.id $filter")
             .params(params).query(Long::class.java).single()
@@ -136,6 +141,27 @@ class TransactionRepository(private val jdbc: JdbcClient) {
 
         return TransactionPage(items, page, size, total, RATINGS.associateWith { counts[it] ?: 0L })
     }
+
+    /** The AI Rating per transaction: that of its most severe alert, when its newest result under the prompt of that alert's disposition is ready. */
+    private fun aiRatings(ids: List<String>): Map<String, String?> =
+        jdbc.sql(
+            """
+            select distinct on (a.transaction_id) a.transaction_id, r.status, r.body->>'rating' as rating
+            from alert a
+            join alert_triage tr on tr.alert_id = a.id
+            left join lateral (
+                select status, body from ai_result
+                where alert_id = a.id and kind = ? and prompt_hash = (?::jsonb ->> tr.disposition) order by id desc limit 1
+            ) r on true
+            where a.run_id = ($LATEST_RUN) and a.transaction_id = any(?)
+            order by a.transaction_id, array_position(?::text[], tr.disposition) desc, a.id
+            """,
+        ).params(
+            AssessmentService.KIND.name, json.writeValueAsString(DISPOSITIONS.associateWith { AssessmentService.KIND.promptHash(it) }),
+            ids.toTypedArray(), DISPOSITIONS.toTypedArray(),
+        ).query { rs, _ ->
+            rs.getString("transaction_id") to rs.getString("rating")?.takeIf { rs.getString("status") == "ready" }?.replaceFirstChar(Char::uppercase)
+        }.list().toMap()
 
     fun detail(id: String): TransactionDetail? {
         val tx = jdbc.sql(
@@ -228,7 +254,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 val evidence = rs.getString("evidence")?.let { json.readValue(it, Map::class.java) as Map<String, Any?> } ?: emptyMap()
                 Hit(rs.getString("key"), rs.getString("name"), rs.getInt("version"), rs.getString("grain_key"), evidence)
             }.list()
-            TransactionAlert(row.id, row.type, row.createdAt, row.triage, row.status, hits)
+            TransactionAlert(row.id, row.type, row.createdAt, row.triage, row.triage?.let { ratingOf(it.disposition) }, row.status, hits)
         }
     }
 
@@ -293,8 +319,8 @@ class TransactionRepository(private val jdbc: JdbcClient) {
 
     private data class AlertRow(val id: Long, val type: String, val status: String, val createdAt: OffsetDateTime, val triage: AlertTriage?)
 
-    private companion object {
-        val RATINGS = listOf("High", "Medium", "Low")
+    companion object {
+        private val RATINGS = listOf("High", "Medium", "Low")
 
         /** Triage dispositions, mildest first, as in `triage/TriageModel.kt`. */
         val DISPOSITIONS = listOf("AUTO_CLOSE", "REVIEW_LOW", "REVIEW_MEDIUM", "REVIEW_HIGH", "ESCALATE")
@@ -303,13 +329,13 @@ class TransactionRepository(private val jdbc: JdbcClient) {
         val STATUSES = listOf("NEW", "FALSE_POSITIVE", "ESCALATED", "REPORTED")
 
         /** The three-level rating the UI shows. Must match the `rating` case in [QUEUE]. */
-        fun ratingOf(disposition: String): String = when (disposition) {
+        private fun ratingOf(disposition: String): String = when (disposition) {
             "ESCALATE", "REVIEW_HIGH" -> "High"
             "REVIEW_MEDIUM" -> "Medium"
             else -> "Low"
         }
 
-        const val LATEST_RUN = "select max(id) from run where finished_at is not null"
+        private const val LATEST_RUN = "select max(id) from run where finished_at is not null"
 
         /**
          * One row per transaction the latest run alerted on: its most severe triage disposition (`sev`, the
@@ -317,7 +343,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
          * Transactions that triage closed on its own (`AUTO_CLOSE`) are left out, as no one needs to review them;
          * an alert not triaged yet is left out too.
          */
-        const val QUEUE = """
+        private const val QUEUE = """
             with alert_sev as (
                 select a.id, a.transaction_id, a.alert_type, a.status, a.assignee_id, a.created_at, tr.score,
                        array_position(array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'], tr.disposition) as sev

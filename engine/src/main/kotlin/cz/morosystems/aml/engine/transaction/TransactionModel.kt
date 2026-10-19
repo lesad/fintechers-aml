@@ -25,6 +25,8 @@ data class FlaggedTransaction(
     val rules: List<RuleRef>,
     /** `High`, `Medium` or `Low`, from [disposition]. */
     val rating: String,
+    /** `High`, `Medium` or `Low` from the AI Rating of the most severe alert; null when it has no current ready result. */
+    val aiRating: String? = null,
     /** The most severe triage disposition of the transaction's alerts, e.g. `REVIEW_HIGH`. */
     val disposition: String,
     /** The highest triage score of the transaction's alerts. */
@@ -101,6 +103,8 @@ data class TransactionAlert(
     val createdAt: OffsetDateTime,
     /** Null when the alert has not been triaged. */
     val triage: AlertTriage?,
+    /** `High`, `Medium` or `Low` from the triage disposition; null when the alert has not been triaged. */
+    val rating: String?,
     /** `NEW`, `ESCALATED`, `FALSE_POSITIVE` or `REPORTED`. */
     val status: String,
     val hits: List<Hit>,

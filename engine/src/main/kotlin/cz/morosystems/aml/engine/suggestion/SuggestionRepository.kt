@@ -5,7 +5,7 @@ import cz.morosystems.aml.engine.rules.RuleRepository
 import cz.morosystems.aml.engine.run.ClientRepository
 import cz.morosystems.aml.engine.summary.AlertActivity
 import cz.morosystems.aml.engine.summary.AlertNotFoundException
-import cz.morosystems.aml.engine.summary.SummaryRepository
+import cz.morosystems.aml.engine.summary.SummaryService
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import tools.jackson.databind.json.JsonMapper
@@ -17,7 +17,7 @@ class SuggestionRepository(
     private val activity: AlertActivity,
     private val rules: RuleRepository,
     private val clients: ClientRepository,
-    private val summaries: SummaryRepository,
+    private val summaries: SummaryService,
 ) {
     private val json = JsonMapper()
 
@@ -35,7 +35,7 @@ class SuggestionRepository(
             latest = (hitKeys + hitKeys.map { clientKey(it, alert.clientId) }).mapNotNull { key -> rules.latestOf(key)?.let { key to it } }.toMap(),
             values = values(),
             triage = triage(alertId),
-            summary = summaries.latest(alertId)?.text,
+            summary = summaries.latestText(alertId),
             existingRules = rules.allVersions().filter { it.status != "retired" },
         )
     }

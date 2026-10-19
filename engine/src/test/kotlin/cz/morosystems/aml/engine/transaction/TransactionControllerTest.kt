@@ -1,6 +1,8 @@
 package cz.morosystems.aml.engine.transaction
 
 import cz.morosystems.aml.engine.PostgresTest
+import cz.morosystems.aml.engine.ai.promptHash
+import cz.morosystems.aml.engine.assessment.AssessmentService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -59,6 +61,52 @@ class TransactionControllerTest {
         body.extractingPath("$.countsByRating.High").isEqualTo(2)
         body.extractingPath("$.countsByRating.Medium").isEqualTo(1)
         body.extractingPath("$.countsByRating.Low").isEqualTo(1)
+    }
+
+    @Test
+    fun aRowCarriesTheAiRatingOfItsTriageAlert() {
+        aiResult(alertOf("T1", "ESCALATE"))
+        val body = assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
+        body.extractingPath("$.items[0].id").isEqualTo("T1")
+        body.extractingPath("$.items[0].aiRating").isEqualTo("High")
+    }
+
+    @Test
+    fun aRowWithoutAResultHasNoAiRating() {
+        assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
+            .extractingPath("$.items[0].aiRating").isNull()
+    }
+
+    @Test
+    fun aResultOfAnOldPromptIsIgnored() {
+        aiResult(alertOf("T1", "ESCALATE"), promptHash = "old")
+        assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
+            .extractingPath("$.items[0].aiRating").isNull()
+    }
+
+    @Test
+    fun aResultUnderAnotherDispositionsPromptIsIgnored() {
+        aiResult(alertOf("T1", "ESCALATE"), promptHash = AssessmentService.KIND.promptHash("AUTO_CLOSE"))
+        assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
+            .extractingPath("$.items[0].aiRating").isNull()
+    }
+
+    @Test
+    fun onlyTheMostSevereAlertCounts() {
+        val latest = jdbc.sql("select max(id) from run").query(Long::class.java).single()
+        aiResult(alert(latest, "A", "K3", "T3", "A1", "REVIEW_LOW", 10))
+        val body = assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
+        body.extractingPath("$.items[2].id").isEqualTo("T3")
+        body.extractingPath("$.items[2].aiRating").isNull()
+    }
+
+    @Test
+    fun theDetailGivesEachAlertItsRuleRating() {
+        val latest = jdbc.sql("select max(id) from run").query(Long::class.java).single()
+        jdbc.sql("insert into alert (run_id, alert_type, client_id, transaction_id) values (?, 'A', 'K3', 'T3')").param(latest).update()
+        val body = assertThat(mvc.get().uri("/api/transactions/T3")).hasStatusOk().bodyJson()
+        body.extractingPath("$.alerts[0].rating").isEqualTo("Medium")
+        body.extractingPath("$.alerts[1].rating").isNull()
     }
 
     @Test
@@ -300,7 +348,7 @@ class TransactionControllerTest {
             .query(Long::class.java).single()
 
     @Suppress("LongParameterList") // test fixture: one call spells out the whole alert
-    private fun alert(runId: Long, type: String, client: String, txId: String, rule: String, disposition: String, score: Int) {
+    private fun alert(runId: Long, type: String, client: String, txId: String, rule: String, disposition: String, score: Int): Long {
         val hit = jdbc.sql(
             """
             insert into rule_hit (run_id, rule_id, client_id, grain_key, evidence)
@@ -317,5 +365,18 @@ class TransactionControllerTest {
             values (?, ?, ?, ?::jsonb, 'test-v1', 'hash')
             """,
         ).params(alert, disposition, score, """[{"code": "$rule", "description": "rule $rule fired", "points": $score}]""").update()
+        return alert
     }
+
+    private fun aiResult(alertId: Long, promptHash: String = promptHashOf(alertId)) {
+        jdbc.sql("insert into ai_result (alert_id, kind, status, body, model_id, prompt_hash, input_hash) values (?, 'assessment', 'ready', '{\"rating\": \"high\"}'::jsonb, 'm', ?, 'i')")
+            .params(alertId, promptHash).update()
+    }
+
+    private fun promptHashOf(alertId: Long): String =
+        AssessmentService.KIND.promptHash(jdbc.sql("select disposition from alert_triage where alert_id = ?").param(alertId).query(String::class.java).single())
+
+    private fun alertOf(txId: String, disposition: String): Long =
+        jdbc.sql("select a.id from alert a join alert_triage tr on tr.alert_id = a.id where a.transaction_id = ? and tr.disposition = ? and a.run_id = (select max(id) from run)")
+            .params(txId, disposition).query(Long::class.java).single()
 }

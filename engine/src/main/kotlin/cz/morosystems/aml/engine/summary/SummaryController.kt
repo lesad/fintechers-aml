@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.summary
 
+import cz.morosystems.aml.engine.ai.AiResult
 import cz.morosystems.aml.engine.bedrock.BedrockException
 import cz.morosystems.aml.engine.suggestion.InvalidSuggestionException
 import cz.morosystems.aml.engine.suggestion.Suggestion
@@ -22,12 +23,12 @@ import org.springframework.web.server.ResponseStatusException
 class SummaryController(private val summaries: SummaryService, private val suggestions: SuggestionService) {
     /** The alert's latest summary; 404 until one was generated. */
     @GetMapping("/summary")
-    fun latest(@PathVariable id: Long): Summary =
+    fun latest(@PathVariable id: Long): AiResult =
         summaries.latest(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "alert $id has no summary")
 
-    /** Generates and stores a new summary. 502 when the model fails or its output does not pass the checks. */
+    /** Generates and stores a new summary: `ready`, `rejected` when the reply fails the checks, `failed` when the model does (ADR-0043). */
     @PostMapping("/summary")
-    fun generate(@PathVariable id: Long): Summary = summaries.generate(id)
+    fun generate(@PathVariable id: Long): AiResult = summaries.generate(id)
 
     /** Suggests a rule change for a false-positive reason; stores nothing. 400 for a blank or overlong reason, 502 when the model fails or its output does not pass the checks. */
     @PostMapping("/suggestion")
