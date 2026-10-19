@@ -22,6 +22,9 @@ class RuleRepository(private val jdbc: JdbcClient) {
 
     fun missingExplanations(): List<RuleDefinition> = load("r.explanation is null").map { it.rule }
 
+    fun alertTypeExists(code: String): Boolean =
+        jdbc.sql("select exists (select 1 from alert_type where code = ?)").param(code).query(Boolean::class.java).single()
+
     fun segmentName(id: Long): String? =
         jdbc.sql("select name from segment where id = ?").param(id).query(String::class.java).optional().orElse(null)
 

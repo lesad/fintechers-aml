@@ -22,7 +22,7 @@ data class RuleBody(
     val condition: String,
     val replacesKey: String? = null,
     val variables: List<VariableJson> = emptyList(),
-    val params: Map<String, Long> = emptyMap(),
+    val params: Map<String, Long?> = emptyMap(),
     val author: String,
 )
 
@@ -88,7 +88,7 @@ fun RuleBody.toNewRule() = NewRule(
     variables = variables.mapIndexed { i, v ->
         VariableDefinition(i + 1, v.name.trim(), enumOf<Agg>("aggregation", v.agg), v.field.trim(), v.filter.trim().ifEmpty { "true" }, v.window.toWindow(v.name))
     },
-    params = params,
+    params = params.mapValues { (name, value) -> value ?: throw InvalidRuleException("parameter $name needs a whole-number value") },
     author = author.trim(),
 )
 

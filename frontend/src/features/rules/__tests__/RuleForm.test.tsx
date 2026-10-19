@@ -43,6 +43,18 @@ describe("RuleForm", () => {
     expect(screen.getByText("= 50,000 CZK if an amount")).toBeInTheDocument();
   });
 
+  it("a blank or non-numeric parameter value blocks the save", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    form();
+    for (const value of ["", "50 000"]) {
+      fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value } });
+      fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+      expect(await screen.findByText("Whole number of haléře or units")).toBeInTheDocument();
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("anchor appears only for the client anchor grain", () => {
     render(<RuleForm from={null} author="J. Novák" onSaved={() => {}} onCancel={() => {}} />);
     expect(screen.queryByLabelText("Anchor")).not.toBeInTheDocument();

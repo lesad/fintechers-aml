@@ -1,6 +1,6 @@
 import { formatCzk, type RuleVersion, type RuleWindow } from "./api";
 
-// shortcut: values from 100,000 up are read as haléře amounts, smaller ones as percentages or multiples; add a unit to the engine's parameters if a rule ever needs a small amount.
+// HACK: shortcut: values from 100,000 up read as haléře amounts, smaller ones as percentages or multiples; add a unit to engine parameters when a rule needs a small amount.
 const AMOUNT_FROM = 100_000;
 
 /** `pep_min = 10,000,000 haléře (100,000 CZK)` for amounts, `projected_pct = 25` otherwise. */

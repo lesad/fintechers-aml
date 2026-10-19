@@ -117,6 +117,18 @@ class RuleControllerTest {
     }
 
     @Test
+    fun rejectsAnUnknownAlertType() {
+        assertThat(post(b2Body(key = "X1").replace(""""alertType": "B"""", """"alertType": "Q"""")))
+            .hasStatus(HttpStatus.BAD_REQUEST).bodyJson().extractingPath("$.detail").asString().contains("alert type Q")
+    }
+
+    @Test
+    fun rejectsAParameterWithoutAValue() {
+        assertThat(post(b2Body().replace(""""pep_min": 5000000""", """"pep_min": null""")))
+            .hasStatus(HttpStatus.BAD_REQUEST).bodyJson().extractingPath("$.detail").asString().contains("pep_min")
+    }
+
+    @Test
     fun rejectsAnUnreadableBody() {
         assertThat(post("""{"key": "B2"}""")).hasStatus(HttpStatus.BAD_REQUEST)
     }

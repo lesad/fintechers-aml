@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-// The engine's /api/rules contract (engine/.../rules/RuleJson.kt). Parameter values are integers;
-// amounts among them are in haléře.
+// NOTE: parameter values are integers; the amounts among them are in haléře.
 
 const window = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("day") }),

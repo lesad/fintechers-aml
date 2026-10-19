@@ -49,6 +49,10 @@ class RuleService(
         if (rule.key.isBlank()) throw InvalidRuleException("a rule needs a key")
         if (rule.author.isBlank()) throw InvalidRuleException("a rule needs an author")
         if (rule.condition.isBlank()) throw InvalidRuleException("a rule needs a condition")
+        if (!rules.alertTypeExists(rule.alertType)) throw InvalidRuleException("unknown alert type ${rule.alertType}")
+        if (rule.scopeSegmentId != null && rules.segmentName(rule.scopeSegmentId) == null) {
+            throw InvalidRuleException("unknown segment ${rule.scopeSegmentId}")
+        }
         when (rule.layer) {
             Layer.COMPANY -> if (rule.scopeSegmentId != null || rule.scopeClientId != null) throw InvalidRuleException("a company rule has no segment or client")
             Layer.SEGMENT -> if (rule.scopeSegmentId == null || rule.scopeClientId != null) throw InvalidRuleException("a segment rule needs a segment and no client")

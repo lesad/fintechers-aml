@@ -52,7 +52,7 @@ export function App() {
 
       {view === "rules" && <RulesPage author={CURRENT_USER} onBack={() => setView("review")} />}
 
-      {/* The review area stays mounted behind the rules page, so open tabs and half-written reasons survive. */}
+      {/* NOTE: the review area stays mounted behind the rules page, so open tabs and half-written reasons survive. */}
       <div hidden={view === "rules"} className="flex min-h-0 flex-1 flex-col">
         <Tabs>
           <Tab

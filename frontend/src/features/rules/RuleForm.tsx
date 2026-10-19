@@ -5,6 +5,7 @@ import {
   type UseFormRegister,
   useFieldArray,
   useForm,
+  useFormState,
   useWatch,
 } from "react-hook-form";
 
@@ -133,6 +134,8 @@ function toNewRule(values: FormValues, from: RuleVersion | null, author: string)
   };
 }
 
+const WHOLE = "Whole number of haléře or units";
+
 type FieldsProps = { control: Control<FormValues>; register: UseFormRegister<FormValues> };
 
 const legend = "mb-1 text-[11px] tracking-[0.04em] text-fg-subtle uppercase";
@@ -140,6 +143,7 @@ const legend = "mb-1 text-[11px] tracking-[0.04em] text-fg-subtle uppercase";
 function ParamFields({ control, register }: FieldsProps) {
   const params = useFieldArray({ control, name: "params" });
   const paramValues = useWatch({ control, name: "params" });
+  const { errors } = useFormState({ control, name: "params" });
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className={legend}>Parameters</legend>
@@ -153,13 +157,21 @@ function ParamFields({ control, register }: FieldsProps) {
               className={input({ mono: true })}
             />
             <input
-              {...register(`params.${i}.value`)}
+              {...register(`params.${i}.value`, {
+                required: WHOLE,
+                pattern: { value: /^\d+$/, message: WHOLE },
+              })}
               aria-label={`Value of parameter ${i + 1}`}
               inputMode="numeric"
               className={input({ mono: true })}
             />
-            {Number.isFinite(value) && value > 0 && (
-              <span className="text-xs text-fg-subtle">= {formatCzk(value)} if an amount</span>
+            {errors.params?.[i]?.value ? (
+              <span className="text-xs text-high">{errors.params[i].value.message}</span>
+            ) : (
+              Number.isFinite(value) &&
+              value > 0 && (
+                <span className="text-xs text-fg-subtle">= {formatCzk(value)} if an amount</span>
+              )
             )}
             <button
               type="button"

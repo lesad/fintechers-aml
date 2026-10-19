@@ -23,7 +23,7 @@ export function RulesPage({ author, onBack }: RulesPageProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [mode, setMode] = useState<Mode>({ kind: "view" });
-  // A just-saved draft shows at once, before the reload brings it back from the engine.
+  // NOTE: a just-saved draft shows at once, before the reload brings it back from the engine.
   const [saved, setSaved] = useState<RuleVersion[]>([]);
 
   const fetched = rules.status === "ready" ? rules.versions : [];

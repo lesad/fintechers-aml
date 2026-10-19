@@ -30,7 +30,7 @@ class RuleExplainer(private val bedrock: Bedrock, private val properties: RulesP
             log.warn("rule {} v{}: no explanation, Bedrock failed: {}", rule.key, rule.version, e.message)
             return null
         }
-        val problem = problemWith(text, system + "\n" + prompt)
+        val problem = problemWith(text, prompt)
         if (problem != null) {
             log.warn("rule {} v{}: explanation rejected ({}): {}", rule.key, rule.version, problem, text)
             return null

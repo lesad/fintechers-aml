@@ -94,6 +94,13 @@ class RuleExplainerTest {
     }
 
     @Test
+    fun rejectsANumberOnlyTheSystemPromptHas() {
+        val a3 = b2.copy(key = "A3", alertType = "A", condition = "client.q2_tx_count > 0 && tx.amount > p.max_multiple * client.q2_max_tx", params = mapOf("max_multiple" to 2L))
+        bedrock.reply = "Flags a transaction whose amount is more than 3 times the client's largest single transaction in Q2."
+        assertThat(explainer.explain(a3)).isNull()
+    }
+
+    @Test
     fun rejectsAReplyNotStartingWithFlags() {
         bedrock.reply = "This rule flags transactions of politically exposed persons."
         assertThat(explainer.explain(b2)).isNull()
