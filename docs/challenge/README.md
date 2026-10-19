@@ -16,6 +16,7 @@ Decided 2026-10-19 on the way to the event. The focus is AML, not fraud: it has 
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | [hackathon.md](hackathon.md)                           | Team, timeline, rules, judging, deliverables, open questions                                            |
 | [finreg-challenge.md](finreg-challenge.md)             | Full challenge page and brief text: ruleset, output CSV, scoring, hand-ins                              |
+| [finreg-kickoff.md](finreg-kickoff.md)                 | What FINREG stressed at the kickoff: scope, no self-review, ruleset maintenance duties                  |
 | [app-rules.md](app-rules.md)                           | **Implementation spec:** the detection rules and the invariants the code enforces, with guidelines      |
 | [company-specific-rules.md](company-specific-rules.md) | Our own 18-scenario monitoring ruleset (S-01…S-18): typology, logic, evidence status, firing rates      |
 | [data-profile.md](data-profile.md)                     | The ČNB dataset as delivered, FX rates, five findings for the build, the rule dry run                   |
