@@ -30,6 +30,7 @@ const copy = {
     label: "Why it is a false positive",
     placeholder: "Why the transaction is not suspicious",
     submit: "Mark as false positive",
+    busy: "Checking for a rule change…",
   },
   escalate: {
     button: "Escalate",
@@ -37,6 +38,7 @@ const copy = {
     label: "Reason for escalating",
     placeholder: "What needs further investigation and why",
     submit: "Escalate transaction",
+    busy: "Escalating…",
   },
   report: {
     button: "Report",
@@ -44,6 +46,7 @@ const copy = {
     label: "Reason for reporting",
     placeholder: "Why the transaction is reported as suspicious",
     submit: "Report transaction",
+    busy: "Reporting…",
   },
 } as const;
 
@@ -157,9 +160,15 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
             type="button"
             disabled={!reason || saving}
             onClick={() => save(() => onDecide(copy[choice].action, reason))}
-            className="h-8 cursor-pointer rounded-md border-0 bg-fg text-[13px] font-semibold text-bg disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 cursor-pointer items-center justify-center gap-2 rounded-md border-0 bg-fg text-[13px] font-semibold text-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {copy[choice].submit}
+            {saving && (
+              <span
+                aria-hidden="true"
+                className="size-3.5 animate-spin rounded-full border-2 border-bg/40 border-t-bg"
+              />
+            )}
+            {saving ? copy[choice].busy : copy[choice].submit}
           </button>
           {errorLine}
         </>

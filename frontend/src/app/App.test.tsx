@@ -534,6 +534,7 @@ describe("App", () => {
       target: { value: "Monthly supplier payment." },
     });
     fireEvent.click(screen.getByRole("button", { name: "Mark as false positive" }));
+    expect(screen.getByRole("button", { name: "Checking for a rule change…" })).toBeDisabled();
 
     const dialog = await screen.findByRole("dialog", { name: "Rule suggestion" });
     expect(within(dialog).getByText("Suggested rule change")).toBeInTheDocument();
