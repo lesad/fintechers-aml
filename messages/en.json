@@ -27,18 +27,5 @@
       "email": "Enter a valid email address"
     },
     "custom": "This value isn't allowed"
-  },
-  "guestbook": {
-    "title": "Guestbook",
-    "subtitle": "Leave a message for future visitors.",
-    "nameLabel": "Name",
-    "messageLabel": "Message",
-    "submit": "Sign guestbook",
-    "submitting": "Signing…",
-    "success": "Thanks for signing!",
-    "empty": "No entries yet — be the first to sign.",
-    "errors": {
-      "unexpected": "Couldn't save your message — please try again."
-    }
   }
 }

@@ -1,6 +1,14 @@
-# agentic-next-app
+# FinTechers AML triage
 
-Drop-in Next.js 16 template optimized for agentic development.
+MoroSystems entry for The FinTechers Hackathon 2026, Track 5 (Compliance and RegTech copilots), FINREG PARTNERS challenge: AML transaction monitoring, triage and red-flag escalation.
+
+## Built during the hackathon
+
+Before the event, this repo held only a generic Next.js app template (`agentic-next-app`): framework setup, tooling and an example feature, with no AML or domain code. That state is the `hackathon-start` tag. Everything after it is built during the hackathon.
+
+## Template notes
+
+The sections below come from the template and describe its tooling.
 
 ## 30-second start
 

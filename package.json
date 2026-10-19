@@ -1,5 +1,5 @@
 {
-  "name": "agentic-next-app",
+  "name": "fintechers-aml",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -39,8 +39,7 @@
     "db:types": "supabase gen types typescript --local > src/core/db/supabase-types.ts",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "setup:agentic": "tsx scripts/setup-skills.ts",
-    "eject:examples": "tsx scripts/eject-examples.ts"
+    "setup:agentic": "tsx scripts/setup-skills.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.4.1",
