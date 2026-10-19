@@ -25,7 +25,7 @@ export function App() {
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const [view, setView] = useState<"review" | "rules">("review");
-  const queue = useQueue(filter.query, filter.rating);
+  const queue = useQueue(filter.query, filter.rating, filter.status);
   const items = review.apply(queue.items);
   const rating = new Map(items.map((r) => [r.id, r.rule]));
   const openByRating = review.openCounts(queue.countsByRating ?? NO_COUNTS);
@@ -34,7 +34,7 @@ export function App() {
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       <Header
-        openByRating={openByRating}
+        openByRating={queue.countsByRating ? openByRating : null}
         onJump={async (id) => {
           try {
             await fetchDetail(id);

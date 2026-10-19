@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { fetchFlagged, type TransactionPage } from "./api";
-import { type QueueItem, toQueueItem } from "./queue";
+import { type QueueItem, STATUS_CODE, type StatusFilter, toQueueItem } from "./queue";
 
 import type { RiskLevel } from "@/components";
 
@@ -28,9 +28,9 @@ const EMPTY: QueueState = {
 
 /**
  * Flagged transactions from the engine, a page at a time: `loadMore` appends the next page.
- * A new search or rating starts over from page 0; the search waits 300 ms for typing to stop.
+ * A new search, rating or status starts over from page 0; all three filter on the engine; the search waits 300 ms for typing to stop.
  */
-export function useQueue(query: string, rating: RiskLevel | "all") {
+export function useQueue(query: string, rating: RiskLevel | "all", status: StatusFilter) {
   const [state, setState] = useState<QueueState>(EMPTY);
   const inFlight = useRef<AbortController | null>(null);
 
@@ -38,8 +38,22 @@ export function useQueue(query: string, rating: RiskLevel | "all") {
     inFlight.current?.abort();
     const ctrl = new AbortController();
     inFlight.current = ctrl;
-    setState((s) => ({ ...(reset ? EMPTY : s), loading: true, error: null }));
-    fetchFlagged({ q: query, rating, page, size: PAGE_SIZE }, ctrl.signal)
+    // The counts cover the whole queue whatever the filters, so a new list keeps the last ones.
+    setState((s) => ({
+      ...(reset ? { ...EMPTY, countsByRating: s.countsByRating } : s),
+      loading: true,
+      error: null,
+    }));
+    fetchFlagged(
+      {
+        q: query,
+        rating,
+        status: status === "all" ? "" : STATUS_CODE[status],
+        page,
+        size: PAGE_SIZE,
+      },
+      ctrl.signal,
+    )
       .then((res) =>
         setState((s) => ({
           items: [...(reset ? [] : s.items), ...res.items.map(toQueueItem)],
@@ -66,9 +80,9 @@ export function useQueue(query: string, rating: RiskLevel | "all") {
       clearTimeout(timer);
       inFlight.current?.abort();
     };
-    // `load` closes over query and rating, the only inputs that start a new list.
+    // `load` closes over query, rating and status, the only inputs that start a new list.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, rating]);
+  }, [query, rating, status]);
 
   const done = !state.loading && state.items.length >= state.total;
   return {

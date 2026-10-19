@@ -3,7 +3,6 @@ import { cva } from "class-variance-authority";
 import { type Column, LoadMore, RatingBadge, Select, StatusLabel, Table } from "@/components";
 
 import {
-  byStatus,
   DISPOSITION_LABEL,
   formatAge,
   formatAmount,
@@ -52,7 +51,6 @@ export function ReviewQueue({
   onOpen,
 }: ReviewQueueProps) {
   const now = new Date();
-  const rows = byStatus(items, filter.status);
   const hasFilters = filter.query !== "" || filter.rating !== "all" || filter.status !== "all";
 
   const columns: Column<QueueItem>[] = [
@@ -146,7 +144,6 @@ export function ReviewQueue({
           onChange={(e) => onFilter({ ...filter, status: e.target.value as QueueFilter["status"] })}
         >
           <option value="all">All statuses</option>
-          <option value="open">Open</option>
           <option value="New">New</option>
           <option value="Escalated">Escalated</option>
           <option value="False Positive">False Positive</option>
@@ -168,7 +165,7 @@ export function ReviewQueue({
 
       <Table
         columns={columns}
-        rows={rows}
+        rows={items}
         rowKey={(r) => r.id}
         rowTitle={(r) => `Open ${r.id} in a new tab`}
         rowClassName={(r) => (openIds.includes(r.id) ? "bg-bg-sub" : undefined)}

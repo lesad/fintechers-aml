@@ -129,12 +129,13 @@ async function get<T>(url: string, schema: z.ZodType<T>, signal?: AbortSignal): 
 }
 
 export function fetchFlagged(
-  params: { q: string; rating: string; page: number; size: number },
+  params: { q: string; rating: string; status: string; page: number; size: number },
   signal?: AbortSignal,
 ): Promise<TransactionPage> {
   const qs = new URLSearchParams({ page: String(params.page), size: String(params.size) });
   if (params.q.trim()) qs.set("q", params.q.trim());
   if (params.rating !== "all") qs.set("rating", params.rating);
+  if (params.status) qs.set("status", params.status);
   return get(`/api/transactions?${qs}`, page, signal);
 }
 

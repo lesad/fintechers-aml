@@ -6,7 +6,8 @@ import { CURRENT_USER } from "./user";
 import type { RiskLevel } from "@/components";
 
 type HeaderProps = {
-  openByRating: Record<RiskLevel, number>;
+  /** Null until the engine has answered: the counts show as skeletons. */
+  openByRating: Record<RiskLevel, number> | null;
   /** Opens the transaction if it exists; resolves to false when the id is unknown. */
   onJump: (id: string) => Promise<boolean>;
   rulesOpen: boolean;
@@ -73,7 +74,12 @@ export function Header({ openByRating, onJump, rulesOpen, onToggleRules }: Heade
           {levels.map((level) => (
             <span key={level} className="flex items-center gap-[5px]">
               <span className={dot({ level })} />
-              <b className="text-white">{openByRating[level]}</b> {level}
+              {openByRating ? (
+                <b className="text-white">{openByRating[level]}</b>
+              ) : (
+                <span aria-hidden className="h-3 w-7 animate-pulse rounded-sm bg-white/15" />
+              )}{" "}
+              {level}
             </span>
           ))}
         </div>

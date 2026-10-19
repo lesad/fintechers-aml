@@ -1,5 +1,6 @@
-import { AiPill, Card } from "@/components";
+import { AiLabel, Card } from "@/components";
 
+import { AiNotConnected } from "./AiNotConnected";
 import { caseState } from "./case-state";
 import { ClientCard } from "./ClientCard";
 import { ClientHistoryCard } from "./ClientHistoryCard";
@@ -67,7 +68,12 @@ function DetailView({
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
-      <DetailStrip detail={detail} status={state.status} flagged={state.flaggedAt} />
+      <DetailStrip
+        detail={detail}
+        status={state.status}
+        flagged={state.flaggedAt}
+        triage={state.triage}
+      />
 
       <div className="min-h-0 flex-1 overflow-auto bg-bg-sub">
         <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-3 px-4 pt-3 pb-4">
@@ -76,18 +82,13 @@ function DetailView({
               <RuleRatingCard
                 rating={rating}
                 ruleNames={state.ruleNames}
-                facts={state.facts}
+                thresholds={state.thresholds}
                 alertTypes={state.alertTypes}
                 triage={state.triage}
               />
 
-              <Card tone="ai" title="AI rating" className="gap-2">
-                <div className="flex items-center gap-2">
-                  <AiPill rating="none" />
-                </div>
-                <p className="m-0 text-[13px] leading-normal text-fg-muted">
-                  No model rates cases (ADR-0032). An AI summary for the reviewer will appear here.
-                </p>
+              <Card tone="ai" title={<AiLabel>Rating</AiLabel>} className="gap-2">
+                <AiNotConnected />
               </Card>
             </div>
 

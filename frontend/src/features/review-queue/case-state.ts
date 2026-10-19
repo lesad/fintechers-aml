@@ -1,6 +1,6 @@
 import { czk, type HistoryTransaction, type TransactionDetail } from "./api";
 import { formatTs } from "./queue";
-import { strongestFacts } from "./rules";
+import { ruleThresholds } from "./rules";
 
 import type { Decision } from "./decisions";
 import type { FlowTx } from "./MoneyFlow";
@@ -19,7 +19,7 @@ const toFlow = (h: HistoryTransaction): FlowTx => ({
  * made in the browser. Pure, so the case rules (who decides, what status) are testable on their own.
  */
 export function caseState(detail: TransactionDetail, decision: Decision | undefined) {
-  const { transaction: tx, client, rating, alerts } = detail;
+  const { transaction: tx, rating, alerts } = detail;
   const hits = alerts.flatMap((a) => a.hits);
   const autoClosed = detail.disposition === "AUTO_CLOSE";
   const day = tx.ts.slice(0, 10);
@@ -29,7 +29,7 @@ export function caseState(detail: TransactionDetail, decision: Decision | undefi
     .toSorted((a, b) => (a.dt > b.dt ? 1 : -1));
 
   return {
-    facts: strongestFacts(hits, client),
+    thresholds: ruleThresholds(hits),
     ruleNames: [
       ...new Map(
         hits.toSorted((a, b) => (a.rule > b.rule ? 1 : -1)).map((h) => [h.rule, h.name]),

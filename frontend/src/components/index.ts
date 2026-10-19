@@ -1,14 +1,14 @@
 export { Card } from "./Card";
 export {
   type AiRating,
-  AiPill,
+  AiLabel,
   RatingBadge,
   RiskBadge,
   riskDot,
   type RiskLevel,
-  riskText,
 } from "./RatingBadge";
 export { LoadMore } from "./LoadMore";
+export { Modal } from "./Modal";
 export { Select } from "./Select";
 export { type CaseStatus, StatusLabel } from "./StatusLabel";
 export { type Column, Table } from "./Table";

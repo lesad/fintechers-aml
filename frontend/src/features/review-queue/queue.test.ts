@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { byStatus, formatAge, formatTs, toQueueItem } from "./queue";
+import { formatAge, formatTs, toQueueItem } from "./queue";
 
 import type { FlaggedTransaction } from "./api";
 
@@ -34,20 +34,6 @@ describe("toQueueItem", () => {
       disposition: "ESCALATE",
       score: 92,
     });
-  });
-});
-
-describe("byStatus", () => {
-  const items = [
-    { ...toQueueItem(flagged), id: "a" },
-    { ...toQueueItem(flagged), id: "b", status: "False Positive" as const },
-    { ...toQueueItem(flagged), id: "c", status: "Escalated" as const },
-  ];
-
-  it("keeps open cases, or one status, or all", () => {
-    expect(byStatus(items, "open").map((r) => r.id)).toEqual(["a", "c"]);
-    expect(byStatus(items, "False Positive").map((r) => r.id)).toEqual(["b"]);
-    expect(byStatus(items, "all")).toHaveLength(3);
   });
 });
 

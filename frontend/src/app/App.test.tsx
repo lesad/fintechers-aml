@@ -143,6 +143,20 @@ afterEach(() => vi.unstubAllGlobals());
 const queueTable = () => screen.getByRole("table");
 
 describe("App", () => {
+  it("filters by status on the engine, not in the browser", async () => {
+    render(<App />);
+    await waitFor(() => expect(within(queueTable()).getAllByRole("row")).toHaveLength(3));
+    fireEvent.change(screen.getByRole("combobox", { name: "Status" }), {
+      target: { value: "Escalated" },
+    });
+    await waitFor(() =>
+      expect(vi.mocked(fetch)).toHaveBeenLastCalledWith(
+        expect.stringContaining("status=ESCALATED"),
+        expect.anything(),
+      ),
+    );
+  });
+
   it("loads the queue from the engine and the next page when the list end comes into view", async () => {
     render(<App />);
     await waitFor(() => expect(within(queueTable()).getAllByRole("row")).toHaveLength(3));
@@ -172,15 +186,25 @@ describe("App", () => {
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
   });
 
-  it("opens a row as a detail tab with the rule's threshold and actual value", async () => {
+  it("opens a row as a detail tab with the rule's parameters as stored", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
 
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
-    expect(await screen.findByText("100,000 CZK")).toBeInTheDocument();
+    expect(await screen.findByText("p.pep_min 10000000")).toBeInTheDocument();
     expect(screen.getByText("95", { selector: "b" })).toBeInTheDocument();
     expect(screen.queryByText("client is a PEP")).not.toBeInTheDocument();
-    expect(screen.getAllByText("184,500 CZK").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Breakdown" }));
+    const breakdown = screen.getByRole("dialog", { name: "Triage score breakdown" });
+    expect(within(breakdown).getByText("client is a PEP")).toBeInTheDocument();
+    expect(within(breakdown).getByText("+35")).toBeInTheDocument();
+    expect(
+      within(breakdown).queryByText("0 earlier filing(s) for this client"),
+    ).not.toBeInTheDocument();
+    expect(within(breakdown).getByText("Not connected")).toBeInTheDocument();
+    fireEvent.click(within(breakdown).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close tab" }));
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");

@@ -49,7 +49,7 @@ export function toQueueItem(f: FlaggedTransaction): QueueItem {
   };
 }
 
-export type StatusFilter = CaseStatus | "all" | "open";
+export type StatusFilter = CaseStatus | "all";
 
 export type QueueFilter = {
   /** Transaction or client id, matched by the engine. */
@@ -60,13 +60,13 @@ export type QueueFilter = {
 
 export const NO_FILTER: QueueFilter = { query: "", rating: "all", status: "all" };
 
-const done = (r: QueueItem) => r.status === "False Positive" || r.status === "Reported";
-
-/** The status filter runs in the browser: only decisions made here change a status. */
-export function byStatus(items: QueueItem[], status: StatusFilter): QueueItem[] {
-  if (status === "all") return items;
-  return items.filter((r) => (status === "open" ? !done(r) : r.status === status));
-}
+/** The engine's alert status for each case status the UI shows (`GET /api/transactions?status=`). */
+export const STATUS_CODE: Record<CaseStatus, string> = {
+  New: "NEW",
+  Escalated: "ESCALATED",
+  "False Positive": "FALSE_POSITIVE",
+  Reported: "REPORTED",
+};
 
 /** "12 min", "5h 3m", "2d 4h". */
 export function formatAge(flagged: Date, now: Date): string {

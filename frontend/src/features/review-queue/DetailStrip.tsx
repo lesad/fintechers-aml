@@ -1,10 +1,12 @@
 import { cva } from "class-variance-authority";
+import { useState } from "react";
 
 import { type CaseStatus, StatusLabel } from "@/components";
 import { cn } from "@/utils";
 
 import { czk, type TransactionDetail } from "./api";
-import { formatAge, formatAmount, formatTs } from "./queue";
+import { DISPOSITION_LABEL, formatAge, formatAmount, formatTs } from "./queue";
+import { TriageBreakdown } from "./TriageBreakdown";
 
 const eyebrow = "text-[10px] font-semibold tracking-[0.08em] text-fg-subtle uppercase";
 
@@ -25,17 +27,21 @@ const directionLabel = {
 /** `legal entity` → `Legal entity` */
 const sentence = (s: string | null) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 
-/** The detail's fixed top strip: transaction, amount, who paid whom, case status. */
+/** The detail's fixed top strip: triage score, transaction, amount, who paid whom, case status. */
 export function DetailStrip({
   detail,
   status,
   flagged,
+  triage,
 }: {
   detail: TransactionDetail;
   status: CaseStatus | null;
   flagged: Date | null;
+  /** The triage of the alert that set the case's disposition; null when not flagged. */
+  triage: TransactionDetail["alerts"][number]["triage"];
 }) {
   const { transaction: tx, client } = detail;
+  const [breakdown, setBreakdown] = useState(false);
   const clientSide = { account: client.id, sub: `Client · ${sentence(client.type)}` };
   const parties =
     tx.direction === "in"
@@ -55,7 +61,29 @@ export function DetailStrip({
 
   return (
     <div className="relative z-[1] flex flex-none items-stretch overflow-x-auto bg-bg py-3 shadow-strip">
-      <div className={stripBlock({ first: true })}>
+      {triage && (
+        <div className={stripBlock({ first: true })}>
+          <span className={eyebrow}>Triage score</span>
+          <span className="flex items-baseline gap-0.5 leading-tight whitespace-nowrap">
+            <span className="text-lg font-bold tabular-nums">{triage.score}</span>
+            <span className="text-xs text-fg-muted">/100</span>
+            <span className="ml-1.5 text-xs text-fg-muted">
+              {DISPOSITION_LABEL[triage.disposition]}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setBreakdown(true)}
+            className="cursor-pointer self-start border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-fg underline underline-offset-[0.2em] hover:text-purple"
+          >
+            Breakdown
+          </button>
+          {breakdown && (
+            <TriageBreakdown txId={tx.id} triage={triage} onClose={() => setBreakdown(false)} />
+          )}
+        </div>
+      )}
+      <div className={stripBlock({ first: !triage })}>
         <span className={eyebrow}>Transaction</span>
         <span className="font-mono text-lg leading-tight font-semibold tracking-[-0.01em]">
           {tx.id}

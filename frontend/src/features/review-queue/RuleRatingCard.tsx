@@ -1,24 +1,23 @@
-import { Card, RiskBadge, type RiskLevel, riskText } from "@/components";
-import { cn } from "@/utils";
+import { Card, RiskBadge, type RiskLevel } from "@/components";
 
-import { type RuleFacts, rulesSummary } from "./rules";
+import { type RuleThresholds, rulesSummary } from "./rules";
 
 import type { TransactionDetail } from "./api";
 
 type RuleRatingCardProps = {
   rating: RiskLevel | null;
   ruleNames: readonly string[];
-  /** The hit furthest over its threshold. */
-  facts: RuleFacts | null;
+  /** Each rule's parameters, as the engine stored them. */
+  thresholds: RuleThresholds[];
   alertTypes: string[];
   triage: TransactionDetail["alerts"][number]["triage"];
 };
 
-/** What the rules found: the rating, the strongest rule's threshold vs actual; triage's score top right. */
+/** What the rules found: the rating and each rule's thresholds verbatim; triage's score top right. */
 export function RuleRatingCard({
   rating,
   ruleNames,
-  facts,
+  thresholds,
   alertTypes,
   triage,
 }: RuleRatingCardProps) {
@@ -39,26 +38,27 @@ export function RuleRatingCard({
             <RiskBadge level={rating} />
             <span className="text-sm font-semibold text-pretty">{rulesSummary(ruleNames)}</span>
           </div>
-          {facts && (
-            <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-t border-border-soft pt-2.5">
+          {thresholds.map((t) => (
+            <div
+              key={t.rule}
+              className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)] gap-3 border-t border-border-soft pt-2.5"
+            >
               <div className="flex flex-col gap-0.5">
                 <span className="text-[11px] text-fg-subtle">Rule fired</span>
                 <span>
-                  {facts.rule} · alert {alertTypes.join(", ")}
+                  {t.rule} · alert {alertTypes.join(", ")}
                 </span>
               </div>
               <div className="flex flex-col gap-0.5">
                 <span className="text-[11px] text-fg-subtle">Threshold</span>
-                <span className="text-fg-muted tabular-nums">{facts.threshold}</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-fg-subtle">Actual</span>
-                <span className={cn("font-bold tabular-nums", riskText({ level: rating }))}>
-                  {facts.actual}
-                </span>
+                {t.params.map(([k, v]) => (
+                  <span key={k} className="text-fg-muted tabular-nums">
+                    {k} {v}
+                  </span>
+                ))}
               </div>
             </div>
-          )}
+          ))}
         </>
       ) : (
         <span className="text-[13px] text-fg-muted">
