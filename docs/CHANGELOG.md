@@ -6,6 +6,7 @@
 
 ### Added
 
+- `engine/`: the rules engine. `./gradlew bootRun --args=import` loads the ČNB data into Postgres (amounts in haléře, FX by ČNB fixing, prorated Q2 baseline); `--args=run` runs the CEL rules A1–A3, B1–B2 and C1 (company layer) into hits, alerts (A per client, B per transaction, C per client) and `data/out/alerts-<run>.csv`. July data: A 5,493, B 112, C 1,077. Run instructions in `engine/README.md`.
 - Vite 8 as the build tool: `index.html` → `src/app/main.tsx` → `src/app/App.tsx`. `pnpm dev` / `pnpm build` / `pnpm preview` replace the Next CLI. React Compiler stays on (Rolldown Babel preset), Tailwind moves to `@tailwindcss/vite`, and the Vitest unit project now lives in `vite.config.ts`.
 - `src/app/ErrorBoundary.tsx`: one top-level error boundary with a retry button, replacing the `error.tsx` / `global-error.tsx` / `global-not-found.tsx` route conventions.
 - ADR-0025 for the move off Next.js.
