@@ -12,24 +12,27 @@ Decided 2026-10-19 on the way to the event. The focus is AML, not fraud: it has 
 
 ## Files
 
-| File                                                 | What it answers                                                                                   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| [hackathon.md](hackathon.md)                         | Team, timeline, rules, judging, deliverables, open questions                                      |
-| [finreg-challenge.md](finreg-challenge.md)           | Full challenge page and brief text: ruleset, output CSV, scoring, hand-ins                        |
-| [data-profile.md](data-profile.md)                   | The ČNB dataset as delivered, FX rates, five findings for the build, the rule dry run             |
-| [data-patterns.md](data-patterns.md)                 | What the synthetic data supports: the generator fingerprint and the verdict on every signal tried |
-| [aml-pattern-research.md](aml-pattern-research.md)   | Typologies, EU and ČNB guidance on alerts, unsupervised methods; the research behind the data run |
-| [rule-b-reference-data.md](rule-b-reference-data.md) | EU and FATF high-risk lists for July 2026 (data in `reference/high-risk-countries-2026-07.json`)  |
-| [aml-legal-sources.md](aml-legal-sources.md)         | Czech, EU and guidance sources with links, mapped to rules, priority, escalation and records      |
-| [czech-aml-escalation.md](czech-aml-escalation.md)   | Czech AML roles, FAÚ reporting, 4-eyes, closure reasons, a draft escalation matrix                |
-| [mentor-questions.md](mentor-questions.md)           | Questions for FINREG, ČNB and the crash course, our defaults, and the answers we get              |
-| [decision-architecture.md](decision-architecture.md) | Stack, who decides what, guardrails, labelling plan                                               |
-| [architecture.md](architecture.md)                   | UNDECIDED: which component does what, and the open questions for the team                         |
-| [ux-and-typed-ai.md](ux-and-typed-ai.md)             | AML triage UX patterns, graph libraries, the demo moment                                          |
-| [aws-account-setup.md](aws-account-setup.md)         | Our AWS profile setup (`hackathon`), daily commands, verified access and model behaviour          |
-| [aws-participant-guide.md](aws-participant-guide.md) | Team AWS account: SSO sign-in, models and limits, budget, blocked services                        |
-| [aws-demo-guidance.md](aws-demo-guidance.md)         | AWS's flow and five demo criteria, mapped to our design                                           |
-| [aml-triage-playbook.html](aml-triage-playbook.html) | The AML Triage Playbook page: brief, build plan, triage logic, demo, research; open in a browser  |
+| File                                                   | What it answers                                                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| [hackathon.md](hackathon.md)                           | Team, timeline, rules, judging, deliverables, open questions                                            |
+| [finreg-challenge.md](finreg-challenge.md)             | Full challenge page and brief text: ruleset, output CSV, scoring, hand-ins                              |
+| [app-rules.md](app-rules.md)                           | **Implementation spec:** the detection rules and the invariants the code enforces, with guidelines      |
+| [company-specific-rules.md](company-specific-rules.md) | Our own 18-scenario monitoring ruleset (S-01…S-18): typology, logic, evidence status, firing rates      |
+| [data-profile.md](data-profile.md)                     | The ČNB dataset as delivered, FX rates, five findings for the build, the rule dry run                   |
+| [data-patterns.md](data-patterns.md)                   | What the synthetic data supports: the generator fingerprint and the verdict on every signal tried       |
+| [aml-pattern-research.md](aml-pattern-research.md)     | Typologies, EU and ČNB guidance on alerts, unsupervised methods; the research behind the data run       |
+| [rule-b-reference-data.md](rule-b-reference-data.md)   | EU and FATF high-risk lists for July 2026 (data in `reference/high-risk-countries-2026-07.json`)        |
+| [aml-hard-rules.md](aml-hard-rules.md)                 | Legal context for the rules: EU and Czech AML hard rules today, from 10 July 2027 (AMLR), and the delta |
+| [aml-legal-sources.md](aml-legal-sources.md)           | Czech, EU and guidance sources with links, mapped to rules, priority, escalation and records            |
+| [czech-aml-escalation.md](czech-aml-escalation.md)     | Czech AML roles, FAÚ reporting, 4-eyes, closure reasons, a draft escalation matrix                      |
+| [mentor-questions.md](mentor-questions.md)             | Questions for FINREG, ČNB and the crash course, our defaults, and the answers we get                    |
+| [decision-architecture.md](decision-architecture.md)   | Stack, who decides what, guardrails, labelling plan                                                     |
+| [architecture.md](architecture.md)                     | UNDECIDED: which component does what, and the open questions for the team                               |
+| [ux-and-typed-ai.md](ux-and-typed-ai.md)               | AML triage UX patterns, graph libraries, the demo moment                                                |
+| [aws-account-setup.md](aws-account-setup.md)           | Our AWS profile setup (`hackathon`), daily commands, verified access and model behaviour                |
+| [aws-participant-guide.md](aws-participant-guide.md)   | Team AWS account: SSO sign-in, models and limits, budget, blocked services                              |
+| [aws-demo-guidance.md](aws-demo-guidance.md)           | AWS's flow and five demo criteria, mapped to our design                                                 |
+| [aml-triage-playbook.html](aml-triage-playbook.html)   | The AML Triage Playbook page: brief, build plan, triage logic, demo, research; open in a browser        |
 
 ## Data
 
