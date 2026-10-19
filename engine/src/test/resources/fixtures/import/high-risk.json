@@ -1,0 +1,11 @@
+{
+  "description": "Test fixture",
+  "source": "hand-made",
+  "validFor": "2026-07",
+  "countries": [
+    { "iso2": "AF", "country": "Afghanistan", "eu": true, "fatf": true, "note": "" },
+    { "iso2": "KP", "country": "North Korea", "eu": true, "fatf": true, "note": "" },
+    { "iso2": "NA", "country": "Namibia", "eu": true, "fatf": false, "note": "" },
+    { "iso2": "IR", "country": "Iran", "eu": true, "fatf": true, "note": "" }
+  ]
+}

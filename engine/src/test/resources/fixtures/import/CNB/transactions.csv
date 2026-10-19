@@ -1,0 +1,7 @@
+transaction ID;client ID;date;time;volume;currency;country of payer;country of payee;account of payer;account of payee;type of transaction
+T000001;K000001;04.05.2026;10:15:00;1000.00;EUR;DE;CZ;ACZ00172;K000001;incoming payment
+T000002;K000001;05.05.2026;11:00:00;2500.50;CZK;CZ;CZ;K000001;ACZ00200;outgoing payment
+T000003;K000002;09.05.2026;09:30:00;100.00;USD;US;CZ;;K000002;remittance
+T000004;K000002;11.05.2026;12:00:00;50000;JPY;JP;CZ;ACZ00300;K000002;incoming payment
+T000005;K000002;12.06.2026;08:00:00;10.00;CZK;CZ;CZ;K000002;ACZ00400;outgoing payment
+T000006;K000001;30.06.2026;23:59:59;5.55;CZK;CZ;CZ;K000001;ACZ00500;outgoing payment

@@ -1,0 +1,4 @@
+﻿client ID;country of client;date of contract;contract concluded;PEP;type of client;expected volume of transactions at the time of contract conclusion [CZK];expected number of transactions at the time of contract conclusion;real volume of transactions in 2Q2026 [CZK];real number of transactions in 2Q2026;maximal volume of transaction in 2Q2026 [CZK];AML risk score
+K000001;CZ;15.03.2024;in person;N;natural person;50000.00;5;120000.50;4;60000.25;low
+K000002;SK;10.06.2026;distant form;Y;legal entity;1000000.00;20;250000.00;3;100000.00;high
+K000003;CZ;01.02.2025;in person;N;enterpreneur;30000;2;0;;;medium
