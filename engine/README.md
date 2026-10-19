@@ -6,7 +6,7 @@ Kotlin + Spring Boot service that imports the organisers' data and runs the moni
 
 - **Docker**, for the local Postgres and for the tests (Testcontainers).
 - **Any JDK 17+** to start Gradle. The build itself runs on JDK 25, which the Gradle toolchain downloads on first use.
-- **The data** in `data/raw/`: sign in with `aws sso login --profile hackathon`, then `pnpm data:pull` from the repo root (setup in the root [README](../README.md#getting-started-for-the-hackathon)). If your team profile has another name, run `bash scripts/pull-data.sh --profile <name>`.
+- **The data** in `data/raw/`: sign in with `aws sso login --profile hackathon`, then `bash scripts/pull-data.sh --profile hackathon` from the repo root (or `pnpm data:pull` inside `frontend/`; setup in the root [README](../README.md#getting-started-for-the-hackathon)). Use your own profile name if it differs.
 
 ## Run it locally
 
