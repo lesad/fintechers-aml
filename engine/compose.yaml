@@ -1,5 +1,5 @@
 # Local Postgres for the engine (ADR-0024). Tests use Testcontainers, not this container.
-# One project name for every worktree, so they share the container and port 5432.
+# One project name for every worktree, so they share the container. Port 5440 by default, so it does not clash with other local Postgres containers on 5432.
 name: fintechers-aml
 
 services:
@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${ENGINE_DB_PORT:-5440}:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
