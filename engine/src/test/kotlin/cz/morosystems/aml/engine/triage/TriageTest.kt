@@ -146,6 +146,21 @@ class TriageTest {
     }
 
     @Test
+    fun theAmountReasonNamesTheBandItLandedIn() {
+        val scoring = reasonOf(Triage.decide(input(amount = 593_425.8300000001), CONFIG), "AMOUNT")
+        assertThat(scoring.description).isEqualTo("largest amount involved is CZK 593,425.83, at or above the CZK 250,000 band")
+        assertThat(scoring.points).isEqualTo(8)
+
+        val belowEveryBand = reasonOf(Triage.decide(input(amount = 10_000.0), CONFIG), "AMOUNT")
+        assertThat(belowEveryBand.description).isEqualTo("largest amount involved is CZK 10,000, under the CZK 50,000 band")
+        assertThat(belowEveryBand.points).isZero()
+
+        val none = reasonOf(Triage.decide(input(amount = null), CONFIG), "AMOUNT")
+        assertThat(none.description).isEqualTo("no amount to score: no rule hit on this alert records one")
+        assertThat(none.points).isZero()
+    }
+
+    @Test
     fun otherAlertTypesAreCountedNotNamed() {
         val one = reasonOf(Triage.decide(input(otherAlertTypesOnClient = setOf("C")), CONFIG), "MULTIPLE_RULE_BREACHES")
         assertThat(one.description).isEqualTo("the client also breaks another kind of rule in this run")

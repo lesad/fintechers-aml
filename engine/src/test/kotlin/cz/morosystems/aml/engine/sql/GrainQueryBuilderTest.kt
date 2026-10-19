@@ -58,6 +58,15 @@ class GrainQueryBuilderTest {
     }
 
     @Test
+    fun aSumIsRoundedToTheHellerSoDoublesDoNotDrift() {
+        // 19692.76 + 8059.87 is 27752.629999999997 in IEEE doubles; money is exact to the heller.
+        tx("T1", "K1", "2026-07-10 09:00", 19_692.76, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-07-10 11:00", 8_059.87, "in", payer = "ACZ2")
+
+        assertThat(run(a1).single()["day_volume"]).isEqualTo(27_752.63)
+    }
+
+    @Test
     fun clientDayRowsCarryTheMonth() {
         tx("T1", "K1", "2026-07-10 09:00", 100, "in", payer = "ACZ1")
 
@@ -155,12 +164,14 @@ class GrainQueryBuilderTest {
         return jdbc.sql(query.sql).params(query.params).query().listOfRows()
     }
 
-    private fun tx(id: String, client: String, ts: String, amountCzk: Long, direction: String, payer: String? = null, payee: String? = null) {
+    /** [amountCzk] is CZK, whole or to the heller. */
+    private fun tx(id: String, client: String, ts: String, amountCzk: Number, direction: String, payer: String? = null, payee: String? = null) {
+        val amount = amountCzk.toDouble()
         jdbc.sql(
             """
             insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_account, payee_account, type, direction)
             values (?, ?, ?::timestamp, ?, ?, 'CZK', 1, ?, ?, 'x', ?)
             """,
-        ).params(listOf(id, client, ts, czk(amountCzk), amountCzk, payer, payee, direction)).update()
+        ).params(listOf(id, client, ts, amount, amount, payer, payee, direction)).update()
     }
 }

@@ -75,7 +75,9 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
         val field = "tx.${variable.field}"
         return when (variable.agg) {
             // Money is CZK as a double; an aggregate over it is one too, so CEL sees the same type the rule declares.
-            Agg.SUM -> "coalesce(sum($field), 0)::double precision"
+            // A sum of doubles drifts below the heller (27752.629999999997); money is exact to the heller, so the
+            // aggregate is rounded there — in SQL, where the sum happens, not when someone later prints it.
+            Agg.SUM -> "round(coalesce(sum($field), 0)::numeric, 2)::double precision"
             Agg.MAX -> "coalesce(max($field), 0)::double precision"
             Agg.MIN -> "coalesce(min($field), 0)::double precision"
             Agg.COUNT -> "count(*)"

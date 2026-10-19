@@ -1,6 +1,8 @@
 package cz.morosystems.aml.engine
 
 import java.math.BigDecimal
+import java.math.RoundingMode
+import java.util.Locale
 
 /**
  * An amount as text: CZK, no exponent, no trailing `.0`. The one rendering every layer uses, so the same amount
@@ -19,3 +21,13 @@ fun plain(value: Double): String {
  */
 fun plainDecimal(value: Number): BigDecimal =
     BigDecimal(if (value is Double || value is Float) plain(value.toDouble()) else value.toString())
+
+/**
+ * [value] as a reviewer reads it: `CZK 593,425.83`, `CZK 250,000`. Grouped, to the heller, and the heller only
+ * when there is one. For a sentence a person reads — [plain] stays the exact form for hashes and machine input.
+ */
+fun money(value: Double): String {
+    val heller = BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP)
+    val digits = if (heller.stripTrailingZeros().scale() <= 0) 0 else 2
+    return "CZK " + String.format(Locale.US, "%,.${digits}f", heller)
+}

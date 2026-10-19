@@ -1,6 +1,6 @@
 package cz.morosystems.aml.engine.triage
 
-import cz.morosystems.aml.engine.plain
+import cz.morosystems.aml.engine.money
 import java.time.temporal.ChronoUnit
 
 /**
@@ -119,8 +119,19 @@ object Triage {
             reasons += Reason("STATIC_CAP", "rating, country and channel capped at ${f.staticCap} (summed to $static)", f.staticCap - static)
         }
 
-        val amount = input.amount?.let { value -> config.amountBands.firstOrNull { value >= it.from }?.points } ?: 0
-        reasons += Reason("AMOUNT", input.amount?.let { "largest amount ${plain(it)} CZK" } ?: "no amount on this alert", amount)
+        // The band is named as well as the amount: a reviewer should see why this amount scored what it scored.
+        val band = input.amount?.let { value -> config.amountBands.firstOrNull { value >= it.from } }
+        val smallestBand = config.amountBands.lastOrNull()
+        reasons += Reason(
+            "AMOUNT",
+            when {
+                input.amount == null -> "no amount to score: no rule hit on this alert records one"
+                band != null -> "largest amount involved is ${money(input.amount)}, at or above the ${money(band.from)} band"
+                smallestBand != null -> "largest amount involved is ${money(input.amount)}, under the ${money(smallestBand.from)} band"
+                else -> "largest amount involved is ${money(input.amount)}; no amount band is configured"
+            },
+            band?.points ?: 0,
+        )
 
         // Not a red flag in itself — an absence of evidence. It also blocks the auto-close, through its own floor.
         val unbaselined = if (input.client.unbaselined) f.unbaselinedClient else 0
