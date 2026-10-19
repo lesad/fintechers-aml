@@ -1,13 +1,22 @@
-import react from "@vitejs/plugin-react";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import babel from "@rolldown/plugin-babel";
+import tailwindcss from "@tailwindcss/vite";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
-const dirname =
-  typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // The Vite equivalent of Next's `reactCompiler: true`. `@vitejs/plugin-react` v6
+    // transforms JSX with oxc and no longer takes a `babel` option, so the compiler
+    // is wired as a Rolldown Babel preset instead — hence the `@rolldown/plugin-babel`
+    // + `babel-plugin-react-compiler` pair. It still handles all memoization, so
+    // `useMemo` / `useCallback` / `memo` stay banned (CLAUDE.md → React Compiler).
+    babel({ presets: [reactCompilerPreset()] }),
+    tailwindcss(),
+  ],
   resolve: {
+    // Vite reads the `paths` map from tsconfig.json, so `@/…` aliases are
+    // declared in exactly one place for both the app build and Vitest.
     tsconfigPaths: true,
   },
   test: {
@@ -17,7 +26,7 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "happy-dom",
-          // `.test` = unit, `.spec` = integration (co-located taxonomy)
+          // `.test` = unit. `.spec` (integration, Postgres) went with the database.
           include: ["src/**/*.test.{ts,tsx}"],
           setupFiles: ["./src/core/test/setup.ts"],
           globals: true,
@@ -30,23 +39,6 @@ export default defineConfig({
           // the other file. Measured downstream; not worth the startup saving.
           isolate: true,
           fileParallelism: true,
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: "integration",
-          environment: "node",
-          include: ["src/**/*.spec.{ts,tsx}"],
-          setupFiles: ["./src/core/test/integration-setup.ts"],
-          // Reseeds afterwards — see the file. The per-test truncation would
-          // otherwise leave the database empty for whatever runs next.
-          globalSetup: ["./src/core/test/integration-global.ts"],
-          globals: true,
-          fileParallelism: false,
-          alias: {
-            "server-only": path.join(dirname, "src/core/test/server-only-stub.ts"),
-          },
         },
       },
     ],

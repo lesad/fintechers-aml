@@ -2,6 +2,8 @@
 
 Status: approved 2026-10-19. Owner: Martin. Related: ADR-0024, `docs/challenge/README.md`, `docs/rules/` (the second layer's spec).
 
+> **Updated 2026-10-19 (ADR-0025):** the frontend went further than this document assumed — it is now a client-only Vite + React SPA, so the app has no server, no Drizzle, no `db:*` scripts and no `compose.yaml` at all (not "reduced to starting the container"). The engine owns the container as well as the schema, and the browser calls its API directly. The frontend CI jobs are now `check` (unit) and `build` (Vite); there is no `integration` job for the `engine` check to join.
+
 ## Intent
 
 FINREG's challenge asks for alerts from three red-flag rules (A, B, C) over July 2026 transactions, then triage, justification and escalation. This document covers the first layer only: a **monitoring rules engine** that stores rules in Postgres, runs them over every transaction, and writes alerts with the evidence that triggered them.

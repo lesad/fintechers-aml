@@ -15,30 +15,15 @@
     "isolatedModules": true,
     "incremental": true,
     "verbatimModuleSyntax": false,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "types": ["vite/client"],
     "paths": {
-      "@/db": ["./src/core/db"],
-      "@/db/*": ["./src/core/db/*"],
-      "@/env": ["./src/core/env"],
       "@/hooks": ["./src/core/hooks"],
-      "@/i18n": ["./src/core/i18n"],
       "@/test/*": ["./src/core/test/*"],
       "@/utils": ["./src/core/utils"],
-      "@/validation": ["./src/core/validation"],
       "@/features/*": ["./src/features/*"],
       "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": ["node_modules", ".next", "dist", "scripts/eject/pristine"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }

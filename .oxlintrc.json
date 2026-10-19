@@ -48,7 +48,7 @@
       }
     },
     {
-      "files": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "tests/**", "src/core/test/**"],
+      "files": ["**/*.test.{ts,tsx}", "tests/**", "src/core/test/**"],
       "rules": {
         "no-console": "off",
         "max-lines-per-function": "off",
@@ -108,11 +108,7 @@
             "patterns": [
               {
                 "group": ["@/app", "@/app/**", "@/features", "@/features/**"],
-                "message": "components/ must stay reusable — no imports from app/ (routes) or features/ (domain slices). Feature-specific UI belongs in src/features/<name>/."
-              },
-              {
-                "group": ["@/db", "@/db/**"],
-                "message": "components/ must stay presentational and data-free — no direct DB/server access. Fetch in a route or feature and pass data down as props."
+                "message": "components/ must stay reusable — no imports from app/ (the app shell) or features/ (domain slices). Feature-specific UI belongs in src/features/<name>/."
               }
             ]
           }
@@ -160,5 +156,5 @@
       }
     }
   ],
-  "ignorePatterns": ["node_modules", ".next", "dist", "db/migrations", "next-env.d.ts"]
+  "ignorePatterns": ["node_modules", "dist"]
 }

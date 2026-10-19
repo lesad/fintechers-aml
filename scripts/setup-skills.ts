@@ -12,7 +12,6 @@ const PROJECT_SKILLS = [
   // dex — live task memory. Install only the `dex` skill; the repo's `dex-plan`
   // is Critical-flagged and unused here, so the 3-part form skips it (no prune needed).
   "dcramer/dex/dex",
-  "vercel-labs/next-skills/next-best-practices",
   "wshobson/agents/tailwind-design-system",
   "vercel-labs/agent-skills/vercel-react-best-practices",
   "shadcn/ui/shadcn",
