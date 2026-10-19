@@ -52,6 +52,7 @@
   /* Transaction detail: the current transaction's highlight, money-flow ribbons */
   --color-sel: #fff8d8;
   --color-flow: #d3d4da;
+  --color-flow-remit: #f2b5b0;
   --color-flow-mark: #c9a800;
 
   --shadow-card: 0 6px 18px -6px rgba(37, 39, 70, 0.18);

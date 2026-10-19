@@ -163,7 +163,7 @@ describe("App", () => {
 
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
     expect(await screen.findByText("100,000 CZK")).toBeInTheDocument();
-    expect(screen.getByText("Escalate", { selector: "span" })).toBeInTheDocument();
+    expect(screen.getByText("95", { selector: "b" })).toBeInTheDocument();
     expect(screen.queryByText("client is a PEP")).not.toBeInTheDocument();
     expect(screen.getAllByText("184,500 CZK").length).toBeGreaterThan(0);
 

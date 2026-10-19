@@ -2,7 +2,6 @@ import { Card, RiskBadge, type RiskLevel, riskText } from "@/components";
 import { cn } from "@/utils";
 
 import { type RuleFacts, rulesSummary } from "./rules";
-import { TriageSummary } from "./TriageSummary";
 
 import type { TransactionDetail } from "./api";
 
@@ -15,7 +14,7 @@ type RuleRatingCardProps = {
   triage: TransactionDetail["alerts"][number]["triage"];
 };
 
-/** What the rules found: the rating, the strongest rule's threshold vs actual, and triage's score. */
+/** What the rules found: the rating, the strongest rule's threshold vs actual; triage's score top right. */
 export function RuleRatingCard({
   rating,
   ruleNames,
@@ -24,7 +23,16 @@ export function RuleRatingCard({
   triage,
 }: RuleRatingCardProps) {
   return (
-    <Card title="Rule rating">
+    <Card
+      title="Rule rating"
+      aside={
+        triage && (
+          <span className="ml-auto text-xs text-fg-muted tabular-nums">
+            score <b className="text-fg">{triage.score}</b> / 100
+          </span>
+        )
+      }
+    >
       {rating ? (
         <>
           <div className="flex items-center gap-2.5">
@@ -51,7 +59,6 @@ export function RuleRatingCard({
               </div>
             </div>
           )}
-          {triage && <TriageSummary triage={triage} />}
         </>
       ) : (
         <span className="text-[13px] text-fg-muted">

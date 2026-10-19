@@ -12,8 +12,14 @@ export type FlowTx = {
   amount: number;
 };
 
-// `current` = the transaction the detail is about.
-const ribbonFill = cva("", { variants: { current: { true: "fill-yellow", false: "fill-flow" } } });
+// `current` = the transaction the detail is about; it stays yellow even when it is a remittance.
+const ribbonFill = cva("fill-flow", {
+  variants: { current: { true: "" }, remittance: { true: "" } },
+  compoundVariants: [
+    { current: true, className: "fill-yellow" },
+    { current: false, remittance: true, className: "fill-flow-remit" },
+  ],
+});
 const endMark = cva("", {
   variants: { current: { true: "fill-flow-mark", false: "fill-fg-subtle" } },
 });
@@ -24,8 +30,8 @@ const amountLabel = cva("text-[11px]", {
   variants: { current: { true: "fill-fg font-semibold", false: "fill-fg-muted" } },
 });
 
-// ~280 px for labels left of the payers (a remittance's line adds "· direction unknown")
-// and ~240 px right of the payees.
+// ~280 px for labels left of the payers and ~240 px right of the payees (a remittance's line
+// adds "· remittance").
 const W = 880;
 const X_LEFT = 290;
 const ACC_LEFT = 410;
@@ -47,8 +53,8 @@ const ribbon = ([x1, a0]: Point, [x2, b0]: Point, t: number) => {
 
 /**
  * One day of the client's money: payers on the left flow into the client's account,
- * payees on the right flow out. The current transaction is yellow; remittances, whose
- * direction is unknown, are drawn dashed on the incoming side.
+ * payees on the right flow out. The current transaction is yellow; remittances count as
+ * outgoing and get their own colour.
  */
 export function MoneyFlow({
   day,
@@ -59,8 +65,8 @@ export function MoneyFlow({
   currentId: string;
   clientId: string;
 }) {
-  const ins = day.filter((t) => t.dir !== "Outgoing");
-  const outs = day.filter((t) => t.dir === "Outgoing");
+  const ins = day.filter((t) => t.dir === "Incoming");
+  const outs = day.filter((t) => t.dir !== "Incoming");
   const k = SCALE / Math.max(sum(ins), sum(outs), 1);
   const thick = (t: FlowTx) => Math.max(3, t.amount * k);
   const slot = (t: FlowTx) => Math.max(thick(t), 30);
@@ -90,7 +96,6 @@ export function MoneyFlow({
       const w = thick(t);
       const a0 = mid - w / 2;
       const current = t.id === currentId;
-      const dashed = left && t.dir === "Remittance";
       const path = left
         ? ribbon([X_LEFT, a0], [ACC_LEFT, b], w)
         : ribbon([ACC_RIGHT, b], [X_RIGHT, a0], w);
@@ -98,13 +103,7 @@ export function MoneyFlow({
       b += w;
       return (
         <g key={t.id}>
-          <path
-            d={path}
-            className={ribbonFill({ current })}
-            fillOpacity={dashed ? 0.5 : 1}
-            stroke={dashed ? "var(--color-fg-subtle)" : "none"}
-            strokeDasharray={dashed ? "4 3" : undefined}
-          />
+          <path d={path} className={ribbonFill({ current, remittance: t.dir === "Remittance" })} />
           <rect
             x={left ? X_LEFT - 4 : X_RIGHT}
             y={a0}
@@ -117,7 +116,7 @@ export function MoneyFlow({
           </text>
           <text x={textX} y={mid + 12} textAnchor={anchor} className={amountLabel({ current })}>
             {Math.round(t.amount).toLocaleString("en-US")} CZK · {t.dt.slice(11)}
-            {t.dir === "Remittance" ? " · direction unknown" : ""}
+            {t.dir === "Remittance" ? " · remittance" : ""}
           </text>
         </g>
       );
@@ -132,12 +131,6 @@ export function MoneyFlow({
       aria-label={`Money flow of ${clientId} on ${day[0]?.dt.slice(0, 10) ?? "this day"}`}
       className="block h-auto max-w-full"
     >
-      <text x={0} y={12} className="fill-fg-subtle text-[11px]">
-        Payer
-      </text>
-      <text x={W} y={12} textAnchor="end" className="fill-fg-subtle text-[11px]">
-        Payee
-      </text>
       {side(ins, true)}
       {side(outs, false)}
       <rect

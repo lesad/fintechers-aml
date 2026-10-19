@@ -106,6 +106,10 @@ function DetailView({
                       <span className="h-1.5 w-3.5 rounded-[1px] bg-flow" />
                       Other that day
                     </span>
+                    <span className="flex items-center gap-[5px]">
+                      <span className="h-1.5 w-3.5 rounded-[1px] bg-flow-remit" />
+                      Remittance
+                    </span>
                     <span>Line width = amount</span>
                   </span>
                 </>
