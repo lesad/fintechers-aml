@@ -12,23 +12,26 @@ import tools.jackson.databind.json.JsonMapper
 class TransactionRepository(private val jdbc: JdbcClient) {
     private val json = JsonMapper()
 
-    /** Flagged transactions of the latest finished run: highest rating first, then oldest flag first. */
+    /**
+     * The review queue: transactions the latest finished run alerted on and triage did not close on its own,
+     * most severe disposition first, then highest score.
+     */
     fun flagged(query: String?, rating: String?, page: Int, size: Int): TransactionPage {
         val filter = """
-            where (:q = '' or f.id ilike :like or t.client_id ilike :like)
-              and (:rating = '' or $RATING = :rating)
+            where (:q = '' or q.id ilike :like or t.client_id ilike :like)
+              and (:rating = '' or q.rating = :rating)
         """
         val q = query?.trim().orEmpty()
         val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty())
 
         val items = jdbc.sql(
             """
-            $FLAGGED
-            select f.id, t.client_id, t.ts, t.amount, t.volume, t.currency, t.direction,
-                   f.alert_types, f.rules, f.flagged_at, $RATING as rating
-            from flagged f join transaction t on t.id = f.id join client c on c.id = t.client_id
+            $QUEUE
+            select q.id, t.client_id, t.ts, t.amount, t.volume, t.currency, t.direction,
+                   q.alert_types, q.rules, q.rule_names, q.flagged_at, q.rating, q.disposition, q.score
+            from queue q join transaction t on t.id = q.id
             $filter
-            order by $RATING_RANK, f.flagged_at, f.id
+            order by q.sev desc, q.score desc, q.id
             limit :limit offset :offset
             """,
         ).params(params + mapOf("limit" to size, "offset" to page.toLong() * size)).query { rs, _ ->
@@ -41,20 +44,19 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 currency = rs.getString("currency"),
                 direction = rs.getString("direction"),
                 alertTypes = rs.strings("alert_types"),
-                rules = rs.strings("rules"),
+                rules = rs.strings("rules").zip(rs.strings("rule_names"), ::RuleRef),
                 rating = rs.getString("rating"),
+                disposition = rs.getString("disposition"),
+                score = rs.getInt("score"),
                 flaggedAt = rs.getObject("flagged_at", OffsetDateTime::class.java),
             )
         }.list()
 
-        val total = jdbc.sql(
-            "$FLAGGED select count(*) from flagged f join transaction t on t.id = f.id join client c on c.id = t.client_id $filter",
-        ).params(params).query(Long::class.java).single()
+        val total = jdbc.sql("$QUEUE select count(*) from queue q join transaction t on t.id = q.id $filter")
+            .params(params).query(Long::class.java).single()
 
-        val counts = jdbc.sql(
-            "$FLAGGED select $RATING as rating, count(*) as n from flagged f join transaction t on t.id = f.id " +
-                "join client c on c.id = t.client_id group by 1",
-        ).query { rs, _ -> rs.getString("rating") to rs.getLong("n") }.list().toMap()
+        val counts = jdbc.sql("$QUEUE select q.rating, count(*) as n from queue q group by 1")
+            .query { rs, _ -> rs.getString("rating") to rs.getLong("n") }.list().toMap()
 
         return TransactionPage(items, page, size, total, RATINGS.associateWith { counts[it] ?: 0L })
     }
@@ -108,34 +110,52 @@ class TransactionRepository(private val jdbc: JdbcClient) {
             )
         }.single()
 
-        val rating = jdbc.sql(
-            "$FLAGGED select $RATING from flagged f join client c on c.id = ? where f.id = ?",
-        ).params(client.id, id).query(String::class.java).optional().orElse(null)
-
-        return TransactionDetail(tx, client, rating, alerts(id), history(client.id))
+        val alerts = alerts(id)
+        val worst = alerts.mapNotNull { it.triage?.disposition }.maxByOrNull { DISPOSITIONS.indexOf(it) }
+        return TransactionDetail(tx, client, worst?.let(::ratingOf), worst, alerts, history(client.id))
     }
 
     private fun alerts(transactionId: String): List<TransactionAlert> {
         val alerts = jdbc.sql(
-            "select a.id, a.alert_type, a.created_at from alert a where a.run_id = ($LATEST_RUN) and a.transaction_id = ? order by a.id",
+            """
+            select a.id, a.alert_type, a.created_at,
+                   tr.disposition, tr.score, tr.reasons::text as reasons, tr.config_version, tr.decided_at
+            from alert a left join alert_triage tr on tr.alert_id = a.id
+            where a.run_id = ($LATEST_RUN) and a.transaction_id = ? order by a.id
+            """,
         ).param(transactionId).query { rs, _ ->
-            Triple(rs.getLong("id"), rs.getString("alert_type"), rs.getObject("created_at", OffsetDateTime::class.java))
+            val triage = rs.getString("disposition")?.let { disposition ->
+                AlertTriage(
+                    disposition = disposition,
+                    score = rs.getInt("score"),
+                    reasons = reasons(rs.getString("reasons")),
+                    configVersion = rs.getString("config_version"),
+                    decidedAt = rs.getObject("decided_at", OffsetDateTime::class.java),
+                )
+            }
+            AlertRow(rs.getLong("id"), rs.getString("alert_type"), rs.getObject("created_at", OffsetDateTime::class.java), triage)
         }.list()
-        return alerts.map { (alertId, type, createdAt) ->
+        return alerts.map { row ->
             val hits = jdbc.sql(
                 """
-                select r.key, r.version, h.grain_key, h.evidence::text as evidence
+                select r.key, coalesce(r.name, r.key) as name, r.version, h.grain_key, h.evidence::text as evidence
                 from alert_hit ah join rule_hit h on h.id = ah.hit_id join rule r on r.id = h.rule_id
                 where ah.alert_id = ? order by r.key, h.grain_key
                 """,
-            ).param(alertId).query { rs, _ ->
+            ).param(row.id).query { rs, _ ->
                 @Suppress("UNCHECKED_CAST") // evidence is a JSON object written by RunService
                 val evidence = rs.getString("evidence")?.let { json.readValue(it, Map::class.java) as Map<String, Any?> } ?: emptyMap()
-                Hit(rs.getString("key"), rs.getInt("version"), rs.getString("grain_key"), evidence)
+                Hit(rs.getString("key"), rs.getString("name"), rs.getInt("version"), rs.getString("grain_key"), evidence)
             }.list()
-            TransactionAlert(alertId, type, createdAt, hits)
+            TransactionAlert(row.id, row.type, row.createdAt, row.triage, hits)
         }
     }
+
+    @Suppress("UNCHECKED_CAST") // reasons is a JSON array of {code, description, points} written by TriageRepository
+    private fun reasons(text: String?): List<TriageReason> =
+        (text?.let { json.readValue(it, List::class.java) as List<Map<String, Any?>> } ?: emptyList()).map {
+            TriageReason(it["code"] as String, it["description"] as String, (it["points"] as Number).toInt())
+        }
 
     private fun history(clientId: String): List<HistoryTransaction> =
         jdbc.sql(
@@ -167,33 +187,58 @@ class TransactionRepository(private val jdbc: JdbcClient) {
     private fun ResultSet.strings(column: String): List<String> =
         (getArray(column).array as Array<*>).map { it as String }
 
+    private data class AlertRow(val id: Long, val type: String, val createdAt: OffsetDateTime, val triage: AlertTriage?)
+
     private companion object {
         val RATINGS = listOf("High", "Medium", "Low")
 
+        /** Triage dispositions, mildest first, as in `triage/TriageModel.kt`. */
+        val DISPOSITIONS = listOf("AUTO_CLOSE", "REVIEW_LOW", "REVIEW_MEDIUM", "REVIEW_HIGH", "ESCALATE")
+
+        /** The three-level rating the UI shows. Must match the `rating` case in [QUEUE]. */
+        fun ratingOf(disposition: String): String = when (disposition) {
+            "ESCALATE", "REVIEW_HIGH" -> "High"
+            "REVIEW_MEDIUM" -> "Medium"
+            else -> "Low"
+        }
+
         const val LATEST_RUN = "select max(id) from run where finished_at is not null"
 
-        /** One row per transaction the latest run alerted on, with its alert types and the rules that fired. */
-        const val FLAGGED = """
-            with flagged as (
-                select a.transaction_id as id,
-                       array_agg(distinct a.alert_type order by a.alert_type) as alert_types,
-                       array_remove(array_agg(distinct r.key order by r.key), null) as rules,
-                       min(a.created_at) as flagged_at
-                from alert a
-                left join alert_hit ah on ah.alert_id = a.id
-                left join rule_hit h on h.id = ah.hit_id
-                left join rule r on r.id = h.rule_id
+        /**
+         * One row per transaction the latest run alerted on: its most severe triage disposition (`sev`, the
+         * 1-based position in the disposition list), highest score, alert types and the rules that fired.
+         * Transactions that triage closed on its own (`AUTO_CLOSE`) are left out, as no one needs to review them;
+         * an alert not triaged yet is left out too.
+         */
+        const val QUEUE = """
+            with alert_sev as (
+                select a.id, a.transaction_id, a.alert_type, a.created_at, tr.score,
+                       array_position(array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'], tr.disposition) as sev
+                from alert a join alert_triage tr on tr.alert_id = a.id
                 where a.run_id = ($LATEST_RUN) and a.transaction_id is not null
-                group by a.transaction_id
+            ), per_tx as (
+                select transaction_id as id,
+                       array_agg(distinct alert_type order by alert_type) as alert_types,
+                       array_agg(id) as alert_ids,
+                       max(sev) as sev, max(score) as score, min(created_at) as flagged_at
+                from alert_sev group by transaction_id
+            ), queue as (
+                select p.id, p.alert_types, p.sev, p.score, p.flagged_at,
+                       coalesce(rk.rules, '{}') as rules, coalesce(rk.rule_names, '{}') as rule_names,
+                       (array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'])[p.sev] as disposition,
+                       (case when p.sev >= 4 then 'High' when p.sev = 3 then 'Medium' else 'Low' end) as rating
+                from per_tx p
+                left join lateral (
+                    select array_agg(k order by k) as rules, array_agg(n order by k) as rule_names
+                    from (
+                        select distinct on (r.key) r.key as k, coalesce(r.name, r.key) as n
+                        from alert_hit ah join rule_hit h on h.id = ah.hit_id join rule r on r.id = h.rule_id
+                        where ah.alert_id = any(p.alert_ids)
+                        order by r.key, r.version desc
+                    ) fired
+                ) rk on true
+                where p.sev > 1
             )
         """
-
-        // shortcut: rating from the alert type and the client's AML risk score, until the priority
-        // scorecard (docs/rules/priority.md) is computed by the engine; then rate by its band.
-        const val RATING = """
-            (case when 'B' = any(f.alert_types) or 'C' = any(f.alert_types) then 'High'
-                  when c.risk = 'low' then 'Low' else 'Medium' end)
-        """
-        const val RATING_RANK = "(case $RATING when 'High' then 0 when 'Medium' then 1 else 2 end)"
     }
 }

@@ -101,7 +101,7 @@ Data:
 
 Rules:
 
-- `rule` — immutable rule versions. Columns: `key` (e.g. `C1`), `version`, `alert_type` (`A`/`B`/`C`/further), `layer` (`company`/`segment`/`client`), `scope_segment_id`, `scope_client_id`, `grain` (`transaction`/`client_day`/`client_anchor`), `anchor` (CEL, only for `client_anchor`), `condition` (CEL), `replaces_key` (nullable), `status` (`draft`/`approved`/`active`/`retired`), `author`, `approver`, timestamps. At most one `active` version per `(key, scope)`.
+- `rule` — immutable rule versions. Columns: `key` (e.g. `C1`), `version`, `name` (human-readable, shown in the review UI; nullable, the API falls back to the key), `alert_type` (`A`/`B`/`C`/further), `layer` (`company`/`segment`/`client`), `scope_segment_id`, `scope_client_id`, `grain` (`transaction`/`client_day`/`client_anchor`), `anchor` (CEL, only for `client_anchor`), `condition` (CEL), `replaces_key` (nullable), `status` (`draft`/`approved`/`active`/`retired`), `author`, `approver`, timestamps. At most one `active` version per `(key, scope)`.
 - `rule_variable` — rule version, `name`, `agg` (`sum`/`max`/`min`/`count`/`set`), `field`, `filter` (CEL), window spec (see below).
 - `rule_param` — rule `key`, `name`, `layer`, scope, integer `value`. The company row is the default.
 - `segment` — id, name, `predicate` (CEL over `client`). Membership is computed, not stored.

@@ -20,12 +20,20 @@ data class FlaggedTransaction(
     val direction: String,
     /** Alert types on this transaction, e.g. `["A", "B"]`. */
     val alertTypes: List<String>,
-    /** Rule keys that fired, e.g. `["A1", "B2"]`. */
-    val rules: List<String>,
+    /** Rules that fired, by key. */
+    val rules: List<RuleRef>,
+    /** `High`, `Medium` or `Low`, from [disposition]. */
     val rating: String,
+    /** The most severe triage disposition of the transaction's alerts, e.g. `REVIEW_HIGH`. */
+    val disposition: String,
+    /** The highest triage score of the transaction's alerts. */
+    val score: Int,
     /** When the first alert on this transaction was created. */
     val flaggedAt: OffsetDateTime,
 )
+
+/** A rule by key and its human-readable name (the key when the rule has no name). */
+data class RuleRef(val key: String, val name: String)
 
 data class TransactionPage(
     val items: List<FlaggedTransaction>,
@@ -33,7 +41,7 @@ data class TransactionPage(
     val size: Int,
     /** Rows matching the filters, across all pages. */
     val total: Long,
-    /** Flagged transactions per rating, ignoring the filters. */
+    /** Transactions in the queue per rating, ignoring the filters. */
     val countsByRating: Map<String, Long>,
 )
 
@@ -70,9 +78,28 @@ data class Client(
 )
 
 /** One rule firing, with every variable and parameter it evaluated. */
-data class Hit(val rule: String, val version: Int, val grainKey: String, val evidence: Map<String, Any?>)
+data class Hit(val rule: String, val name: String, val version: Int, val grainKey: String, val evidence: Map<String, Any?>)
 
-data class TransactionAlert(val id: Long, val alertType: String, val createdAt: OffsetDateTime, val hits: List<Hit>)
+/** One line of a triage score: the reasons sum to the score. */
+data class TriageReason(val code: String, val description: String, val points: Int)
+
+/** What triage decided for one alert (table `alert_triage`). */
+data class AlertTriage(
+    val disposition: String,
+    val score: Int,
+    val reasons: List<TriageReason>,
+    val configVersion: String,
+    val decidedAt: OffsetDateTime?,
+)
+
+data class TransactionAlert(
+    val id: Long,
+    val alertType: String,
+    val createdAt: OffsetDateTime,
+    /** Null when the alert has not been triaged. */
+    val triage: AlertTriage?,
+    val hits: List<Hit>,
+)
 
 /** One of the client's transactions, with the alert types the latest run raised on it (empty when none). */
 data class HistoryTransaction(
@@ -88,8 +115,10 @@ data class HistoryTransaction(
 data class TransactionDetail(
     val transaction: Transaction,
     val client: Client,
-    /** Null when the latest run raised no alert on this transaction. */
+    /** From [disposition]; null when the latest run raised no triaged alert on this transaction. */
     val rating: String?,
+    /** The most severe triage disposition of its alerts; `AUTO_CLOSE` means triage closed it without a person. */
+    val disposition: String?,
     val alerts: List<TransactionAlert>,
     /** All of the client's transactions, newest first. */
     val history: List<HistoryTransaction>,
