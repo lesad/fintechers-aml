@@ -111,7 +111,7 @@ Runs and results:
 
 - `run` — id, kind (`production`; `backtest` reserved for the later slice), the frozen set of rule version ids, period, started/finished, counts per rule and alert type.
 - `rule_hit` — run, rule version, client, grain key (transaction id, day, or anchor transaction id), `evidence` jsonb (every variable and resolved parameter value, plus the triggering transaction ids).
-- `alert` — run, alert type, client, transaction (B only), created_at. `alert_hit` links alerts to hits. Later steps add triage, score, reason and escalation columns or tables here.
+- `alert` — run, alert type, client, transaction (B only), created_at, `status` (`NEW`/`ESCALATED`/`FALSE_POSITIVE`/`REPORTED`, default `NEW`; migration 0011). `alert_hit` links alerts to hits. Later steps add triage, score, reason and escalation columns or tables here.
 
 ## Rule language
 

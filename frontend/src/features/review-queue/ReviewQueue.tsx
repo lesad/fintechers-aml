@@ -112,7 +112,7 @@ export function ReviewQueue({
       align: "right",
       className: "tabular-nums",
       cell: (r) => {
-        const closed = r.status === "Closed";
+        const closed = r.status === "False Positive" || r.status === "Reported";
         const overdue = now.getTime() - r.flagged.getTime() > 72 * 3_600_000;
         const state = closed ? "closed" : overdue ? "overdue" : "open";
         return <span className={age({ state })}>{formatAge(r.flagged, now)}</span>;
@@ -146,11 +146,11 @@ export function ReviewQueue({
           onChange={(e) => onFilter({ ...filter, status: e.target.value as QueueFilter["status"] })}
         >
           <option value="all">All statuses</option>
-          <option value="open">Open (not closed)</option>
+          <option value="open">Open</option>
           <option value="New">New</option>
-          <option value="In review">In review</option>
           <option value="Escalated">Escalated</option>
-          <option value="Closed">Closed</option>
+          <option value="False Positive">False Positive</option>
+          <option value="Reported">Reported</option>
         </Select>
         {hasFilters && (
           <button

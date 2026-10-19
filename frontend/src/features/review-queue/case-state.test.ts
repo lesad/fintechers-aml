@@ -65,7 +65,10 @@ const closed: Decision = { action: "Escalated", reason: "r", at: "", by: "", rat
 
 describe("caseState", () => {
   it("leaves a case triage closed to triage, until a reviewer decides otherwise", () => {
-    expect(caseState(base, undefined)).toMatchObject({ status: "Closed", decides: "triage" });
+    expect(caseState(base, undefined)).toMatchObject({
+      status: "False Positive",
+      decides: "triage",
+    });
     expect(caseState(base, closed)).toMatchObject({ status: "Escalated", decides: "triage" });
   });
 

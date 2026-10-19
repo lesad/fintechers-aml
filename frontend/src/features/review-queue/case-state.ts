@@ -39,8 +39,8 @@ export function caseState(detail: TransactionDetail, decision: Decision | undefi
     flaggedAt: alerts[0] ? new Date(alerts[0].createdAt) : null,
     /** The triage of the alert that set the transaction's (most severe) disposition. */
     triage: alerts.find((a) => a.triage?.disposition === detail.disposition)?.triage ?? null,
-    /** Not flagged → no status; closed by triage unless someone decided otherwise; else New. */
-    status: rating ? (decision?.action ?? (autoClosed ? "Closed" : "New")) : null,
+    /** Not flagged → no status; a false positive when triage closed it, unless someone decided otherwise; else New. */
+    status: rating ? (decision?.action ?? (autoClosed ? "False Positive" : "New")) : null,
     /** Who decides: nobody (not flagged), triage already did, or the reviewer. */
     decides: !rating ? "nobody" : autoClosed ? "triage" : "reviewer",
     dayTx,

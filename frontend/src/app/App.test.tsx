@@ -175,8 +175,8 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
 
-    fireEvent.click(await screen.findByRole("button", { name: "Close" }));
-    const submit = screen.getByRole("button", { name: "Close transaction" });
+    fireEvent.click(await screen.findByRole("button", { name: "False positive" }));
+    const submit = screen.getByRole("button", { name: "Mark as false positive" });
     expect(submit).toBeDisabled();
     fireEvent.change(screen.getByPlaceholderText("Why the transaction is not suspicious"), {
       target: { value: "Supplier payment, invoice on file." },
@@ -185,7 +185,7 @@ describe("App", () => {
     expect(screen.getByText("Supplier payment, invoice on file.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /Review queue/ }));
-    expect(within(queueTable()).getByText("TX1").closest("tr")).toHaveTextContent("Closed");
+    expect(within(queueTable()).getByText("TX1").closest("tr")).toHaveTextContent("False Positive");
     expect(screen.getByTitle("Open cases by rule rating")).toHaveTextContent("0 High");
   });
 

@@ -5,24 +5,24 @@ import { Card } from "@/components";
 
 import type { Decision } from "./decisions";
 
-type Choice = "close" | "escalate";
+type Choice = "falsePositive" | "escalate";
 
 const choiceButton = cva("h-8 cursor-pointer rounded-md border text-[13px]", {
   variants: {
     kind: {
-      close: "border-border bg-transparent font-semibold text-fg hover:border-fg",
+      falsePositive: "border-border bg-transparent font-semibold text-fg hover:border-fg",
       escalate: "border-fg bg-fg font-bold text-bg hover:opacity-90",
     },
     picked: { true: "ring-2 ring-yellow ring-offset-2 ring-offset-bg" },
   },
-  compoundVariants: [{ kind: "close", picked: true, className: "border-fg" }],
+  compoundVariants: [{ kind: "falsePositive", picked: true, className: "border-fg" }],
 });
 
 const copy = {
-  close: {
-    label: "Reason for closing",
+  falsePositive: {
+    label: "Why it is a false positive",
     placeholder: "Why the transaction is not suspicious",
-    submit: "Close transaction",
+    submit: "Mark as false positive",
   },
   escalate: {
     label: "Reason for escalating",
@@ -37,10 +37,13 @@ type DecisionPanelProps = {
   onUndo: () => void;
 };
 
-/** Close or escalate with a required reason; once decided, shows who decided what and why. */
+/** False positive or escalate with a required reason; once decided, shows who decided what and why. */
 export function DecisionPanel({ decision, onDecide, onUndo }: DecisionPanelProps) {
   const [choice, setChoice] = useState<Choice | null>(null);
-  const [reasons, setReasons] = useState<Record<Choice, string>>({ close: "", escalate: "" });
+  const [reasons, setReasons] = useState<Record<Choice, string>>({
+    falsePositive: "",
+    escalate: "",
+  });
   const reason = choice ? reasons[choice].trim() : "";
 
   return (
@@ -66,7 +69,7 @@ export function DecisionPanel({ decision, onDecide, onUndo }: DecisionPanelProps
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2">
-            {(["close", "escalate"] as const).map((kind) => (
+            {(["falsePositive", "escalate"] as const).map((kind) => (
               <button
                 key={kind}
                 type="button"
@@ -74,7 +77,7 @@ export function DecisionPanel({ decision, onDecide, onUndo }: DecisionPanelProps
                 onClick={() => setChoice(kind)}
                 className={choiceButton({ kind, picked: choice === kind })}
               >
-                {kind === "close" ? "Close" : "Escalate"}
+                {kind === "falsePositive" ? "False positive" : "Escalate"}
               </button>
             ))}
           </div>
@@ -95,7 +98,9 @@ export function DecisionPanel({ decision, onDecide, onUndo }: DecisionPanelProps
               <button
                 type="button"
                 disabled={!reason}
-                onClick={() => onDecide(choice === "close" ? "Closed" : "Escalated", reason)}
+                onClick={() =>
+                  onDecide(choice === "falsePositive" ? "False Positive" : "Escalated", reason)
+                }
                 className="h-8 cursor-pointer rounded-md border-0 bg-fg text-[13px] font-semibold text-bg disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {copy[choice].submit}

@@ -40,13 +40,13 @@ describe("toQueueItem", () => {
 describe("byStatus", () => {
   const items = [
     { ...toQueueItem(flagged), id: "a" },
-    { ...toQueueItem(flagged), id: "b", status: "Closed" as const },
+    { ...toQueueItem(flagged), id: "b", status: "False Positive" as const },
     { ...toQueueItem(flagged), id: "c", status: "Escalated" as const },
   ];
 
   it("keeps open cases, or one status, or all", () => {
     expect(byStatus(items, "open").map((r) => r.id)).toEqual(["a", "c"]);
-    expect(byStatus(items, "Closed").map((r) => r.id)).toEqual(["b"]);
+    expect(byStatus(items, "False Positive").map((r) => r.id)).toEqual(["b"]);
     expect(byStatus(items, "all")).toHaveLength(3);
   });
 });

@@ -60,10 +60,12 @@ export type QueueFilter = {
 
 export const NO_FILTER: QueueFilter = { query: "", rating: "all", status: "all" };
 
+const done = (r: QueueItem) => r.status === "False Positive" || r.status === "Reported";
+
 /** The status filter runs in the browser: only decisions made here change a status. */
 export function byStatus(items: QueueItem[], status: StatusFilter): QueueItem[] {
   if (status === "all") return items;
-  return items.filter((r) => (status === "open" ? r.status !== "Closed" : r.status === status));
+  return items.filter((r) => (status === "open" ? !done(r) : r.status === status));
 }
 
 /** "12 min", "5h 3m", "2d 4h". */

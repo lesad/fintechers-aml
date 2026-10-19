@@ -4,12 +4,12 @@ import type { QueueItem } from "./queue";
 import type { RiskLevel } from "@/components";
 
 export type Decision = {
-  action: "Closed" | "Escalated";
+  action: "False Positive" | "Escalated";
   reason: string;
   /** `YYYY-MM-DD HH:mm` */
   at: string;
   by: string;
-  /** The case's rule rating, so the header's open counts can drop closed cases. */
+  /** The case's rule rating, so the header's open counts can drop false positives. */
   rating: RiskLevel | null;
 };
 
@@ -39,11 +39,12 @@ export function useDecisions() {
         const d = decisions[r.id];
         return d ? { ...r, status: d.action } : r;
       }),
-    /** Server counts per rating, minus the cases closed here. */
+    /** Server counts per rating, minus the false positives marked here. */
     openCounts: (counts: Record<RiskLevel, number>): Record<RiskLevel, number> => {
       const open = { ...counts };
       for (const d of Object.values(decisions))
-        if (d.action === "Closed" && d.rating) open[d.rating] = Math.max(0, open[d.rating] - 1);
+        if (d.action === "False Positive" && d.rating)
+          open[d.rating] = Math.max(0, open[d.rating] - 1);
       return open;
     },
   };

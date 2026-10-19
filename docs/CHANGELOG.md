@@ -6,6 +6,8 @@
 
 ### Added
 
+- `alert.status` (`NEW`, `ESCALATED`, `FALSE_POSITIVE`, `REPORTED`; default `NEW`), migration 0011. Nothing writes it yet; decisions still live in the browser.
+- Case statuses are New, Escalated, False Positive and Reported; the detail's decision buttons are "False positive" and "Escalate". A case triage auto-closed shows as False Positive.
 - The money flow in the transaction detail draws remittances on the outgoing side in their own colour, with a legend entry; elsewhere they stay labelled as remittances.
 
 - `engine/`: alert summary. `POST /api/alerts/{id}/summary` collects the alert's activity (its rule hits aggregated per rule in code, and its triage decision with the scoring reasons), asks Sonnet 4.5 on Bedrock for two or three sentences through a fixed JSON schema, checks that every sentence cites only refs from that activity and writes only numbers from the input, and stores it in `alert_summary` with the model id and prompt hash; `GET` returns the latest. `Bedrock.askJson` adds structured outputs to the Bedrock client.
