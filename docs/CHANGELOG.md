@@ -17,6 +17,7 @@
 
 ### Added
 
+- Rule suggestion: Accept saves the suggested rule as a draft by the signed-in user (`POST /api/rules`), closes the modal and shows a toast with an "Open in rules" link to `/rules?rule=<id>`, which opens that version. If the engine refuses the draft, the modal stays open with its reason. A new client key now has a name: the replaced rule's name with the client, "Flow-through: inflow forwarded within hours (client K005146)"; a new version of an existing key keeps the key's name.
 - The overview holds only the signed-in user's cases, counts included: the engine scopes `GET /api/transactions` by the role behind `X-User-Id` (reviewer New/False Positive, manager Escalated/Reported) and filters on the case status. After a decision the queue reloads, so an escalated case leaves the reviewer's list; its open detail stays, without decision options. An escalated case offers decisions to the manager only.
 - The open transaction is in the URL (`/transactions/:id`, ADR-0041): opening a detail or clicking a tab adds a history entry, so the browser's Back returns to the list and Forward to the detail; a reload or a link opens the transaction. Closing a tab or a Ctrl/⌘ click leaves the history alone. The cog leaves the rules page for the tab it was opened from.
 - The AML spotter logo in the header links to the default view: the review queue tab at `/`, from the rules page or a transaction tab; open tabs stay.

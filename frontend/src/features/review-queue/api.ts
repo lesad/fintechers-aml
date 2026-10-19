@@ -193,25 +193,26 @@ const param = z.object({
 const suggestedRule = z.object({
   key: z.string(),
   version: z.number(),
+  /** Null keeps the key's latest name. */
+  name: z.string().nullable(),
   alertType: z.string(),
   layer: z.enum(["company", "segment", "client"]),
   scopeSegmentId: z.number().nullable(),
   scopeClientId: z.string().nullable(),
-  grain: z.string(),
+  grain: z.enum(["transaction", "client_day", "client_anchor"]),
   anchor: z.string().nullable(),
   condition: z.string(),
   replacesKey: z.string().nullable(),
   variables: z.array(
     z.object({
       name: z.string(),
-      agg: z.string(),
+      agg: z.enum(["sum", "max", "min", "count", "set"]),
       field: z.string(),
       filter: z.string(),
-      window: z.object({
-        kind: z.string(),
-        from: z.string().optional(),
-        to: z.string().optional(),
-      }),
+      window: z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("day") }),
+        z.object({ kind: z.literal("relative"), from: z.string(), to: z.string() }),
+      ]),
     }),
   ),
   params: z.record(z.string(), param),

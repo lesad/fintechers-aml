@@ -78,11 +78,24 @@ class SuggestionCheckTest {
         assertThat(suggestion.rule).isEqualTo(
             SuggestedRule(
                 "A1-K1", 1, "A", "client", null, "K1", "client_day", null, a1.condition, "A1",
-                listOf(VariableJson("day_volume", "sum", "amount", "true", WindowJson("day"))), mapOf("projected_pct" to ParamJson(60.0, "percent")),
+                listOf(VariableJson("day_volume", "sum", "amount", "true", WindowJson("day"))), mapOf("projected_pct" to ParamJson(60.0, "percent")), null,
             ),
         )
         assertThat(suggestion.previousParams).isEqualTo(mapOf("projected_pct" to ParamJson(25.0, "percent")))
         assertThat(suggestion.retires).isNull()
+    }
+
+    @Test
+    fun aNewClientRuleTakesTheReplacedRulesNameWithTheClient() {
+        val named = RuleVersion(a1, "Daily volume above the projected share", "active", null, OffsetDateTime.now(), null, null)
+        assertThat(check(reply(), context.copy(existingRules = listOf(named))).rule?.name).isEqualTo("Daily volume above the projected share (client K1)")
+    }
+
+    @Test
+    fun aNewVersionOfAnExistingKeyKeepsItsName() {
+        val named = RuleVersion(a3Client, "Big single payment", "active", null, OffsetDateTime.now(), null, null)
+        val reply = reply(key = "A3-K1", params = listOf(mapOf("name" to "max_multiple", "value" to 4)), explanation = reasonOnly("Raise it to 4."))
+        assertThat(check(reply, clientRuleContext.copy(existingRules = listOf(named))).rule?.name).isNull()
     }
 
     @Test

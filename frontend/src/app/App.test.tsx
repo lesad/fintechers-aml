@@ -142,6 +142,7 @@ const ruleSuggestion = {
   rule: {
     key: "B2-K1",
     version: 1,
+    name: "PEP outgoing payment above the limit (client K1)",
     alertType: "B",
     layer: "client",
     scopeSegmentId: null,
@@ -210,6 +211,18 @@ beforeEach(() => {
         return new Response(null, { status: 204 });
       }
       if (url.pathname === "/api/alerts/7/suggestion") return json(suggestionReply);
+      if (init?.method === "POST" && url.pathname === "/api/rules") {
+        const body = JSON.parse(String(init.body));
+        return json({
+          ...body,
+          id: 42,
+          version: 1,
+          status: "draft",
+          createdAt: "2026-10-20T10:00:00Z",
+          explanation: null,
+          explanationModel: null,
+        });
+      }
       if (url.pathname.endsWith("/history")) return json(history(url));
       const route = routes[url.pathname];
       return route ? json(route(url)) : json({ message: "not found" }, 404);
@@ -527,6 +540,36 @@ describe("App", () => {
     expect(screen.getByText("Monthly supplier payment.", { selector: "span" })).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("accepting the suggestion saves it as a draft by the current user and links to it", async () => {
+    suggestionReply = ruleSuggestion;
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    fireEvent.click(await screen.findByRole("button", { name: "False positive" }));
+    fireEvent.change(screen.getByPlaceholderText("Why the transaction is not suspicious"), {
+      target: { value: "Monthly supplier payment." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Mark as false positive" }));
+    const dialog = await screen.findByRole("dialog", { name: "Rule suggestion" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Accept" }));
+
+    const toast = await screen.findByRole("status");
+    expect(toast).toHaveTextContent("Draft rule B2-K1 saved.");
+    expect(within(toast).getByRole("link", { name: "Open in rules" })).toHaveAttribute(
+      "href",
+      "/rules?rule=42",
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const post = vi
+      .mocked(fetch)
+      .mock.calls.find(([u, init]) => u === "/api/rules" && init?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+      key: "B2-K1",
+      name: "PEP outgoing payment above the limit (client K1)",
+      replacesKey: "B2",
+      author: "J. Novák",
+    });
   });
 
   it("still records the false positive when the suggestion fails", async () => {

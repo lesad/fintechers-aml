@@ -17,7 +17,7 @@ import {
   useDecisions,
   useQueue,
 } from "@/features/review-queue";
-import { RulesPage } from "@/features/rules";
+import { RulesPage, saveRule } from "@/features/rules";
 import { fetchUsers, saveUser, savedUser, type User } from "@/user";
 import { cn } from "@/utils";
 
@@ -157,6 +157,9 @@ export function App() {
                 // The case may have left this user's queue (escalated); the engine's list says.
                 queue.reload();
               }}
+              onAcceptSuggestion={async (rule) =>
+                (await saveRule({ ...rule, author: user?.name ?? "" })).id
+              }
               onOpen={tabs.openTab}
             />
           </div>

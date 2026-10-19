@@ -1,4 +1,5 @@
 import { cva } from "class-variance-authority";
+import { useState } from "react";
 
 import { AiLabel, Card, ConditionCode, ConditionLegend, Modal } from "@/components";
 import { type ParamValue, paramText } from "@/utils";
@@ -9,10 +10,29 @@ import type { ReactNode } from "react";
 type SuggestionModalProps = {
   suggestion: Suggestion;
   onClose: () => void;
+  /** Saves the suggested rule as a draft; a rejection's message is shown in the modal. */
+  onAccept: (rule: SuggestedRule) => Promise<void>;
 };
 
-/** The engine's checked rule change for a false positive; accepting it is not built yet. */
-export function SuggestionModal({ suggestion, onClose }: SuggestionModalProps) {
+/** The engine's checked rule change for a false positive; accepting saves it as a draft. */
+export function SuggestionModal({ suggestion, onClose, onAccept }: SuggestionModalProps) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // A declined draft is shown for reference only.
+  const rule = suggestion.declined ? null : suggestion.rule;
+
+  const accept = async () => {
+    if (!rule) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onAccept(rule);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setSaving(false);
+    }
+  };
+
   return (
     <Modal
       label="Rule suggestion"
@@ -20,14 +40,19 @@ export function SuggestionModal({ suggestion, onClose }: SuggestionModalProps) {
       className="max-w-[640px]"
       header={<span className="text-sm font-bold">Rule suggestion</span>}
       footer={
-        <div className="flex justify-end gap-2 border-t border-border-soft px-[18px] py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-border-soft px-[18px] py-3">
+          {error && (
+            <span role="alert" className="mr-auto text-xs text-high">
+              Could not save the draft: {error}
+            </span>
+          )}
           <button
             type="button"
-            disabled
-            title="Not available yet"
+            disabled={!rule || saving}
+            onClick={accept}
             className="h-8 cursor-pointer rounded-md border-0 bg-fg px-3 text-[13px] font-semibold text-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Accept
+            {saving ? "Saving…" : "Accept"}
           </button>
         </div>
       }
@@ -156,6 +181,7 @@ function RuleView({
 }) {
   const fields: [string, string][] = [
     ["Rule", `${rule.key} v${rule.version} (draft)`],
+    ...(rule.name ? [["Name", rule.name] as [string, string]] : []),
     ["Layer", rule.scopeClientId ? `${rule.layer}, client ${rule.scopeClientId}` : rule.layer],
     ["Replaces", rule.replacesKey ?? "—"],
     ["Retires", retires ? `${retires.key} v${retires.version}` : "—"],

@@ -14,7 +14,7 @@ import { RuleRatingCard } from "./RuleRatingCard";
 import { SuggestionModal } from "./SuggestionModal";
 import { useDetail } from "./use-detail";
 
-import type { TransactionDetail as Detail, Suggestion } from "./api";
+import type { TransactionDetail as Detail, SuggestedRule, Suggestion } from "./api";
 import type { Decision } from "./decisions";
 import type { Role } from "./queue";
 
@@ -24,6 +24,8 @@ type TransactionDetailProps = {
   role: Role;
   /** Saves the status on the engine, then records the decision. */
   onDecide: (d: Pick<Decision, "action" | "reason">) => Promise<void>;
+  /** Saves an accepted rule suggestion as a draft and returns the new version's id. */
+  onAcceptSuggestion: (rule: SuggestedRule) => Promise<number>;
   onOpen: (id: string, background: boolean) => void;
 };
 
@@ -66,6 +68,7 @@ function DetailView({
   decisions,
   role,
   onDecide,
+  onAcceptSuggestion,
   onOpen,
 }: Omit<TransactionDetailProps, "id"> & { detail: Detail }) {
   const { transaction: tx, client, rating } = detail;
@@ -74,7 +77,7 @@ function DetailView({
   // A false positive asks for a rule change on the alert; a transaction with several alerts uses the first.
   const alertId = detail.alerts[0]?.id;
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; ruleId?: number } | null>(null);
 
   // A false positive first asks for a rule change, then records the decision (and with it the alert status) whatever
   // the answer: a suggestion opens the modal, no suggestion or a failure only confirms the decision.
@@ -84,8 +87,14 @@ function DetailView({
     await onDecide({ action: "False Positive", reason });
     if (result?.kind === "rule_version") setSuggestion(result);
     else if (result === undefined)
-      setToast("Marked as false positive. The rule suggestion failed.");
-    else setToast("Marked as false positive.");
+      setToast({ message: "Marked as false positive. The rule suggestion failed." });
+    else setToast({ message: "Marked as false positive." });
+  };
+
+  const acceptSuggestion = async (rule: SuggestedRule) => {
+    const ruleId = await onAcceptSuggestion(rule);
+    setSuggestion(null);
+    setToast({ message: `Draft rule ${rule.key} saved.`, ruleId });
   };
 
   return (
@@ -179,9 +188,24 @@ function DetailView({
         </div>
       </div>
       {suggestion && (
-        <SuggestionModal suggestion={suggestion} onClose={() => setSuggestion(null)} />
+        <SuggestionModal
+          suggestion={suggestion}
+          onClose={() => setSuggestion(null)}
+          onAccept={acceptSuggestion}
+        />
       )}
-      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          link={
+            toast.ruleId === undefined
+              ? undefined
+              : { to: `/rules?rule=${toast.ruleId}`, label: "Open in rules" }
+          }
+          duration={toast.ruleId === undefined ? undefined : 8000}
+          onDone={() => setToast(null)}
+        />
+      )}
     </main>
   );
 }

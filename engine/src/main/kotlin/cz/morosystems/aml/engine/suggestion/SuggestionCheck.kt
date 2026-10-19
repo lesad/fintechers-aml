@@ -99,7 +99,7 @@ class SuggestionChecker(
 
         val explanation = explain(reply, input, context, proposed.map { it.second.value })
         val ruleExplanation = ruleExplanation(reply["ruleExplanation"], input, proposed.map { it.second.value })
-        val suggestion = Suggestion(kind, explanation, suggestedRule(definition), base.params.json(), retires?.let { RuleRef(it.key, it.version) }, ruleExplanation)
+        val suggestion = Suggestion(kind, explanation, suggestedRule(definition, nameOf(definition, earlier, context)), base.params.json(), retires?.let { RuleRef(it.key, it.version) }, ruleExplanation)
         return Checked(suggestion, Draft(definition, base, retires, resolved.clientsByRule[definition].orEmpty()))
     }
 
@@ -222,7 +222,17 @@ class SuggestionChecker(
             invalid("variable $i has a bad window bound '$raw'")
         }
 
-    private fun suggestedRule(rule: RuleDefinition) = SuggestedRule(
+    /**
+     * A new client key takes the name of the rule it replaces, with the client added; any other version sends null, which
+     * keeps the key's latest name.
+     */
+    private fun nameOf(rule: RuleDefinition, earlier: RuleDefinition?, context: SuggestionContext): String? {
+        if (earlier != null || rule.replacesKey == null) return null
+        val replaced = context.existingRules.filter { it.rule.key == rule.replacesKey }.maxByOrNull { it.rule.version }?.name
+        return replaced?.let { "$it (client ${rule.scopeClientId})" }
+    }
+
+    private fun suggestedRule(rule: RuleDefinition, name: String?) = SuggestedRule(
         rule.key, rule.version, rule.alertType, rule.layer.name.lowercase(), rule.scopeSegmentId, rule.scopeClientId, rule.grain.name.lowercase(), rule.anchor,
         rule.condition, rule.replacesKey, rule.variables.map { v ->
             val window = when (val w = v.window) {
@@ -231,7 +241,7 @@ class SuggestionChecker(
             }
             VariableJson(v.name, v.agg.name.lowercase(), v.field, v.filter, window)
         },
-        rule.params.json(),
+        rule.params.json(), name,
     )
 
     /** The variable as the model sees and writes it, with ISO-8601 window bounds. */

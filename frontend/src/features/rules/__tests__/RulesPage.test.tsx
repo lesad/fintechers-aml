@@ -31,6 +31,12 @@ describe("RulesPage", () => {
     expect(b2).toHaveTextContent("draft v2");
   });
 
+  it("opens the version named in ?rule=", async () => {
+    serve(() => json([...SEEDED, B2_V2]));
+    render(<RulesPage author="J. Novák" />, { route: `/rules?rule=${B2_V2.id}` });
+    expect(await screen.findByRole("region", { name: "B2 v2" })).toBeInTheDocument();
+  });
+
   it("filters rules by key or name", async () => {
     serve();
     render(<RulesPage author="J. Novák" />);

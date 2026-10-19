@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 
 import { groupByKey, type RuleVersion } from "./api";
 import { RuleDetail } from "./RuleDetail";
@@ -17,8 +18,12 @@ const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg h
 
 export function RulesPage({ author }: RulesPageProps) {
   const rules = useRules();
+  const [params] = useSearchParams();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  // `?rule=<id>` opens that version, e.g. a draft saved from a rule suggestion.
+  const [selectedId, setSelectedId] = useState<number | null>(
+    () => Number(params.get("rule")) || null,
+  );
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   // NOTE: a just-saved draft shows at once, before the reload brings it back from the engine.
   const [saved, setSaved] = useState<RuleVersion[]>([]);
@@ -26,7 +31,10 @@ export function RulesPage({ author }: RulesPageProps) {
   const fetched = rules.status === "ready" ? rules.versions : [];
   const versions = [...fetched, ...saved.filter((s) => !fetched.some((v) => v.id === s.id))];
   const groups = groupByKey(versions);
-  const group = groups.find((g) => g.key === selectedKey) ?? groups[0];
+  const group =
+    groups.find((g) => g.key === selectedKey) ??
+    groups.find((g) => g.versions.some((v) => v.id === selectedId)) ??
+    groups[0];
   const version =
     group?.versions.find((v) => v.id === selectedId) ??
     group?.versions.find((v) => v.status === "active") ??

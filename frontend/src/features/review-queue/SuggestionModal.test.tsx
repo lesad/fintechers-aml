@@ -13,6 +13,7 @@ const ruleVersion: Suggestion = {
   rule: {
     key: "C1-K2",
     version: 1,
+    name: "Flow-through: inflow forwarded within hours (client K2)",
     alertType: "C",
     layer: "client",
     scopeSegmentId: null,
@@ -55,9 +56,11 @@ const ruleVersion: Suggestion = {
   declined: null,
 };
 
+const accept = async () => {};
+
 describe("SuggestionModal", () => {
   it("shows one AI card, the measured effect and the rule under details", () => {
-    render(<SuggestionModal suggestion={ruleVersion} onClose={() => {}} />);
+    render(<SuggestionModal suggestion={ruleVersion} onClose={() => {}} onAccept={accept} />);
 
     expect(screen.getByText("Suggested rule change")).toBeInTheDocument();
     expect(screen.getByText("The reviewer says it is payroll.")).toBeInTheDocument();
@@ -73,7 +76,9 @@ describe("SuggestionModal", () => {
     const changed = screen.getByText("min_inflow").closest("tr");
     expect(changed).toHaveTextContent("100,000 CZK");
     expect(changed).toHaveTextContent("200,000 CZK");
-    expect(screen.getByRole("button", { name: "Accept" })).toBeDisabled();
+    expect(
+      screen.getByText("Flow-through: inflow forwarded within hours (client K2)"),
+    ).toBeInTheDocument();
   });
 
   it("leads with the reason when code declines the draft", () => {
@@ -82,15 +87,36 @@ describe("SuggestionModal", () => {
       kind: "none",
       declined: "The change would also close 1 other alerts that triage rated high or escalated.",
     };
-    render(<SuggestionModal suggestion={declined} onClose={() => {}} />);
+    render(<SuggestionModal suggestion={declined} onClose={() => {}} onAccept={accept} />);
     expect(screen.getByText("No rule change suggested")).toBeInTheDocument();
     expect(screen.getByText(/triage rated high/)).toBeInTheDocument();
     expect(screen.getByText("What the model proposed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accept" })).toBeDisabled();
+  });
+
+  it("accepts the suggested rule", async () => {
+    const onAccept = vi.fn(async () => {});
+    render(<SuggestionModal suggestion={ruleVersion} onClose={() => {}} onAccept={onAccept} />);
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+    expect(onAccept).toHaveBeenCalledWith(ruleVersion.rule);
+    expect(await screen.findByRole("button", { name: "Saving…" })).toBeDisabled();
+  });
+
+  it("shows the engine's reason when saving fails, and lets the reviewer try again", async () => {
+    const onAccept = vi.fn(async () => {
+      throw new Error("rule C1-K2 already exists");
+    });
+    render(<SuggestionModal suggestion={ruleVersion} onClose={() => {}} onAccept={onAccept} />);
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not save the draft: rule C1-K2 already exists",
+    );
+    expect(screen.getByRole("button", { name: "Accept" })).toBeEnabled();
   });
 
   it("closes from the close button", () => {
     const onClose = vi.fn();
-    render(<SuggestionModal suggestion={ruleVersion} onClose={onClose} />);
+    render(<SuggestionModal suggestion={ruleVersion} onClose={onClose} onAccept={accept} />);
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalled();
   });

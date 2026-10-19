@@ -63,6 +63,8 @@ data class SuggestedRule(
     val replacesKey: String?,
     val variables: List<VariableJson>,
     val params: Map<String, ParamJson>,
+    /** Null keeps the key's latest name; a new client key gets the replaced rule's name with the client. */
+    val name: String?,
 )
 
 /** Window bounds are ISO-8601 durations, e.g. `-PT24H`; this is the flat shape the model reads and writes. */
