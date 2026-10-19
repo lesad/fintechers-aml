@@ -62,6 +62,7 @@ export function RulesPage({ author }: RulesPageProps) {
               mode={mode}
               version={version}
               siblings={group?.versions ?? []}
+              keys={groups.map((g) => g.key)}
               author={author}
               onMode={setMode}
               onSelectVersion={setSelectedId}
@@ -82,24 +83,35 @@ type PanelProps = {
   mode: Mode;
   version: RuleVersion | undefined;
   siblings: RuleVersion[];
+  /** Every rule key, so a new rule cannot reuse one. */
+  keys: string[];
   author: string;
   onMode: (mode: Mode) => void;
   onSelectVersion: (id: number) => void;
   onSaved: (saved: RuleVersion) => void;
 };
 
-function Panel({ mode, version, siblings, author, onMode, onSelectVersion, onSaved }: PanelProps) {
+function Panel({
+  mode,
+  version,
+  siblings,
+  keys,
+  author,
+  onMode,
+  onSelectVersion,
+  onSaved,
+}: PanelProps) {
   if (mode.kind === "form") {
     return (
-      <div className="p-4">
-        <RuleForm
-          key={mode.from?.id ?? "new"}
-          from={mode.from}
-          author={author}
-          onCancel={() => onMode({ kind: "view" })}
-          onSaved={onSaved}
-        />
-      </div>
+      <RuleForm
+        key={mode.from?.id ?? "new"}
+        from={mode.from}
+        author={author}
+        nextVersion={mode.from ? Math.max(...siblings.map((s) => s.version)) + 1 : 1}
+        existingKeys={keys}
+        onCancel={() => onMode({ kind: "view" })}
+        onSaved={onSaved}
+      />
     );
   }
   if (!version) return <p className="p-4 text-xs text-fg-subtle">No rules yet.</p>;

@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { RuleVersion } from "./api";
 
 const row = cva(
-  "grid w-full grid-cols-[34px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-0.5 border-l-3 py-2.5 pr-4 pl-[13px] text-left outline-none focus-visible:bg-hover",
+  "grid w-full grid-cols-[34px_minmax(0,1fr)] items-center gap-x-2 border-l-3 py-1.5 pr-3 pl-[9px] text-left outline-none focus-visible:bg-hover",
   {
     variants: {
       selected: {
@@ -34,19 +34,19 @@ export function RuleList({ groups, selectedKey, onSelect, onNew }: RuleListProps
   const alertTypes = [...new Set(shown.map((g) => newest(g)?.alertType ?? ""))].toSorted();
 
   return (
-    <aside className="flex w-80 flex-none flex-col border-r border-border bg-bg">
-      <div className="flex flex-none gap-2 border-b border-border-soft p-3">
+    <aside className="flex w-[280px] flex-none flex-col border-r border-border bg-bg">
+      <div className="flex flex-none gap-1.5 border-b border-border-soft p-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter rules"
           aria-label="Filter rules"
-          className="h-[30px] min-w-0 flex-1 rounded border border-border bg-bg px-2.5 text-[13px] text-fg outline-none focus:border-purple focus:ring-2 focus:ring-purple/25"
+          className="h-7 min-w-0 flex-1 rounded border border-border bg-bg px-2 text-[13px] text-fg outline-none focus:border-purple focus:ring-2 focus:ring-purple/25"
         />
         <button
           type="button"
           onClick={onNew}
-          className="h-[30px] flex-none rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover"
+          className="h-7 flex-none rounded bg-indigo px-2.5 text-[13px] font-semibold text-white hover:bg-indigo-hover"
         >
           + New rule
         </button>
@@ -54,7 +54,7 @@ export function RuleList({ groups, selectedKey, onSelect, onNew }: RuleListProps
       <nav aria-label="Rules" className="min-h-0 flex-1 overflow-auto">
         {alertTypes.map((type) => (
           <div key={type}>
-            <div className="px-4 pt-3.5 pb-1.5 text-[11px] font-semibold tracking-[0.06em] text-fg-subtle uppercase">
+            <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold tracking-[0.06em] text-fg-subtle uppercase">
               Alert type {type}
             </div>
             {shown

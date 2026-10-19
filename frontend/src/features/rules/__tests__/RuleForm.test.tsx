@@ -7,83 +7,68 @@ import { RuleForm } from "../RuleForm";
 import { RulesPage } from "../RulesPage";
 import { B2, B2_V2, json, SEEDED } from "./fixtures";
 
+import type { RuleVersion } from "../api";
+
 afterEach(() => vi.unstubAllGlobals());
 
-const form = (from = B2) =>
-  render(<RuleForm from={from} author="J. Novák" onSaved={() => {}} onCancel={() => {}} />);
+const form = (from: RuleVersion | null = B2) =>
+  render(
+    <RuleForm
+      from={from}
+      author="J. Novák"
+      nextVersion={from ? 2 : 1}
+      existingKeys={["A1", "B2", "C1"]}
+      onSaved={() => {}}
+      onCancel={() => {}}
+    />,
+  );
+
+const save = (version: number) => screen.getByRole("button", { name: `Save as draft v${version}` });
 
 describe("RuleForm", () => {
-  it("pre-fills from a version and locks alert type, layer and replaces", () => {
+  it("starts a new version from the one it is based on, amounts in CZK", () => {
     form();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("B2 · new version v2");
+    expect(screen.getByText("B2 · based on v1 active")).toBeInTheDocument();
     expect(screen.getByLabelText("Condition")).toHaveValue(B2.condition);
     expect(screen.getByLabelText("Value of parameter 1")).toHaveValue("100000");
-    for (const field of ["Key", "Alert type", "Layer", "Replaces"]) {
-      expect(screen.getByLabelText(field)).toHaveAttribute("readonly");
-    }
-  });
-
-  it("a new rule starts empty with key, alert type, layer and replaces editable", () => {
-    render(<RuleForm from={null} author="J. Novák" onSaved={() => {}} onCancel={() => {}} />);
-    expect(screen.getByLabelText("Key")).toHaveValue("");
-    expect(screen.getByLabelText("Key")).not.toHaveAttribute("readonly");
-    expect(screen.getByLabelText("Alert type")).not.toHaveAttribute("readonly");
-    expect(screen.getByLabelText("Replaces")).not.toHaveAttribute("readonly");
-    expect(
-      within(screen.getByLabelText("Layer"))
-        .getAllByRole("option")
-        .map((o) => o.textContent),
-    ).toEqual(["company", "client"]);
-  });
-
-  it("pre-fills each parameter's unit", () => {
-    form();
     expect(screen.getByLabelText("Unit of parameter 1")).toHaveValue("amount");
+    expect(screen.getByRole("radio", { name: "B" })).toBeDisabled();
   });
 
-  it("shows the CZK reading next to an amount parameter only", () => {
+  it("cannot save a version without changes", () => {
     form();
-    fireEvent.change(screen.getByLabelText("Value of parameter 1"), {
-      target: { value: "50000" },
+    expect(screen.getByText("No changes from v1 yet")).toBeInTheDocument();
+    expect(save(2)).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "50000" } });
+    expect(screen.getByText("1 section changed · ready to save")).toBeInTheDocument();
+    expect(screen.getByText("changed from v1")).toBeInTheDocument();
+    expect(save(2)).toBeEnabled();
+  });
+
+  it("a blank new rule lists what is missing and cannot be saved", () => {
+    form(null);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("New rule");
+    expect(screen.getByText("Rule code is required.")).toBeInTheDocument();
+    expect(screen.getByText("3 issues to fix")).toBeInTheDocument();
+    expect(save(1)).toBeDisabled();
+  });
+
+  it("offers to add a parameter the condition uses", () => {
+    form();
+    fireEvent.change(screen.getByLabelText("Condition"), {
+      target: { value: `${B2.condition} && tx.amount < p.cap` },
     });
-    expect(screen.getByText("= 50,000 CZK")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Unit of parameter 1"), {
-      target: { value: "percent" },
-    });
-    expect(screen.queryByText("= 50,000 CZK")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add p.cap" }));
+    expect(screen.getByLabelText("Name of parameter 2")).toHaveValue("cap");
+    expect(screen.getByText("p.cap needs a number.")).toBeInTheDocument();
   });
 
-  it("a new parameter without a unit blocks the save", async () => {
-    const fetch = vi.fn();
-    vi.stubGlobal("fetch", fetch);
-    form();
-    fireEvent.click(screen.getByRole("button", { name: "+ parameter" }));
-    fireEvent.change(screen.getByLabelText("Name of parameter 2"), { target: { value: "max_n" } });
-    fireEvent.change(screen.getByLabelText("Value of parameter 2"), { target: { value: "5" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
-    expect(await screen.findByText("Pick a unit")).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("a blank or non-numeric parameter value blocks the save", async () => {
-    const fetch = vi.fn();
-    vi.stubGlobal("fetch", fetch);
-    form();
-    for (const value of ["", "50 000"]) {
-      fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value } });
-      fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
-      expect(
-        await screen.findByText("CZK or units, digits and an optional decimal point"),
-      ).toBeInTheDocument();
-    }
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("anchor appears only for the client anchor grain", () => {
-    render(<RuleForm from={null} author="J. Novák" onSaved={() => {}} onCancel={() => {}} />);
+  it("the anchor field appears only for the per anchor transaction evaluation", () => {
+    form(null);
     expect(screen.queryByLabelText("Anchor")).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Evaluated per"), {
-      target: { value: "client_anchor" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: "Per anchor transaction" }));
     expect(screen.getByLabelText("Anchor")).toBeInTheDocument();
   });
 });
@@ -115,16 +100,14 @@ describe("saving from the rules page", () => {
       }),
     );
     fireEvent.click(screen.getByRole("button", { name: "New version from v1" }));
-    fireEvent.change(screen.getByLabelText("Value of parameter 1"), {
-      target: { value: "50000" },
-    });
+    fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "50000" } });
   };
 
   it('saving shows "Writing explanation…" then selects the new draft', async () => {
     let respond: (() => void) | undefined;
     stub(() => new Promise((resolve) => (respond = () => resolve(json(B2_V2, 201)))));
     await openB2Form();
-    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    fireEvent.click(save(2));
     expect(await screen.findByRole("button", { name: "Writing explanation…" })).toBeDisabled();
     respond?.();
 
@@ -139,19 +122,20 @@ describe("saving from the rules page", () => {
     const detail = "rule B2, condition: undeclared reference to 'tx.direcion'";
     stub(() => json({ status: 400, detail }, 400));
     await openB2Form();
-    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    fireEvent.click(save(2));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(detail);
     expect(screen.getByLabelText("Value of parameter 1")).toHaveValue("50000");
   });
 
-  it("the author sent is the current user", async () => {
+  it("sends the current user, the name and the amount in CZK", async () => {
     const calls = stub(() => json(B2_V2, 201));
     await openB2Form();
-    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    fireEvent.click(save(2));
     await screen.findByRole("region", { name: "B2 v2" });
     expect(calls[0]?.body).toMatchObject({
       key: "B2",
+      name: "PEP outgoing payment above the limit",
       author: "J. Novák",
       params: { pep_min: { value: 50_000, unit: "amount" } },
     });

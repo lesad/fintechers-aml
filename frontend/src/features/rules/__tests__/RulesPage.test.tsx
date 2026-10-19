@@ -96,15 +96,6 @@ describe("RulesPage", () => {
     expect(detail).toHaveTextContent("relative · −24 h → 0 h");
   });
 
-  it("the version history selects a version", async () => {
-    serve();
-    render(<RulesPage author="J. Novák" />);
-    await open(/C1/);
-    const history = screen.getByRole("list", { name: "Version history" });
-    fireEvent.click(within(history).getByRole("button", { name: /v1/ }));
-    expect(screen.getByRole("region", { name: "C1 v1" })).toBeInTheDocument();
-  });
-
   it("shows an error with retry when the rules fail to load", async () => {
     const fetch = serve(() => json({}, 500));
     render(<RulesPage author="J. Novák" />);

@@ -26,6 +26,7 @@ data class RuleBody(
     val variables: List<VariableJson> = emptyList(),
     val params: Map<String, ParamJson?> = emptyMap(),
     val author: String,
+    val name: String? = null,
 )
 
 data class RuleVersionJson(
@@ -99,6 +100,7 @@ fun RuleBody.toNewRule() = NewRule(
         )
     },
     author = author.trim(),
+    name = name?.trim()?.ifEmpty { null },
 )
 
 private fun WindowJson.toWindow(variable: String): Window = when (kind) {

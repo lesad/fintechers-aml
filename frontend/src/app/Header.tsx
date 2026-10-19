@@ -25,17 +25,8 @@ const dot = cva("size-[7px] rounded-[2px]", {
   },
 });
 
-const cog = cva(
-  "flex size-7 items-center justify-center rounded-md text-base leading-none outline-none focus-visible:ring-2 focus-visible:ring-yellow",
-  {
-    variants: {
-      active: {
-        true: "bg-white/15 text-yellow shadow-[inset_0_-2px_0_var(--color-yellow)]",
-        false: "text-indigo-20 hover:bg-white/10 hover:text-white",
-      },
-    },
-  },
-);
+const cog =
+  "mr-1 flex size-7 items-center justify-center rounded-md border border-transparent text-indigo-20 outline-none hover:border-indigo-80 hover:bg-header-input hover:text-yellow focus-visible:ring-2 focus-visible:ring-yellow";
 
 const hint = cva("pointer-events-none absolute right-2 text-[11px]", {
   variants: { miss: { true: "text-header-miss", false: "text-indigo-60" } },
@@ -129,9 +120,21 @@ export function Header({ openByRating, onJump, rulesOpen, onToggleRules }: Heade
           title="Rules"
           aria-pressed={rulesOpen}
           onClick={onToggleRules}
-          className={cog({ active: rulesOpen })}
+          className={cog}
         >
-          ⚙
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
         </button>
         <span className="text-xs text-indigo-20">{CURRENT_USER}</span>
         <div className="flex size-[26px] items-center justify-center rounded-full bg-indigo-80 text-[11px] font-semibold">

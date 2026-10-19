@@ -79,6 +79,12 @@ class RuleRepositoryTest {
     }
 
     @Test
+    fun aGivenNameReplacesTheRuleName() {
+        val id = repository.insertDraft(newB2().copy(name = "PEP payment above 50,000 CZK"))
+        assertThat(repository.find(id)!!.name).isEqualTo("PEP payment above 50,000 CZK")
+    }
+
+    @Test
     fun roundTripsVariablesAndWindows() {
         val rule = newC1(key = "C9")
         val saved = repository.find(repository.insertDraft(rule))!!

@@ -48,7 +48,11 @@ export type RuleWindow = z.infer<typeof window>;
 export type RuleVariable = z.infer<typeof variable>;
 export type RuleParam = z.infer<typeof param>;
 export type RuleVersion = z.infer<typeof ruleVersion>;
-export type NewRule = z.infer<z.ZodObject<typeof ruleFields>> & { author: string };
+export type NewRule = z.infer<z.ZodObject<typeof ruleFields>> & {
+  author: string;
+  /** null keeps the name of the key's latest version. */
+  name: string | null;
+};
 
 /** The engine refused a save (400 or 409); the message is its reason. */
 export class RuleRejectedError extends Error {}

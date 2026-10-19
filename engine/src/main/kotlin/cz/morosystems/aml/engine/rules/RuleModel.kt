@@ -70,6 +70,8 @@ data class NewRule(
     val variables: List<VariableDefinition>,
     val params: Map<String, Param>,
     val author: String,
+    /** null keeps the name of the key's latest version. */
+    val name: String? = null,
 )
 
 data class Segment(val id: Long, val name: String, val predicate: String)

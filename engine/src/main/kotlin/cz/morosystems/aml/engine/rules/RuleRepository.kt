@@ -41,14 +41,15 @@ class RuleRepository(private val jdbc: JdbcClient) {
             insert into rule (key, version, alert_type, layer, scope_segment_id, scope_client_id, grain, anchor, condition,
                               replaces_key, status, author, name)
             select ?, coalesce(max(version), 0) + 1, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?,
-                   (select name from rule where key = ? order by version desc limit 1)
+                   coalesce(?, (select name from rule where key = ? order by version desc limit 1))
             from rule where key = ?
             returning id
             """,
         ).params(
             listOf(
                 rule.key, rule.alertType, rule.layer.name.lowercase(), rule.scopeSegmentId, rule.scopeClientId,
-                rule.grain.name.lowercase(), rule.anchor, rule.condition, rule.replacesKey, rule.author, rule.key, rule.key,
+                rule.grain.name.lowercase(), rule.anchor, rule.condition, rule.replacesKey, rule.author, rule.name,
+                rule.key, rule.key,
             ),
         ).query(Long::class.java).single()
 

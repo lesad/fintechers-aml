@@ -1,433 +1,331 @@
 import { cva } from "class-variance-authority";
 import { useState } from "react";
-import {
-  type Control,
-  type UseFormRegister,
-  useFieldArray,
-  useForm,
-  useFormState,
-  useWatch,
-} from "react-hook-form";
 
-import { Select } from "@/components";
+import { cn } from "@/utils";
 
+import { type RuleVersion, saveRule } from "./api";
+import { ConditionLegend, token } from "./ConditionLegend";
+import { ChangedBadge, field, Issues, SectionTitle, Segmented } from "./form-parts";
+import { conditionTokens, grainLabel } from "./format";
 import {
-  formatCzk,
-  type NewRule,
-  PARAM_UNITS,
-  type RuleParam,
-  type RuleVersion,
-  saveRule,
-} from "./api";
-import { isoHours } from "./format";
+  changedSections,
+  type Draft,
+  draftFrom,
+  draftIssues,
+  type DraftSection,
+  type Issue,
+  toNewRule,
+  unknownNames,
+} from "./rule-draft";
+import { ParamRows, VariableRows } from "./RuleFormRows";
 
 import type { ReactNode } from "react";
-
-type FormValues = {
-  key: string;
-  alertType: string;
-  layer: RuleVersion["layer"];
-  scopeClientId: string;
-  replacesKey: string;
-  grain: RuleVersion["grain"];
-  anchor: string;
-  condition: string;
-  params: { name: string; value: string; unit: RuleParam["unit"] | "" }[];
-  variables: {
-    name: string;
-    agg: RuleVersion["variables"][number]["agg"];
-    field: string;
-    filter: string;
-    kind: "day" | "relative";
-    from: string;
-    to: string;
-  }[];
-};
 
 type RuleFormProps = {
   /** The version to start from; null for a brand-new rule. */
   from: RuleVersion | null;
   author: string;
+  /** The version number the draft will get. */
+  nextVersion: number;
+  /** Keys already taken, so a new rule cannot reuse one. */
+  existingKeys: string[];
   onSaved: (saved: RuleVersion) => void;
   onCancel: () => void;
 };
 
-const input = cva(
-  "h-7 rounded border border-border px-2 text-[13px] text-fg outline-none focus:border-purple focus:ring-2 focus:ring-purple/25",
-  {
-    variants: {
-      locked: { true: "bg-bg-sub text-fg-subtle", false: "bg-bg" },
-      mono: { true: "font-mono text-xs", false: "" },
-      width: { auto: "", wide: "min-w-64 flex-1", hours: "w-16" },
-    },
-    defaultVariants: { locked: false, mono: false, width: "auto" },
-  },
+const ALERT_TYPES = [
+  ["A", "A"],
+  ["B", "B"],
+  ["C", "C"],
+] as const;
+
+const GRAINS = (["client_day", "transaction", "client_anchor"] as const).map(
+  (g) => [g, grainLabel[g]] as const,
 );
 
-const conditionBox = cva(
-  "min-h-16 w-full rounded border px-2 py-1.5 font-mono text-xs text-fg outline-none focus:ring-2 focus:ring-purple/25",
-  {
-    variants: {
-      error: { true: "border-high bg-high-bg", false: "border-border bg-bg focus:border-purple" },
-    },
-  },
-);
+const status = cva("flex items-center gap-2 font-semibold", {
+  variants: { tone: { error: "text-med", idle: "text-fg-subtle", ready: "text-low" } },
+});
 
-const hours = (iso: string) => String(isoHours(iso) ?? 0);
+const statusDot = cva("size-2 rounded-full", {
+  variants: { tone: { error: "bg-med", idle: "bg-fg-subtle", ready: "bg-low" } },
+});
 
-const EMPTY: FormValues = {
-  key: "",
-  alertType: "",
-  layer: "company",
-  scopeClientId: "",
-  replacesKey: "",
-  grain: "transaction",
-  anchor: "",
-  condition: "",
-  params: [],
-  variables: [],
-};
+const label = "flex flex-col gap-1.5 text-xs font-semibold text-fg-muted";
+const section = "flex flex-col gap-1.5";
 
-function defaults(from: RuleVersion | null): FormValues {
-  if (!from) return EMPTY;
-  return {
-    key: from.key,
-    alertType: from.alertType,
-    layer: from.layer,
-    scopeClientId: from.scopeClientId ?? "",
-    replacesKey: from.replacesKey ?? "",
-    grain: from.grain,
-    anchor: from.anchor ?? "",
-    condition: from.condition,
-    params: Object.entries(from.params).map(([name, { value, unit }]) => ({
-      name,
-      value: String(value),
-      unit,
-    })),
-    variables: from.variables.map((v) => ({
-      name: v.name,
-      agg: v.agg,
-      field: v.field,
-      filter: v.filter,
-      kind: v.window.kind,
-      from: v.window.kind === "relative" ? hours(v.window.from) : "0",
-      to: v.window.kind === "relative" ? hours(v.window.to) : "0",
-    })),
-  };
+const plural = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}`;
+
+type Status = { tone: "error" | "idle" | "ready"; text: string };
+
+function statusOf(errors: number, changed: number, base: number | null): Status {
+  if (errors) return { tone: "error", text: `${plural(errors, "issue")} to fix` };
+  if (base !== null && !changed) return { tone: "idle", text: `No changes from v${base} yet` };
+  if (base === null) return { tone: "ready", text: "Ready to save" };
+  return { tone: "ready", text: `${plural(changed, "section")} changed · ready to save` };
 }
 
-function toNewRule(values: FormValues, from: RuleVersion | null, author: string): NewRule {
-  return {
-    key: values.key.trim(),
-    alertType: values.alertType.trim(),
-    layer: values.layer,
-    scopeSegmentId: from?.scopeSegmentId ?? null,
-    scopeClientId: values.layer === "client" ? values.scopeClientId.trim() : null,
-    grain: values.grain,
-    anchor: values.grain === "client_anchor" ? values.anchor.trim() : null,
-    condition: values.condition.trim(),
-    replacesKey: values.replacesKey.trim() || null,
-    variables: values.variables.map((v) => ({
-      name: v.name.trim(),
-      agg: v.agg,
-      field: v.field.trim(),
-      filter: v.filter.trim() || "true",
-      window:
-        v.kind === "day"
-          ? { kind: "day" }
-          : { kind: "relative", from: `PT${Number(v.from)}H`, to: `PT${Number(v.to)}H` },
-    })),
-    params: Object.fromEntries(
-      values.params.map((p) => [
-        p.name.trim(),
-        // NOTE: the unit select is required, so "" never reaches here.
-        { value: Number(p.value), unit: p.unit as RuleParam["unit"] },
-      ]),
-    ),
-    author,
-  };
-}
-
-const NUMBER = "CZK or units, digits and an optional decimal point";
-
-type FieldsProps = { control: Control<FormValues>; register: UseFormRegister<FormValues> };
-
-const legend = "mb-1 text-[11px] tracking-[0.04em] text-fg-subtle uppercase";
-
-function ParamHint({ error, param }: { error?: string; param?: FormValues["params"][number] }) {
-  if (error) return <span className="text-xs text-high">{error}</span>;
-  const value = Number(param?.value);
-  if (param?.unit !== "amount" || !(value > 0)) return null;
-  return <span className="text-xs text-fg-subtle">= {formatCzk(value)}</span>;
-}
-
-function ParamFields({ control, register }: FieldsProps) {
-  const params = useFieldArray({ control, name: "params" });
-  const paramValues = useWatch({ control, name: "params" });
-  const { errors } = useFormState({ control, name: "params" });
-  return (
-    <fieldset className="flex flex-col gap-1.5">
-      <legend className={legend}>Parameters</legend>
-      {params.fields.map((field, i) => {
-        const error = errors.params?.[i]?.value ?? errors.params?.[i]?.unit;
-        return (
-          <div key={field.id} className="flex items-center gap-2">
-            <input
-              {...register(`params.${i}.name`)}
-              aria-label={`Name of parameter ${i + 1}`}
-              className={input({ mono: true })}
-            />
-            <input
-              {...register(`params.${i}.value`, {
-                required: NUMBER,
-                pattern: { value: /^\d+(\.\d+)?$/, message: NUMBER },
-              })}
-              aria-label={`Value of parameter ${i + 1}`}
-              inputMode="decimal"
-              className={input({ mono: true })}
-            />
-            <Select
-              {...register(`params.${i}.unit`, { required: "Pick a unit" })}
-              aria-label={`Unit of parameter ${i + 1}`}
-            >
-              <option value="">unit…</option>
-              {PARAM_UNITS.map((unit) => (
-                <option key={unit} value={unit}>
-                  {unit === "amount" ? "amount (haléře)" : unit}
-                </option>
-              ))}
-            </Select>
-            <ParamHint error={error?.message} param={paramValues[i]} />
-            <button
-              type="button"
-              aria-label={`Remove parameter ${i + 1}`}
-              onClick={() => params.remove(i)}
-              className="text-fg-subtle hover:text-high"
-            >
-              ✕
-            </button>
-          </div>
-        );
-      })}
-      <button
-        type="button"
-        onClick={() => params.append({ name: "", value: "", unit: "" })}
-        className="self-start text-xs text-fg-muted hover:text-fg"
-      >
-        + parameter
-      </button>
-    </fieldset>
-  );
-}
-
-function VariableFields({ control, register }: FieldsProps) {
-  const variables = useFieldArray({ control, name: "variables" });
-  return (
-    <fieldset className="flex flex-col gap-1.5">
-      <legend className={legend}>Variables</legend>
-      {variables.fields.map((field, i) => (
-        <div key={field.id} className="flex flex-wrap items-center gap-2">
-          <input
-            {...register(`variables.${i}.name`)}
-            aria-label={`Name of variable ${i + 1}`}
-            className={input({ mono: true })}
-          />
-          <Select
-            {...register(`variables.${i}.agg`)}
-            aria-label={`Aggregation of variable ${i + 1}`}
-          >
-            {["sum", "max", "min", "count", "set"].map((agg) => (
-              <option key={agg} value={agg}>
-                {agg}
-              </option>
-            ))}
-          </Select>
-          <input
-            {...register(`variables.${i}.field`)}
-            aria-label={`Field of variable ${i + 1}`}
-            className={input({ mono: true })}
-          />
-          <input
-            {...register(`variables.${i}.filter`)}
-            aria-label={`Filter of variable ${i + 1}`}
-            className={input({ mono: true, width: "wide" })}
-          />
-          <Select {...register(`variables.${i}.kind`)} aria-label={`Window of variable ${i + 1}`}>
-            <option value="day">calendar day</option>
-            <option value="relative">hours around the anchor</option>
-          </Select>
-          <input
-            {...register(`variables.${i}.from`)}
-            aria-label={`Window start of variable ${i + 1} in hours`}
-            inputMode="decimal"
-            className={input({ mono: true, width: "hours" })}
-          />
-          <input
-            {...register(`variables.${i}.to`)}
-            aria-label={`Window end of variable ${i + 1} in hours`}
-            inputMode="decimal"
-            className={input({ mono: true, width: "hours" })}
-          />
-          <button
-            type="button"
-            aria-label={`Remove variable ${i + 1}`}
-            onClick={() => variables.remove(i)}
-            className="text-fg-subtle hover:text-high"
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={() =>
-          variables.append({
-            name: "",
-            agg: "sum",
-            field: "amount",
-            filter: "true",
-            kind: "day",
-            from: "0",
-            to: "0",
-          })
-        }
-        className="self-start text-xs text-fg-muted hover:text-fg"
-      >
-        + variable
-      </button>
-    </fieldset>
-  );
-}
-
-function Labelled({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="flex flex-col gap-0.5 text-[11px] text-fg-subtle">
-      {label}
-      {children}
-    </label>
-  );
-}
-
-export function RuleForm({ from, author, onSaved, onCancel }: RuleFormProps) {
-  const locked = from !== null;
-  const { register, handleSubmit, control } = useForm<FormValues>({
-    defaultValues: defaults(from),
-  });
-  const grain = useWatch({ control, name: "grain" });
-  const layer = useWatch({ control, name: "layer" });
+export function RuleForm({
+  from,
+  author,
+  nextVersion,
+  existingKeys,
+  onSaved,
+  onCancel,
+}: RuleFormProps) {
+  const [base] = useState(() => (from ? draftFrom(from) : null));
+  const [draft, setDraft] = useState(() => draftFrom(from));
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [rejected, setRejected] = useState<string | null>(null);
 
-  const submit = handleSubmit(async (values) => {
+  const baseVersion = from?.version ?? null;
+  const issues = draftIssues(draft, from === null, new Set(existingKeys));
+  const errors = issues.filter((i) => i.level === "error").length;
+  const changed = base ? changedSections(draft, base) : new Set<DraftSection>();
+
+  const set = (change: Partial<Draft>) => setDraft((d) => ({ ...d, ...change }));
+  const fix = (issue: Issue) => issue.fix && setDraft(issue.fix.apply);
+  const of = (s: Issue["section"]) => issues.filter((i) => i.section === s);
+  const badge = (s: DraftSection) => <ChangedBadge show={changed.has(s)} base={baseVersion} />;
+
+  const save = async () => {
     setSaving(true);
-    setError(null);
+    setRejected(null);
     try {
-      onSaved(await saveRule(toNewRule(values, from, author)));
+      onSaved(await saveRule(toNewRule(draft, from, author)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setRejected(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
-  });
+  };
 
   return (
-    <form
-      aria-label={from ? `New version of ${from.key}` : "New rule"}
-      onSubmit={(e) => void submit(e)}
-      className="flex flex-col gap-3"
-    >
-      <h2 className="text-sm font-semibold">
-        {from ? (
-          <>
-            <span className="font-mono">{from.key}</span> · new version{" "}
-            <span className="text-xs font-normal text-fg-subtle">from v{from.version}</span>
-          </>
-        ) : (
-          "New rule"
-        )}
-      </h2>
+    <div className="flex min-h-full flex-col">
+      <div className="flex w-full max-w-[1040px] flex-1 flex-col gap-[18px] px-6 pt-4 pb-6">
+        <Heading from={from} nextVersion={nextVersion} />
+        <Identity draft={draft} set={set} isNew={from === null} nameBadge={badge("name")}>
+          <Issues issues={of("identity")} onFix={fix} />
+        </Identity>
+        <Evaluated draft={draft} set={set} badge={badge("grain")} />
 
-      <div className="flex flex-wrap gap-2.5">
-        <Labelled label="Key">
-          <input {...register("key")} readOnly={locked} className={input({ locked, mono: true })} />
-        </Labelled>
-        <Labelled label="Alert type">
-          <input {...register("alertType")} readOnly={locked} className={input({ locked })} />
-        </Labelled>
-        <Labelled label="Layer">
-          {locked ? (
-            <input
-              value={from.layer === "segment" ? `segment ${from.scopeSegmentId}` : from.layer}
-              readOnly
-              className={input({ locked })}
-            />
-          ) : (
-            <Select {...register("layer")}>
-              <option value="company">company</option>
-              <option value="client">client</option>
-            </Select>
+        <section className={section}>
+          <SectionTitle title="Condition">{badge("condition")}</SectionTitle>
+          <ConditionEditor draft={draft} onChange={(condition) => set({ condition })} />
+          <ConditionLegend withUnknown />
+          <Issues issues={of("condition")} onFix={fix} />
+          {rejected && (
+            <pre
+              role="alert"
+              className="rounded border border-high bg-high-bg px-3 py-2 font-mono text-xs whitespace-pre-wrap text-high"
+            >
+              {rejected}
+            </pre>
           )}
-        </Labelled>
-        {layer === "client" && (
-          <Labelled label="Client">
-            <input
-              {...register("scopeClientId")}
-              readOnly={locked}
-              className={input({ locked, mono: true })}
-            />
-          </Labelled>
-        )}
-        <Labelled label="Replaces">
-          <input
-            {...register("replacesKey")}
-            readOnly={locked}
-            className={input({ locked, mono: true })}
+        </section>
+
+        <section className={section}>
+          <SectionTitle title="Parameters" hint="Referenced as p.name">
+            {badge("params")}
+          </SectionTitle>
+          <ParamRows
+            rows={draft.params}
+            base={base?.params ?? []}
+            onChange={(params) => set({ params })}
           />
-        </Labelled>
-        <Labelled label="Evaluated per">
-          <Select {...register("grain")}>
-            <option value="transaction">transaction</option>
-            <option value="client_day">client day</option>
-            <option value="client_anchor">client anchor</option>
-          </Select>
-        </Labelled>
+          <Issues issues={of("params")} onFix={fix} />
+        </section>
+
+        <section className={section}>
+          <SectionTitle title="Variables" hint="Aggregates over the client’s transactions">
+            {badge("variables")}
+          </SectionTitle>
+          <VariableRows
+            rows={draft.variables}
+            base={base?.variables ?? []}
+            onChange={(variables) => set({ variables })}
+          />
+          <Issues issues={of("variables")} onFix={fix} />
+        </section>
+
+        <section className={section}>
+          <SectionTitle title="What it flags" hint="Plain language, shown to reviewers" />
+          <p className="rounded-md border border-ai-line bg-ai-bg px-3 py-2.5 text-fg-muted">
+            Written by AI from this rule when you save the draft.
+          </p>
+        </section>
       </div>
 
-      {grain === "client_anchor" && (
-        <Labelled label="Anchor">
-          <input {...register("anchor")} className={input({ mono: true })} />
-        </Labelled>
-      )}
+      <Footer
+        status={statusOf(errors, changed.size, baseVersion)}
+        saving={saving}
+        disabled={saving || errors > 0 || (base !== null && changed.size === 0)}
+        nextVersion={nextVersion}
+        onCancel={onCancel}
+        onSave={save}
+      />
+    </div>
+  );
+}
 
-      <Labelled label="Condition">
-        <textarea {...register("condition")} className={conditionBox({ error: error !== null })} />
-      </Labelled>
-      {error && (
-        <p role="alert" className="-mt-2 font-mono text-xs whitespace-pre-wrap text-high">
-          {error}
-        </p>
-      )}
-
-      <ParamFields control={control} register={register} />
-      <VariableFields control={control} register={register} />
-
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-indigo px-3 py-1.5 text-xs text-white disabled:opacity-70"
-        >
-          {saving ? "Writing explanation…" : "Save as draft"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded border border-border px-3 py-1.5 text-xs text-fg-muted"
-        >
-          Cancel
-        </button>
-        <span className="text-xs text-fg-subtle">Saved as {author} · drafts don't affect runs</span>
+function Heading({ from, nextVersion }: { from: RuleVersion | null; nextVersion: number }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-xs text-fg-subtle">
+        {from
+          ? `${from.key} · based on v${from.version} ${from.status}`
+          : "New rule · saved as draft v1"}
       </div>
-    </form>
+      <h1 className="text-lg leading-tight font-semibold">
+        {from ? `${from.key} · new version v${nextVersion}` : "New rule"}
+      </h1>
+    </div>
+  );
+}
+
+type SectionProps = { draft: Draft; set: (change: Partial<Draft>) => void };
+
+type IdentityProps = SectionProps & { isNew: boolean; nameBadge: ReactNode; children: ReactNode };
+
+function Identity({ draft, set, isNew, nameBadge, children }: IdentityProps) {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-end gap-4">
+        {isNew && (
+          <label className={label}>
+            Rule code
+            <input
+              value={draft.key}
+              onChange={(e) => set({ key: e.target.value.toUpperCase() })}
+              placeholder="e.g. C2"
+              className={cn(field({ mono: true }), "w-[110px] font-bold")}
+            />
+          </label>
+        )}
+        <div className={label}>
+          Alert type
+          <Segmented
+            label="Alert type"
+            options={ALERT_TYPES}
+            value={draft.alertType}
+            onChange={(alertType) => set({ alertType })}
+            disabled={!isNew}
+          />
+        </div>
+      </div>
+      <label className={label}>
+        <span className="flex items-center gap-2">Name {nameBadge}</span>
+        <input
+          value={draft.name}
+          onChange={(e) => set({ name: e.target.value })}
+          placeholder="Short description of the pattern"
+          className={cn(field(), "w-full font-normal")}
+        />
+      </label>
+      {children}
+    </section>
+  );
+}
+
+function Evaluated({ draft, set, badge }: SectionProps & { badge: ReactNode }) {
+  return (
+    <section className={section}>
+      <SectionTitle title="Evaluated">{badge}</SectionTitle>
+      <Segmented
+        label="Evaluated"
+        options={GRAINS}
+        value={draft.grain}
+        onChange={(grain) => set({ grain })}
+      />
+      {draft.grain === "client_anchor" && (
+        <label className="flex flex-wrap items-center gap-2.5 text-fg-muted">
+          at each transaction where
+          <input
+            value={draft.anchor}
+            onChange={(e) => set({ anchor: e.target.value })}
+            placeholder='tx.direction == "in"'
+            aria-label="Anchor"
+            className={cn(field({ mono: true }), "min-w-60 flex-1")}
+          />
+        </label>
+      )}
+    </section>
+  );
+}
+
+type FooterProps = {
+  status: Status;
+  saving: boolean;
+  disabled: boolean;
+  nextVersion: number;
+  onCancel: () => void;
+  onSave: () => void;
+};
+
+function Footer({ status: s, saving, disabled, nextVersion, onCancel, onSave }: FooterProps) {
+  return (
+    <div className="sticky bottom-0 flex flex-none flex-wrap items-center gap-3 border-t border-border bg-bg/90 px-6 py-2 backdrop-blur-md">
+      <span className={status({ tone: s.tone })}>
+        <span aria-hidden="true" className={statusDot({ tone: s.tone })} />
+        {s.text}
+      </span>
+      <span className="flex-1" />
+      <button
+        type="button"
+        onClick={onCancel}
+        className="h-7 rounded px-3 text-[13px] font-semibold text-fg-muted hover:bg-hover hover:text-fg"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={disabled}
+        className="h-7 rounded bg-indigo px-3.5 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot"
+      >
+        {saving ? "Writing explanation…" : `Save as draft v${nextVersion}`}
+      </button>
+    </div>
+  );
+}
+
+function ConditionEditor({
+  draft,
+  onChange,
+}: {
+  draft: Draft;
+  onChange: (condition: string) => void;
+}) {
+  const variables = new Set(draft.variables.map((x) => x.name.trim()).filter(Boolean));
+  const params = new Set(draft.params.map((p) => p.name.trim()));
+  const unknown = new Set(unknownNames(draft));
+  return (
+    <div className="relative rounded-md bg-indigo">
+      <pre
+        aria-hidden="true"
+        className="min-h-[60px] px-3 py-2.5 font-mono text-[13px] leading-[1.55] break-words whitespace-pre-wrap"
+      >
+        {conditionTokens(draft.condition, variables).map((t) => (
+          <span
+            key={t.at}
+            className={token({
+              kind: t.kind,
+              unknown: unknown.has(t.text) || (t.kind === "param" && !params.has(t.text.slice(2))),
+            })}
+          >
+            {t.text}
+          </span>
+        ))}
+        {"\n "}
+      </pre>
+      <textarea
+        value={draft.condition}
+        onChange={(e) => onChange(e.target.value)}
+        spellCheck={false}
+        placeholder="e.g. tx.amount > p.min_amount"
+        aria-label="Condition"
+        className="absolute inset-0 size-full resize-none overflow-hidden rounded-md bg-transparent px-3 py-2.5 font-mono text-[13px] leading-[1.55] break-words whitespace-pre-wrap text-transparent caret-yellow outline-none placeholder:text-indigo-60 focus:ring-2 focus:ring-yellow"
+      />
+    </div>
   );
 }
