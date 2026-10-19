@@ -64,6 +64,7 @@ AI never takes part in stages 1 to 3. Stages 4 and 5 are designed; the engine's 
 | `llm_context`       | The per-alert description the engine computes for the AI: evidence plus derived values the second layer names. Not built yet.                                                                            | facts                                       |
 | summary             | AI-written text for a person, built from `llm_context` and the log. Decides nothing.                                                                                                                     | assessment, judgement                       |
 | rule proposal       | A draft rule version written by AI (or a person) in the rule language. Goes through the same checks, backtest and approval as any rule.                                                                 | AI rule                                     |
+| suggestion          | A rule change the engine drafts from a reviewer's false-positive reason; the response form of a rule proposal, checked but not saved.                                                                   |                                             |
 
 ## Origin
 

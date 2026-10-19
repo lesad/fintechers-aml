@@ -53,4 +53,19 @@ class SummaryCheckTest {
         assertThatThrownBy { checkNumbers(listOf(Sentence("Outflow was 118% of inflow.", listOf("hit:1"))), input) }
             .isInstanceOf(InvalidSummaryException::class.java).hasMessageContaining("118")
     }
+
+    @Test
+    fun requiresTheRequiredRef() {
+        val sentences = listOf(Sentence("x", listOf("hit:1")))
+        assertThat(checkSummary(sentences, known, requiredRef = "hit:1")).isEqualTo(sentences)
+        assertThatThrownBy { checkSummary(sentences, known, requiredRef = "hit:2") }
+            .isInstanceOf(InvalidSummaryException::class.java).hasMessageContaining("no sentence cites hit:2")
+    }
+
+    @Test
+    fun acceptsExtraNumbers() {
+        val sentences = listOf(Sentence("Raise it to 60.", listOf("hit:1")))
+        assertThat(checkNumbers(sentences, input, extra = listOf(60L))).isEqualTo(sentences)
+        assertThatThrownBy { checkNumbers(sentences, input) }.hasMessageContaining("60")
+    }
 }

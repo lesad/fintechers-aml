@@ -16,33 +16,35 @@ fun sentencesOf(raw: Any?): List<Sentence> {
     }
 }
 
-/** The model's output is untrusted: every sentence must cite at least one ref, and only refs from the alert's activity. */
-fun checkSummary(sentences: List<Sentence>, known: Set<String>): List<Sentence> {
-    if (sentences.isEmpty()) throw InvalidSummaryException("summary has no sentences")
-    if (sentences.size > MAX_SENTENCES) throw InvalidSummaryException("summary has ${sentences.size} sentences, at most $MAX_SENTENCES allowed")
+/** The model's output is untrusted: every sentence must cite at least one ref, and only refs from the alert's activity. With [requiredRef], some sentence must cite it. [noun] names the text in error messages. */
+fun checkSummary(sentences: List<Sentence>, known: Set<String>, maxSentences: Int = MAX_SENTENCES, requiredRef: String? = null, noun: String = "summary"): List<Sentence> {
+    if (sentences.isEmpty()) throw InvalidSummaryException("$noun has no sentences")
+    if (sentences.size > maxSentences) throw InvalidSummaryException("$noun has ${sentences.size} sentences, at most $maxSentences allowed")
     sentences.forEachIndexed { i, s ->
         if (s.refs.isEmpty()) throw InvalidSummaryException("sentence $i cites nothing")
         val unknown = s.refs.filterNot { it in known }
         if (unknown.isNotEmpty()) throw InvalidSummaryException("sentence $i cites unknown refs $unknown")
     }
+    if (requiredRef != null && sentences.none { requiredRef in it.refs }) throw InvalidSummaryException("no sentence cites $requiredRef")
     return sentences
 }
 
 /**
  * The model does no arithmetic: every number it writes must appear in [input] as is. Amounts are CZK there already.
+ * [extra] values (a suggestion's proposed parameters) are known too.
  * Digits inside identifiers (TX000000651, K005146) are not numbers.
  */
-fun checkNumbers(sentences: List<Sentence>, input: Any?): List<Sentence> {
+fun checkNumbers(sentences: List<Sentence>, input: Any?, extra: Collection<Number> = emptyList()): List<Sentence> {
     sentences.forEachIndexed { i, s ->
-        val unknown = numbersNotIn(s.text, input)
+        val unknown = numbersNotIn(s.text, input, extra)
         if (unknown.isNotEmpty()) throw InvalidSummaryException("sentence $i has numbers not in the input: $unknown")
     }
     return sentences
 }
 
-/** The numbers in [text] that do not appear in [input]. */
-fun numbersNotIn(text: String, input: Any?): List<String> {
-    val known = numbersIn(input)
+/** The numbers in [text] that appear neither in [input] nor in [extra]. */
+fun numbersNotIn(text: String, input: Any?, extra: Collection<Number> = emptyList()): List<String> {
+    val known = numbersIn(input) + extra.map { BigDecimal(it.toString()) }
     return NUMBER.findAll(text).map { it.value }.filterNot { n -> known.any { it.compareTo(BigDecimal(n.replace(",", ""))) == 0 } }.toList()
 }
 
