@@ -8,7 +8,7 @@ This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FI
 - Data: `pnpm data:pull` (uses `AWS_PROFILE`, by convention `hackathon`, or `--profile NAME`) fills `data/raw/` (git-ignored). Never commit the organisers' data.
 - Reference data we own: `reference/high-risk-countries-2026-07.json` (rule B).
 - AWS: Frankfurt (`eu-central-1`) only, SSO sign-in, no IAM users or access keys. Everything runs locally on the `AWS_PROFILE` SSO credentials; nothing is deployed. Models: `openai.gpt-oss-120b-1:0` (unthrottled), Claude 4.5 only through `eu.` profiles.
-- Deterministic rules and all arithmetic stay in code. Triage, priority and routing are code; the model only writes summaries and drafts rule proposals, and code validates every model output (ADR-0032). Terms: `docs/GLOSSARY.md`.
+- Deterministic rules and all arithmetic stay in code. Triage, priority and routing are code. Models judge, summarise or suggest (summaries, rule proposals); they never count, do arithmetic or decide. Code computes every number a model may quote and validates every model output (ADR-0032, ADR-0034). Terms: `docs/GLOSSARY.md`.
 
 ## Stack
 
