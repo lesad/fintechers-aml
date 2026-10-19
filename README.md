@@ -9,9 +9,10 @@ Before the event, this repo held only a generic Next.js app template (`agentic-n
 ## Getting started for the hackathon
 
 1. `pnpm install`
-2. Sign in to the team AWS account: `aws sso login --profile <your-sso-profile>` (setup in `docs/challenge/aws-participant-guide.md`).
-3. `pnpm data:pull -- --profile <your-sso-profile>` fetches the ČNB AML data, the MostlyRight file and the ČNB FX fixings into `data/raw/` (git-ignored).
-4. Read `docs/challenge/README.md` for the challenge, the data findings and the decision design.
+2. Set up the team AWS account once with `aws configure sso` (answers in `docs/challenge/aws-participant-guide.md`) and name the profile `hackathon`, with `region = eu-central-1`. Switch to it in your shell: `export AWS_PROFILE=hackathon` (fish: `set -gx AWS_PROFILE hackathon`).
+3. Sign in: `aws sso login --profile hackathon` (sessions last 12 hours).
+4. `pnpm data:pull` fetches the ČNB AML data, the MostlyRight file and the ČNB FX fixings into `data/raw/` (git-ignored).
+5. Read `docs/challenge/README.md` for the challenge, the data findings and the decision design.
 
 ## Template notes
 

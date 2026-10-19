@@ -22,7 +22,7 @@ Track 5, FINREG PARTNERS "AML transaction monitoring: triage and red-flag escala
 
 ## Data
 
-`pnpm data:pull -- --profile <your-sso-profile>` (or `AWS_PROFILE=<profile> pnpm data:pull`) syncs `CNB/` and `MostlyRIght/` from the shared bucket and downloads the ČNB FX fixings into `data/raw/`, which git ignores. Sign in first with `aws sso login --profile <profile>`; setup is in [aws-participant-guide.md](aws-participant-guide.md). The organisers' data never goes into git.
+`pnpm data:pull` syncs `CNB/` and `MostlyRIght/` from the shared bucket and downloads the ČNB FX fixings into `data/raw/`, which git ignores. It uses `AWS_PROFILE` (the team profile, named `hackathon` by convention) or `--profile NAME`. Sign in first with `aws sso login --profile hackathon`; setup is in [aws-participant-guide.md](aws-participant-guide.md). The organisers' data never goes into git.
 
 ## Open at the event
 
