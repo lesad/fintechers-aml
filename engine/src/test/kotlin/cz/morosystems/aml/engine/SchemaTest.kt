@@ -17,7 +17,7 @@ class SchemaTest(@Autowired private val jdbc: JdbcClient) {
     @Test
     fun c1HasThreeVariablesInOrder() {
         val names = jdbc.sql(
-            "select name from rule_variable where rule_id = (select id from rule where key = 'C1') order by position",
+            "select name from rule_variable where rule_id = (select id from rule where key = 'C1' and version = 1) order by position",
         ).query(String::class.java).list()
         assertThat(names).isEqualTo(listOf("inflow", "payers", "outflow"))
     }

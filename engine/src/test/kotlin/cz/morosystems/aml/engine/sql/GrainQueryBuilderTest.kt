@@ -77,12 +77,23 @@ class GrainQueryBuilderTest {
     }
 
     @Test
-    fun c1PayersNeverHoldNullFromARemittance() {
+    fun c1CountsARemittanceAsOutflow() {
         tx("T1", "K1", "2026-07-14 10:00", 110_000, "in", payer = "ACZ1")
         tx("T2", "K1", "2026-07-14 11:00", 5_000, "unknown", payee = "ACZ5")
         tx("T3", "K1", "2026-07-14 12:00", 90_000, "out", payee = "ACZ9")
 
         val anchor = run(c1).single { it["grain_key"] == "T1" }
+        assertThat(anchor["outflow"]).isEqualTo(czk(95_000))
+    }
+
+    @Test
+    fun c1PayersNeverHoldNull() {
+        tx("T1", "K1", "2026-07-14 09:00", 1_000, "in", payer = null)
+        tx("T2", "K1", "2026-07-14 10:00", 110_000, "in", payer = "ACZ1")
+        tx("T3", "K1", "2026-07-14 12:00", 90_000, "out", payee = "ACZ9")
+
+        val anchor = run(c1).single { it["grain_key"] == "T2" }
+        assertThat(anchor["payers"]).isNotNull()
         assertThat(anchor["outflow"]).isEqualTo(czk(90_000))
     }
 
