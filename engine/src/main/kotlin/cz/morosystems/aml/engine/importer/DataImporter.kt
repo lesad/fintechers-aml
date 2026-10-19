@@ -21,7 +21,9 @@ data class ImportReport(
     val emptyRequiredFields: Int,
 )
 
-private class Row(private val cells: Map<String, String>) {
+internal class Row(private val cells: Map<String, String>) {
+    val columns: Set<String> get() = cells.keys
+
     operator fun get(column: String): String = cells[column] ?: error("missing column '$column'")
 }
 
@@ -51,12 +53,6 @@ class DataImporter(private val jdbc: JdbcClient, private val props: EngineProper
     private fun requireUnique(entity: String, rows: List<Row>, id: (Row) -> String) {
         val seen = HashSet<String>()
         rows.forEach { check(seen.add(id(it))) { "duplicate $entity id ${id(it)}" } }
-    }
-
-    private fun readCsv(path: Path): List<Row> {
-        val lines = Files.readAllLines(path).filter { it.isNotBlank() }
-        val header = lines.first().removePrefix("﻿").split(';').map { it.trim() }
-        return lines.drop(1).map { line -> Row(header.zip(line.split(';', limit = header.size).map { it.trim() }).toMap()) }
     }
 
     private fun loadClients(rows: List<Row>): Set<String> {
@@ -142,4 +138,12 @@ class DataImporter(private val jdbc: JdbcClient, private val props: EngineProper
             "country of payer", "country of payee", "type of transaction",
         )
     }
+}
+
+/** A ČNB CSV: `;`-separated, a header row (a BOM before it is dropped), one [Row] per non-blank line. */
+internal fun readCsv(path: Path): List<Row> {
+    val lines = Files.readAllLines(path).filter { it.isNotBlank() }
+    require(lines.isNotEmpty()) { "the file is empty" }
+    val header = lines.first().removePrefix("\uFEFF").split(';').map { it.trim() }
+    return lines.drop(1).map { line -> Row(header.zip(line.split(';', limit = header.size).map { it.trim() }).toMap()) }
 }

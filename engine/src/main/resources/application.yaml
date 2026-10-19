@@ -1,6 +1,11 @@
 server:
   port: ${ENGINE_PORT:8080}
 spring:
+  servlet:
+    multipart:
+      # Transaction files from the data import page; the July file is 36 MB.
+      max-file-size: 200MB
+      max-request-size: 200MB
   datasource:
     url: ${ENGINE_DB_URL:jdbc:postgresql://127.0.0.1:5440/postgres}
     username: ${ENGINE_DB_USER:postgres}

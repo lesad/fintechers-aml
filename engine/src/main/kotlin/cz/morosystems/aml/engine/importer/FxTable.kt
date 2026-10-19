@@ -20,6 +20,8 @@ class FxTable private constructor(val fixings: List<Fixing>) {
     }
 
     companion object {
+        fun of(fixings: List<Fixing>) = FxTable(fixings)
+
         fun parse(lines: List<String>): FxTable {
             val columns = lines.first().removePrefix("﻿").split('|').drop(1).map {
                 val (quantity, code) = it.trim().split(' ')
