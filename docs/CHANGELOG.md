@@ -6,6 +6,7 @@
 
 ### Added
 
+- `engine/`: alert summary. `POST /api/alerts/{id}/summary` collects the alert's activity (its rule hits aggregated per rule in code, and its triage decision with the scoring reasons), asks Sonnet 4.5 on Bedrock for two or three sentences through a fixed JSON schema, checks that every sentence cites only refs from that activity and writes only numbers from the input, and stores it in `alert_summary` with the model id and prompt hash; `GET` returns the latest. `Bedrock.askJson` adds structured outputs to the Bedrock client.
 - `docs/GLOSSARY.md`: one meaning per term for the pipeline (detect, triage, review, assist, tune), built on the engine's own terms (ADR-0032).
 - `engine/`: Bedrock client. Inject `Bedrock` and call `ask(system, prompt)` for a one-shot text answer through the Converse API (`eu-central-1`, default model `eu.anthropic.claude-sonnet-4-5-20250929-v1:0`, override with `BEDROCK_MODEL_ID`). Credentials come from the default AWS chain: `aws sso login --profile hackathon` and `AWS_PROFILE=hackathon`. A reasoning block before the answer (gpt-oss) is skipped.
 - `engine/`: HTTP API. `./gradlew bootRun` without a command serves `GET /api/alerts` (latest run, `?runId=` for another) and `GET /api/alerts/{id}`. `import` and `run` still run and exit.

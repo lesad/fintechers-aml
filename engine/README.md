@@ -54,6 +54,10 @@ Run from `engine/`:
 
 - `GET /api/alerts`: alerts of the latest finished run, with the hit count. `?runId=` picks another run.
 - `GET /api/alerts/{id}`: one alert. 404 for an unknown id.
+- `POST /api/alerts/{id}/summary`: asks Bedrock for a two-to-three sentence summary of the alert's activity, checks it and stores it. 502 when the model fails or its output does not pass the checks; nothing is stored then.
+- `GET /api/alerts/{id}/summary`: the latest stored summary, 404 when there is none yet.
+
+The summary needs Bedrock credentials: `aws sso login --profile hackathon`, then start the engine with `AWS_PROFILE=hackathon`. `AlertActivity` collects what each step stored about the alert: the rule hits, aggregated per rule in code (`rule:<key>`: hit count, grain keys, each evidence field as its value or its min and max), and the triage decision and its scoring reasons from `alert_triage` (`triage:decision`, `triage:<code>`); a new step adds its query there. The model decides nothing and computes nothing: code rejects a sentence with a number that is not in the input, either as is or as haléře shown in CZK. The model answers through a fixed JSON schema (Bedrock structured outputs), every sentence lists the refs it rests on, and code rejects a summary that cites nothing, cites a ref outside the alert's activity, or writes a number the input does not hold. Each stored summary keeps the model id and a hash of the prompt. The prompt is `src/main/resources/prompts/alert-summary.md`.
 
 ## Triage
 

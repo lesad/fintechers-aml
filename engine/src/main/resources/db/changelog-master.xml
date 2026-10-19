@@ -12,4 +12,5 @@
     <include file="db/migrations/0006-audit.sql" />
     <include file="db/migrations/0007-drop-audit.sql" />
     <include file="db/migrations/0008-triage.sql" />
+    <include file="db/migrations/0009-alert-summary.sql" />
 </databaseChangeLog>

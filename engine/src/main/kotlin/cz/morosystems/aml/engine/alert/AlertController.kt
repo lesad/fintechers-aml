@@ -13,9 +13,9 @@ import org.springframework.web.server.ResponseStatusException
 class AlertController(private val alerts: AlertRepository) {
     /** Alerts of one run, the latest finished run by default. */
     @GetMapping
-    fun list(@RequestParam runId: Long?): List<AlertSummary> = (runId ?: alerts.latestRunId())?.let(alerts::forRun) ?: emptyList()
+    fun list(@RequestParam runId: Long?): List<Alert> = (runId ?: alerts.latestRunId())?.let(alerts::forRun) ?: emptyList()
 
     @GetMapping("/{id}")
-    fun detail(@PathVariable id: Long): AlertSummary =
+    fun detail(@PathVariable id: Long): Alert =
         alerts.find(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "alert $id not found")
 }

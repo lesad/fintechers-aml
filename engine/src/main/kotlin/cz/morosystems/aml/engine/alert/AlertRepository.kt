@@ -5,7 +5,7 @@ import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 
-data class AlertSummary(
+data class Alert(
     val id: Long,
     val runId: Long,
     val alertType: String,
@@ -20,12 +20,12 @@ class AlertRepository(private val jdbc: JdbcClient) {
     fun latestRunId(): Long? =
         jdbc.sql("select max(id) from run where finished_at is not null").query(Long::class.java).optional().orElse(null)
 
-    fun forRun(runId: Long): List<AlertSummary> = jdbc.sql("$SELECT where a.run_id = ? group by a.id order by a.id").param(runId).query(row).list()
+    fun forRun(runId: Long): List<Alert> = jdbc.sql("$SELECT where a.run_id = ? group by a.id order by a.id").param(runId).query(row).list()
 
-    fun find(id: Long): AlertSummary? = jdbc.sql("$SELECT where a.id = ? group by a.id").param(id).query(row).optional().orElse(null)
+    fun find(id: Long): Alert? = jdbc.sql("$SELECT where a.id = ? group by a.id").param(id).query(row).optional().orElse(null)
 
     private val row = RowMapper { rs, _ ->
-        AlertSummary(
+        Alert(
             id = rs.getLong("id"),
             runId = rs.getLong("run_id"),
             alertType = rs.getString("alert_type"),

@@ -7,7 +7,11 @@ import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient
 import software.amazon.awssdk.services.bedrockruntime.model.ContentBlock
 import software.amazon.awssdk.services.bedrockruntime.model.ConversationRole
 import software.amazon.awssdk.services.bedrockruntime.model.ConverseResponse
+import software.amazon.awssdk.services.bedrockruntime.model.JsonSchemaDefinition
 import software.amazon.awssdk.services.bedrockruntime.model.Message
+import software.amazon.awssdk.services.bedrockruntime.model.OutputFormatStructure
+import software.amazon.awssdk.services.bedrockruntime.model.OutputFormatType
+import software.amazon.awssdk.services.bedrockruntime.model.StopReason
 import software.amazon.awssdk.services.bedrockruntime.model.SystemContentBlock
 
 @ConfigurationProperties("bedrock")
@@ -28,6 +32,8 @@ class BedrockException(message: String) : RuntimeException(message)
  */
 @Component
 class Bedrock(private val properties: BedrockProperties) {
+    val modelId: String get() = properties.modelId
+
     private val client: BedrockRuntimeClient by lazy {
         BedrockRuntimeClient.builder().region(Region.of(properties.region)).build()
     }
@@ -39,6 +45,26 @@ class Bedrock(private val properties: BedrockProperties) {
                 .messages(Message.builder().role(ConversationRole.USER).content(ContentBlock.fromText(prompt)).build())
         },
     )
+
+    /**
+     * Like [ask], but the model must answer with JSON matching [schema] (Bedrock structured outputs).
+     * Keep the schema fixed: Bedrock compiles each new schema once, which can take minutes.
+     */
+    fun askJson(system: String, prompt: String, schemaName: String, schema: String): String {
+        val response = client.converse { request ->
+            request.modelId(properties.modelId)
+                .system(SystemContentBlock.fromText(system))
+                .messages(Message.builder().role(ConversationRole.USER).content(ContentBlock.fromText(prompt)).build())
+                .outputConfig { config ->
+                    config.textFormat { format ->
+                        format.type(OutputFormatType.JSON_SCHEMA)
+                            .structure(OutputFormatStructure.fromJsonSchema(JsonSchemaDefinition.builder().name(schemaName).schema(schema).build()))
+                    }
+                }
+        }
+        if (response.stopReason() != StopReason.END_TURN) throw BedrockException("Bedrock stopped with ${response.stopReasonAsString()}")
+        return answerText(response)
+    }
 }
 
 internal fun answerText(response: ConverseResponse): String =
