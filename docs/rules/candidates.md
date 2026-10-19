@@ -1,8 +1,8 @@
 # Further red flags: candidates
 
-Rule C says "include any further red flags you identify". This is the backlog: each candidate with its formula, its basis, what our data says, and what we propose to do with it.
+Rule C says "include any further red flags you identify". This is the backlog: each candidate with its formula, its basis, what our data says, and what we propose to do with it. Keep the active rule set small; most candidates below are drops.
 
-Mentor question 5 is decided by the team (2026-10-19): the CSV columns are fixed, but the `alert_type` values are ours, preferably scoped by the client's AML risk score (low, medium, high). Which candidates ship as their own type is the next call. Until it is made, a further flag raises priority (the "conduct discrepancies" and "multiple flags" factors in [priority.md](priority.md)) and is named in `reason`.
+Every candidate is a **rule under an existing alert type** (A, B or C), never a new type (ADR-0032). It ships as a rule version in the engine, through the checks and an approval, and its alerts are triaged by that type's evidence contract. Until it ships, a candidate can at most add priority points ([priority.md](priority.md)).
 
 ## What the guidance asks for
 
@@ -33,18 +33,23 @@ From the team's pattern research, [aml-pattern-research.md](../challenge/aml-pat
 | 12  | Night activity                | Share of a client's transactions between 00:00 and 06:00                                                                      | Typology unconfirmed                           | Assigned by quota; per-client counts are binomial (22 clients above z = 3, about 20 expected)                                                                                                                       | Drop, or at most 3 points                                                                                   |
 | 13  | Many currencies               | Distinct currencies per client above the peer group's 99th percentile                                                         | Typology unconfirmed                           | Currency follows the counterparty country, so the count follows the transaction count (p50 6, max 15)                                                                                                               | Drop                                                                                                        |
 
-## Novel rules
+## Rules we could add
 
-Round 2 of the data run looked for new alert types whose value is a typed Jev question ([data-patterns.md](../challenge/data-patterns.md), round 2). Each is a proposal with its own spec, and each states both uses: its own `alert_type`, or a priority factor on A, B and C, pending mentor question 5.
+From round 2 of the data run (D to G) and from the scenario catalogue in [company-specific-rules.md](../challenge/company-specific-rules.md) (S-xx). Nothing beat chance on July; these are kept because each states its tail probability and asks a question an analyst would ask. "Needs" is what the engine lacks today ([GLOSSARY.md](../GLOSSARY.md) for the terms).
 
-| Rule                                                  | What it asks                                                           | Count (strict / loose) |
-| ----------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------- |
-| [D](D-kyc-rating-inconsistent.md) rating inconsistent | Is the AML risk rating adequate for the client's stacked risk factors? | 20 / 22                |
-| [E](E-kyc-profile-implausible.md) profile implausible | Is the declared profile plausible for this client type?                | 80 / 212               |
-| [F](F-tail-payment-context.md) tail payment           | Is a payment this rare, with this country, plausible for this client?  | 49 tx / 150 tx         |
-| [G](G-unusual-corridor.md) unusual corridor           | Is a regular corridor with this country plausible for this client?     | 13 / 101               |
+| Candidate                       | Type | CEL sketch or gap                                                                                                                         | Count on July (strict / loose)        | Needs                                                                 |
+| ------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------- |
+| F tail payment                  | A    | grain `transaction`: `tx.raw_amount * client.expected_count > p.ticket_multiple * client.expected_monthly_volume` (ticket multiple 20 is `z > 3`), plus a far inflow `tx.direction == "in" && tx.payer_country in lists.far` | 49 tx / 150 tx; 34.4 expected | `client.expected_count` and `tx.raw_amount` (original volume × 100, an integer) in the vocabulary; a `far` list |
+| E declared profile implausible  | A    | declared volume or ticket beyond the client type's P99 (P1 for legal entities)                                                            | 80 / 212                              | a client grain and type percentiles                                   |
+| S-18 new client at scale        | A    | tenure under 90 days alone; the volume conjunction is chance (20 against 15)                                                              | 230                                   | already a type A guardrail, not a rule                                 |
+| D PEP not rated high            | B    | `client.pep && client.risk != "high"` (Decree 67/2018 §9(3))                                                                             | 14                                    | a client grain: on grain `transaction` it raises one B alert per payment |
+| G unusual foreign corridor      | B    | binomial tail of one foreign country's share below 1e-4                                                                                  | 13 / 101; 13.8 / 110.8 expected       | a client-period grain with a per-country count                       |
+| S-04 enhanced-scrutiny share    | B    | share of a client's payments with an increased-monitoring country; G's tail is the better test                                           | 46 (PR #9)                            | as G                                                                  |
+| S-13 round trip                 | C    | value sent to a counterparty comes back near-equal; not tested by us, counterparties are a uniform draw                                  | 35 (PR #9)                            | a per-counterparty aggregate                                           |
 
-Considered, not adopted: a natural person transacting with 7 or more countries outside the EU and EEA in July (geo R2). 10 clients against 5.6 expected (null range 3 to 7 over 5 seeds; Poisson P about 0.07). The question it would ask overlaps G's, and the excess is within chance.
+Dropped from the catalogue, with the data verdict: S-08 single-day spike (ranks like the count gap, corr of logs 0.92), S-09 and S-10 structuring (no band below a threshold is enriched), S-14 country diversity (10 against 5.6, P about 0.07), S-15 third currency (the generator gives third countries about 35% USD), S-16 off-hours (fixed hour quotas, binomial counts), S-17 counterparty concentration (uniform draw). S-05, S-06, S-07, S-11 and S-12 are already covered by A and C and their derived fields. S-01 to S-03 are guardrails or B itself.
+
+PR #9's figures that did not reproduce on July (checked 2026-10-19): S-06's median 47x needs the declared volume read as quarterly (monthly gives 15.3x); S-07's robust z of 371.5 needs CZK amounts (raw gives a p99 of 43 to 64, log amounts 4 to 6); S-18's 157 new clients above P90 comes out at 24 to 26 on July volume.
 
 ## Planted patterns: none found
 

@@ -1,5 +1,7 @@
 # App rules: what the code enforces
 
+> **Partly out of date (2026-10-19).** Layer 1 is now the engine: its rules and parameters live in `rule` and `rule_param` (`docs/engine/rules-engine-design.md`), so the `DETECTION` constants below are not the source. The zod placement under `src/features/` predates ADR-0025. The invariants still apply to the second layer; INV-5, INV-6, INV-7 and INV-12 are guardrails in the terms of [`../GLOSSARY.md`](../GLOSSARY.md).
+
 The implementation spec. Every rule here is something the app checks, computes or rejects.
 
 **Legal context, citations and what was deliberately excluded live in [aml-hard-rules.md](aml-hard-rules.md).** This file carries no justification — if you need to know _why_ a rule exists, or what it was degraded from, go there.

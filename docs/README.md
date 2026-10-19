@@ -32,7 +32,7 @@ Canonical specs belong committed under `docs/`; working drafts stay out of git (
 
 A fresh agent (new session / cold start) does:
 
-1. Read `CLAUDE.md`, this file, and `docs/STACK.md`.
+1. Read `CLAUDE.md`, this file, `docs/STACK.md` and `docs/GLOSSARY.md`.
 2. Read `docs/challenge/README.md` and the spec for the feature at hand (`docs/rules/`, `docs/engine/`, `docs/design/`).
 3. Do the work under the repo conventions (see `CLAUDE.md`).
 4. Verify: `pnpm check` (typecheck + lint + format:check + unit) before claiming done.

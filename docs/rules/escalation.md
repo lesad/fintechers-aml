@@ -1,6 +1,6 @@
 # Escalation: who decides, who approves
 
-**Status:** decided by the team on 2026-10-19 (mentor question 1): at least two people per alert, configurable per role; the approver is AML staff or higher, and a board member or the AML delegate for a PEP. The matrix below is our default. Routing is a lookup in code. Jev comes in only if the matrix FINREG gives has a fuzzy clause such as "if material".
+**Status:** decided by the team on 2026-10-19 (mentor question 1): at least two people per alert, configurable per role; the approver is AML staff or higher, and a board member or the AML delegate for a PEP. The matrix below is our default. Routing is a lookup in code.
 
 ## Roles
 
@@ -24,19 +24,11 @@ The data links no client to a staff member, so `executive_person` and `approver`
 | A, REVIEW                     | `l2_analyst`                 | a second analyst, outside the client's business line                                 | L2 confirms suspicion, then `contact_person` files                        |
 | B                             | `l2_analyst`                 | `compliance_officer`; plus `board_aml_member` when a PEP relationship is to continue | suspicion, or source of funds not explained                               |
 | C                             | `l2_analyst`                 | `contact_person` and `compliance_officer`                                            | OPO by default unless the purpose is documented; 24 h hold possible (§20) |
-| C, mule or no business reason | `contact_person`             | `compliance_officer`                                                                 | as above, flagged urgent                                                  |
+| C, reviewer finds no purpose  | `contact_person`             | `compliance_officer`                                                                 | as above, flagged urgent                                                  |
 
 Source: [czech-aml-escalation.md](../challenge/czech-aml-escalation.md) section 6, our recommendation, not a matrix from law.
 
-### Proposed rows for the novel rules D to G
-
-Status: default (data run). Further red flags may be their own alerts (mentor question 5, team, 2026-10-19). These rows apply to each of D to G we ship as an alert; one we keep as a priority factor is routed by the A, B or C row.
-
-| Alert                           | Executive (`executive_role`) | Approver (4 eyes)                                                                                   | FAÚ trigger                                                            |
-| ------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| D, E (rating or profile review) | `l2_analyst`                 | `compliance_officer`: the outcome changes the client's rating or CDD intensity (AMLR Art. 76(5)(b)) | none by itself; suspicion found in the review goes to `contact_person` |
-| F, G, FP                        | `l1_analyst` (QA sample)     | a second `l1_analyst`, outside the client's business line                                           | none                                                                   |
-| F, G, REVIEW                    | `l2_analyst`                 | a second analyst, outside the client's business line                                                | L2 confirms suspicion, then `contact_person` files                     |
+Candidates D to G ([candidates.md](candidates.md)) are rules under A or B, so the row of their alert type routes them. One exception to keep: a review that changes the client's rating or CDD intensity (candidate D) needs the `compliance_officer` as approver (AMLR Art. 76(5)(b)).
 
 ## Conflict-of-interest checks (code)
 

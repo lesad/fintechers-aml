@@ -1,21 +1,21 @@
 # Priority scorecard
 
-**Status:** draft. Every rule uses it. Priority is code: points per factor, then floors, then a range check. Jev's answers enter as factors and never set the number directly.
+**Status:** draft. Every alert type uses it. Priority is code: points per factor, then floors, then a range check. No model input (ADR-0032).
 
 ## Factors
 
-The brief lists the factors: AML risk score, PEP, country, amount or volume, conduct discrepancies, length of the client relationship, how the contract was concluded, and multiple flags on the same client. All weights are defaults. If the labels allow, a regression on Jev's probabilities and these facts replaces them (TypeSafe's composite-scoring pattern), and the breakdown stays the same.
+The brief lists the factors: AML risk score, PEP, country, amount or volume, conduct discrepancies, length of the client relationship, how the contract was concluded, and multiple flags on the same client. All weights are defaults. If the labels allow, a regression on these factors replaces them, and the breakdown stays the same. Points add up; there are no multipliers, so each factor's contribution stays readable in `log`, and collinear factors (risk, country, channel) cannot compound.
 
 | Factor              | Points                                                                                                                                                              | Max | Input        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ------------ |
 | AML risk score      | low 0, medium 10, high 20                                                                                                                                           | 20  | client       |
 | PEP                 | 15                                                                                                                                                                  | 15  | client       |
 | Country             | 10 if any party country is on the high-risk list                                                                                                                    | 10  | rule B facts |
-| Amount or volume    | rule A: `czk_spike_band` normal 0, elevated 8, extreme 15. Rule B: above 1,000,000 CZK 15, above 250,000 CZK 8. Rule C: `in_sum_czk` above 1,000,000 CZK 15, else 8 | 15  | rule facts   |
-| Conduct discrepancy | rule A: `15 × (1 - profile_consistent)`, rounded. Rule C: `15 × (1 - business_rationale)`. Rule B: 0                                                                | 15  | Jev          |
+| Amount or volume    | type A: raw largest payment at or above peer P95 10, a CZK payment above 2x the Q2 maximum 5. Type B: above 1,000,000 CZK 15, above 250,000 CZK 8. Type C: `inflow` above 1,000,000 CZK 15, else 8 | 15  | evidence, second layer |
+| Conduct discrepancy | type A: count gap peer percentile P95 and above 15, P90 to P95 10, P75 to P90 5. Type C: shape points ([C-flow-through.md](C-flow-through.md)). Type B: 0             | 15  | second layer |
 | Relationship length | under 1 year 10, 1 to 3 years 5, over 3 years 0                                                                                                                     | 10  | client       |
 | Contract channel    | distant 5, in person 0                                                                                                                                              | 5   | client       |
-| Multiple flags      | 2 rule types on the client 5, all 3 rule types 10                                                                                                                   | 10  | all alerts   |
+| Multiple flags      | 2 alert types on the client 5, all 3 alert types 10                                                                                                                 | 10  | all alerts   |
 | **Total**           |                                                                                                                                                                     | 100 |              |
 
 ### Data run
@@ -43,16 +43,9 @@ Status default (data run), not fitted.
 
 **Risk score, country and channel are one variable.** In the client table no client resident outside the EU and EEA is rated low (205 of 205 medium or high), PEPs are never rated low (9 high, 14 medium), and every client resident outside CZ and SK was onboarded distant (855 of the 1,500 distant clients are foreign). Scoring all three separately gives a third-country client triple credit for one fact. Proposal: cap the combined points of AML risk score, country and contract channel at 25 (the current maximum of risk plus channel). On this data the country factor scores 0, so the cap binds only when the list changes (the TR and ZA demo) or if residence is ever scored. Inferred, not verified: the generator's exact rating rule.
 
-**Rule A amount factor from the single-payment tail (T1).** `z_max` is the client's largest `z = ln(amount / (exp_vol / exp_cnt))`, raw amount against the declared ticket, as in [rule F](F-tail-payment-context.md). Points: `max(0, min(15, round(5 × (z_max - 2.77))))`. 2.77 is `ln 16`, the cut rule A's single-transaction branch already applies, so the branch's own hits start at 0; z 4 gives 6, z 5 gives 11, and the cap of 15 is reached near z 5.8. This orders the 1,003 branch hits by rarity rather than by FX, and is an alternative to the raw peer P95 points above.
+**Rule A amount factor from the single-payment tail (T1).** `z_max` is the client's largest `z = ln(amount / (exp_vol / exp_cnt))`, raw amount against the declared ticket, as in candidate F ([candidates.md](candidates.md)). Points: `max(0, min(15, round(5 × (z_max - 2.77))))`. 2.77 is `ln 16`, the cut rule A's single-transaction branch already applies, so the branch's own hits start at 0; z 4 gives 6, z 5 gives 11, and the cap of 15 is reached near z 5.8. This orders the 1,003 branch hits by rarity rather than by FX, and is an alternative to the raw peer P95 points above.
 
-**Novel rules D to G as factors.** Each one we keep as a factor rather than its own alert (mentor question 5, our call) feeds this scorecard:
-
-| Rule                                        | Factor              | Proposed points (default (data run))                                                             |
-| ------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
-| [D](D-kyc-rating-inconsistent.md) rating    | AML risk score      | Score at `max(current_rating, suggested_rating)`, inside the cap above; +5 for the inconsistency |
-| [E](E-kyc-profile-implausible.md) profile   | Conduct discrepancy | `profile_plausible` at most 0.3: +10; above 0.3 and at most 0.5: +5                              |
-| [F](F-tail-payment-context.md) tail payment | Amount              | On A and B: +5 for a hit, +5 more when `plausible_for_profile` is below 0.3                      |
-| [G](G-unusual-corridor.md) corridor         | Conduct discrepancy | +10 with a corridor below 1e-3 and `corridor_plausible` below 0.5                                |
+**Candidates D to G.** They are rules under A or B ([candidates.md](candidates.md)), not factors of their own. Once one ships, its hits count as hits of its alert type, and the factors above score the alert as usual.
 
 ## Floors
 
@@ -60,7 +53,6 @@ Applied after the sum. The highest floor that matches wins.
 
 | Floor | When                                  | Source                                                                    | Status  |
 | ----- | ------------------------------------- | ------------------------------------------------------------------------- | ------- |
-| 90    | Rule C with `typology` `mule_pattern` | ours                                                                      | default |
 | 80    | Rule C                                | [czech-aml-escalation.md](../challenge/czech-aml-escalation.md) section 6 | default |
 | 80    | PEP and a high-risk country           | [decision-architecture.md](../challenge/decision-architecture.md)         | default |
 

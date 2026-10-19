@@ -1,86 +1,86 @@
-# Rule B: high-risk jurisdiction or PEP
+# Alert type B: high-risk jurisdiction or PEP
 
-**Status:** dry run. **Owner:** unassigned. **Alert unit:** one per transaction.
+**Status:** draft. **Owner:** Adrián (second layer). **Alert unit:** one per transaction.
 
-Rule B is fully deterministic. It needs no Jev question: the country branch fires zero times on this data, and every PEP alert goes to a person anyway.
+Every type B alert goes to a person, so triage is a guardrail and the work is in priority and route.
 
 ## Source
 
 > A transaction above CZK 10,000 where the payer, payee or client country is on the EU or FATF high-risk jurisdictions list; or an outgoing transaction of a Politically Exposed Person above CZK 100,000 (where direction is unclear, any transaction).
 
-## 1. Detect (code)
+## 1. Seed rules (engine)
 
-Two independent branches. A transaction that trips both is one alert with both branches in `branches_fired`.
+Migration `0004-seed-rules.sql`, author `finreg-brief`. A transaction that trips both rules is one alert with both hits.
 
-| Parameter           | Value                                                      | Unit                | Source                                          | Status            |
-| ------------------- | ---------------------------------------------------------- | ------------------- | ----------------------------------------------- | ----------------- |
-| `b_country_min_czk` | 10,000                                                     | CZK, strictly above | brief                                           | brief             |
-| `b_country_list`    | `reference/high-risk-countries-2026-07.json`               | ISO codes           | EU list and FATF call for action, July 2026     | default (ask)     |
-| `b_country_parties` | payer, payee and client country                            |                     | brief                                           | brief             |
-| `b_pep_min_czk`     | 100,000                                                    | CZK, strictly above | brief                                           | brief             |
-| `b_pep_direction`   | outgoing; remittances count as "direction unclear", so any |                     | brief; remittances have no payer account (data) | confirmed by data |
+| Rule | Grain         | Tests                                                               |
+| ---- | ------------- | ------------------------------------------------------------------- |
+| `B1` | `transaction` | payer, payee or client country on `lists.high_risk`, above the floor |
+| `B2` | `transaction` | a PEP's outgoing or direction-unknown payment, above the floor      |
 
-The list is data, so swapping it (for example adding the 2024 FATF grey list with ZA and TR) is a config change and a rerun.
+## 2. Interpretation decisions
 
-## 2. Facts (code)
+| Decision          | Reading                                                                                  | Status            |
+| ----------------- | ---------------------------------------------------------------------------------------- | ----------------- |
+| The list          | `reference/high-risk-countries-2026-07.json`, loaded into `reference_list` as `high_risk` | company; ask FINREG |
+| Direction unclear | Remittances have no payer account and import as `unknown`; `B2` counts them               | confirmed by data |
 
-| Fact                | Meaning                                                     | Unit or band               |
-| ------------------- | ----------------------------------------------------------- | -------------------------- |
-| `branches_fired`    | `country`, `pep` or both                                    | list                       |
-| `matched_parties`   | Which of payer, payee, client country matched, and the code | list of `{party, country}` |
-| `list_source`       | EU, FATF call for action, or both, with the list's date     | text                       |
-| `amount_czk`        | Transaction amount in CZK                                   | CZK                        |
-| `direction`         | outgoing, incoming, unclear (remittance)                    | enum                       |
-| `pep_tx_count_july` | The client's PEP-branch alerts in July                      | count                      |
-| `other_alerts`      | Rule A or C alerts on the same client                       | list                       |
+The list is data: swapping it (for example the 2024 FATF grey list with ZA and TR) is a reload and a rerun, not a rule change.
 
-## 3. Gates (code)
+## 3. Evidence contract and `llm_context`
 
-| Gate        | Outcome | Basis                                                                                                                                                    |
-| ----------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Every alert | REVIEW  | PEP and high-risk third countries require enhanced due diligence (Act §9a, AMLR Art. 42); AMLA draft para 78 excludes higher risk from automated closure |
+| Field                 | Meaning                                                      | Source       |
+| --------------------- | ------------------------------------------------------------ | ------------ |
+| `tx.amount`           | The payment, in haléře                                       | evidence     |
+| `p.*`                 | The parameter values in force                                | evidence     |
+| rules hit             | `B1`, `B2` or both                                           | `alert_hit`  |
+| matched parties       | Which of payer, payee and client country is listed, and the code | second layer |
+| direction             | `out`, `in` or `unknown`                                     | second layer |
+| PEP alerts in the run | The client's other type B alerts                             | second layer |
+| other alerts          | A or C alerts on the same client                             | second layer |
 
-## 4. Judgements (Jev)
+`llm_context` adds the client's type, country, channel and risk score.
 
-None. Every alert is REVIEW, the country branch fires zero times, and priority comes from facts. Revisit only if FINREG names a list that makes the country branch fire and asks for FP closure on it.
+## 4. Guardrails
 
-## 5. Triage policy (code)
+| Guardrail                     | Effect               | Basis                                                                       |
+| ----------------------------- | -------------------- | --------------------------------------------------------------------------- |
+| Every alert                   | REVIEW               | Act §9a, AMLR Art. 42: enhanced due diligence; AMLA draft para 78           |
+| PEP and a listed country      | Priority at least 80 | company                                                                     |
+| PEP relationship to continue  | Approver is the board AML member or delegate | Act §9a(3)(d); AMLR: senior management                 |
+
+## 5. Triage policy
 
 Always REVIEW.
 
-## 6. Priority
+## 6. Priority and route
 
-Inputs to [priority.md](priority.md): PEP, country, `amount_czk`. Floors: PEP plus a high-risk country is at least 80 (default).
-
-## 7. Route
-
-Row B in [escalation.md](escalation.md). A PEP relationship that is to continue needs the board AML member or their delegate (Act §9a(3)(d)).
+Inputs to [priority.md](priority.md): PEP, country, amount. Route: row B in [escalation.md](escalation.md).
 
 ## Reason template
 
-> Rule B ({branches_fired}): {direction} transaction of {amount_czk} CZK (threshold {threshold}). {matched_parties_sentence} {pep_sentence} Rule B alerts always go to review: enhanced due diligence applies to PEPs and high-risk countries.
+> B ({rules_hit}): {direction} payment of {amount} CZK (threshold {threshold}). {matched_parties_sentence} {pep_sentence} Type B alerts always go to review: enhanced due diligence applies to PEPs and high-risk countries.
 
 ## Test cases
 
+Detection rows are pinned by `RuleAcceptanceTest`.
+
 | Case                 | Input                                                 | Expected                                       |
 | -------------------- | ----------------------------------------------------- | ---------------------------------------------- |
-| PEP outgoing above   | PEP, outgoing, 100,001 CZK                            | Fires, `pep`                                   |
+| PEP outgoing above   | PEP, outgoing, 100,001 CZK                            | Fires, `B2`                                    |
 | PEP at threshold     | PEP, outgoing, 100,000 CZK                            | Does not fire                                  |
 | PEP incoming         | PEP, incoming, 500,000 CZK                            | Does not fire                                  |
-| PEP remittance       | PEP, remittance, 150,000 CZK                          | Fires (direction unclear)                      |
-| Country on list      | Non-PEP, payee country on the list, 10,001 CZK        | Fires, `country`, party payee                  |
+| PEP remittance       | PEP, remittance, 150,000 CZK                          | Fires (direction unknown)                      |
+| Country on list      | Non-PEP, payee country on the list, 10,001 CZK        | Fires, `B1`, party payee                       |
 | Country at threshold | Same, 10,000 CZK                                      | Does not fire                                  |
-| Both branches        | PEP, outgoing, 200,000 CZK, payee country on the list | One alert, both branches; priority at least 80 |
+| Both                 | PEP, outgoing, 200,000 CZK, payee country on the list | One alert, both hits; priority at least 80     |
 
 ## Open questions
 
-The escalation for PEPs is decided by the team on 2026-10-19 (mentor question 1): the approver is AML staff or higher, and a board member or the AML delegate for a PEP.
-
-Still open in [mentor-questions.md](../challenge/mentor-questions.md): which high-risk list (3). For the team: whether the UI groups a client's per-transaction alerts (the data has 112 PEP alerts on 22 clients).
+Decided (team, 2026-10-19, mentor question 1): the approver is AML staff or higher, and the board AML member or delegate for a PEP. Still open: which high-risk list (3), and whether the UI groups a client's per-transaction alerts (112 alerts on 22 clients).
 
 ## Change log
 
 | Date       | Change                                    | Alerts                          | FP share       | Agreement (n) |
 | ---------- | ----------------------------------------- | ------------------------------- | -------------- | ------------- |
 | 2026-10-19 | Dry run, converted, July 2026 list        | 112 PEP (22 clients), 0 country | 0 (all REVIEW) | n/a           |
-| 2026-10-19 | Same, not converted (for comparison only) | 4 PEP (3 clients)               | 0              | n/a           |
+| 2026-10-19 | Engine run, seed rules `B1`, `B2`         | 112 (22 clients)                | 0 (all REVIEW) | n/a           |

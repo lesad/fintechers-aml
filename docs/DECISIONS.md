@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0032 — Triage is code; AI only writes summaries and rule proposals; `docs/rules/` follows the engine
+
+**Accepted.** No model takes part in detection, triage, priority or routing. Triage is code: guardrails and a policy over the alert's evidence and the client's fields give `FP` or `REVIEW`, and a scorecard gives the priority. AI does two things: it writes a summary for the reviewer from `llm_context` and the log, and it drafts rule proposals that go through the engine's checks, backtest and approval like any other rule version. The engine owns detection (alert types, rules, grains, variables, parameter names and units, layers, versions, runs, hits, evidence); `docs/rules/` cites it and owns only the interpretation decisions and the second layer (guardrails, triage, priority, route, reason, log, and what `llm_context` must carry). `docs/rules/` is organised by alert type, not by rule, because rules are configured at runtime; triage reads each alert type's evidence contract, never a specific rule key. Terms: `docs/GLOSSARY.md`. _Why:_ triage is graded on correctness and must be reproducible and explainable from the evidence alone; a model in the decision path adds neither, and the data run found no behavioural signal a model could add beyond the computed gaps. _Trade-off:_ the Jev questions in `docs/rules/` are dropped, and with them the typed-judgement pitch. Supersedes the Jev part of ADR-0020 and the Jev rows of the split in `docs/challenge/decision-architecture.md`.
+
 ### ADR-0031 — Component variants through `cva` (class-variance-authority)
 
 **Accepted.** Classes that depend on props or state are declared with `cva` from class-variance-authority, as named variants (`level`, `active`, `embedded`, `state`…) with `compoundVariants` where two props combine, instead of inline ternaries and string concatenation. `cn()` stays for merging a caller's `className` on top. Applies in `components/` and in features (`RiskBadge`, `StatusLabel`, `Tab`, `Table`, `Card`, the decision buttons, the money-flow ribbons). _Why:_ the team asked for it once the first components multiplied their conditional classes; variants give each visual state a name, keep Tailwind classes greppable, and are the pattern most Tailwind codebases use. Re-adds the `class-variance-authority` dependency that ADR-0028 removed with shadcn/ui; the rest of ADR-0028 (no component library) stands.
@@ -57,6 +61,8 @@ _Superseded in part by ADR-0024: Drizzle and `postgres-js` are removed; the Kotl
 _Superseded in part by ADR-0023: with no deployment there is no RDS instance; the local container and the migration layout stand._
 
 ### ADR-0020 — Hackathon AML build: Vercel app, AWS Bedrock through a role, Jev for typed decisions
+
+_Superseded in part by ADR-0032: no model decides triage; Jev is dropped._
 
 **Accepted.** The app is the FINREG AML triage entry for The FinTechers Hackathon 2026. It runs on Vercel; model calls go to AWS Bedrock in Frankfurt through an IAM role (the team account blocks access keys); typed decisions come from TypeSafe's Jev, with Laya as a later migration behind the same request shape. Rules A, B and C and all arithmetic are deterministic code; the model only answers typed questions, and code validates its output. The organisers' data stays out of git (`data/`, pulled by `scripts/pull-data.sh`). _Why:_ the team is frontend-heavy, Jev has a TypeScript SDK, the hackathon provides Bedrock credits, and FINREG grades explainable, auditable decisions. Detail: `docs/challenge/decision-architecture.md`. The database (Supabase from the template or Postgres on AWS) is still open.
 

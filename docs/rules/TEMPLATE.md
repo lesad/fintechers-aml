@@ -1,60 +1,61 @@
-# Rule X: name
+# Alert type X: name
 
-**Status:** draft | dry run | tuned | done. **Owner:** role or name. **Alert unit:** one per client | one per transaction.
+**Status:** draft | tuned | done. **Owner:** role or name. **Alert unit:** one per client per run | one per transaction.
 
 ## Source
 
-The rule text exactly as the brief states it, quoted from [finreg-challenge.md](../challenge/finreg-challenge.md).
+The brief's text for this alert type, quoted from [finreg-challenge.md](../challenge/finreg-challenge.md).
 
-## 1. Detect (code)
+## 1. Seed rules (engine)
 
-How the rule fires, written so two people would implement it the same way. Define every term the brief leaves open (windows, day counts, "another account").
+One line per seed rule: key, grain, what it tests in words, link to the migration. No CEL and no parameter values here; the engine is the source.
 
-| Parameter | Value | Unit | Source | Status |
-| --------- | ----- | ---- | ------ | ------ |
-| `x_name`  |       |      |        | brief  |
+| Rule | Grain | Tests |
+| ---- | ----- | ----- |
 
-## 2. Facts (code)
+## 2. Interpretation decisions
 
-The named values code computes for each alert. They feed the gates, the Jev state, the priority scorecard, `reason` and `log`. Give each a unit. Where Jev reads a number, also give a band computed in code (Jev is not a calculator).
+Every term the brief leaves open, with the reading the seed rules follow and its status (`brief`, `law`, `company`, `confirmed` with who and when).
 
-| Fact | Meaning | Unit or band |
-| ---- | ------- | ------------ |
+| Decision | Reading | Status |
+| -------- | ------- | ------ |
 
-## 3. Gates (code)
+## 3. Evidence contract and `llm_context`
 
-Outcomes no model may override, each with its basis.
+What every rule of this type must put in its evidence, so triage can read a rule added later. Then what `llm_context` adds for the summary.
 
-## 4. Judgements (Jev)
+| Field | Meaning | In evidence or `llm_context` |
+| ----- | ------- | ---------------------------- |
 
-One fenced JSON block per question, in the API's `questions` shape. Say which facts go into `state`. Write "none" and why if the rule needs no judgement.
+## 4. Guardrails
 
-## 5. Triage policy (code)
+Hard outcomes no score overrides, each with its basis and origin.
 
-From gates, facts and answers to FP or REVIEW. Thresholds as parameters.
+| Guardrail | Effect | Basis |
+| --------- | ------ | ----- |
 
-## 6. Priority
+## 5. Triage policy
 
-The rule's inputs to [priority.md](priority.md), and any floor it sets.
+From the guardrails, the evidence contract and the client's fields to `FP` or `REVIEW`. No rule keys, no model. Thresholds are named parameters of the second layer.
 
-## 7. Route
+## 6. Priority and route
 
-The row of [escalation.md](escalation.md) that applies.
+The inputs to [priority.md](priority.md), any floor, and the row of [escalation.md](escalation.md).
 
 ## Reason template
 
-The `reason` text with placeholders for facts and answers. It always names the threshold, the actual value and the deciding factor (a bare "OK" fails a ČNB inspection).
+The `reason` text with placeholders. It always names the rule key, the threshold, the actual value and the deciding guardrail or policy line (a bare "OK" fails a ČNB inspection).
 
 ## Test cases
 
-Hand-computed inputs with the expected detect result, triage and priority floor. These become the backend's unit tests.
+Hand-computed inputs with the expected result. Detection rows are pinned by `engine/.../run/RuleAcceptanceTest.kt`; keep them in step.
 
 | Case | Input | Expected |
 | ---- | ----- | -------- |
 
 ## Open questions
 
-Links to the entries in [mentor-questions.md](../challenge/mentor-questions.md).
+Links to [mentor-questions.md](../challenge/mentor-questions.md).
 
 ## Change log
 

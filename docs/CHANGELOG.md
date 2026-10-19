@@ -6,6 +6,7 @@
 
 ### Added
 
+- `docs/GLOSSARY.md`: one meaning per term for the pipeline (detect, triage, review, assist, tune), built on the engine's own terms (ADR-0032).
 - `engine/`: HTTP API and audit trail. `./gradlew bootRun` without a command serves `GET /api/alerts` (latest run, `?runId=` for another) and `GET /api/alerts/{id}` (the alert with its audit entries). New `audit_entry` table: a run writes one `alert_raised` entry per alert with its hits and evidence, and later steps append theirs through `AuditLog`. `import` and `run` still run and exit.
 - `engine/`: the rules engine. `./gradlew bootRun --args=import` loads the ČNB data into Postgres (amounts in haléře, FX by ČNB fixing, prorated Q2 baseline); `--args=run` runs the CEL rules A1–A3, B1–B2 and C1 (company layer) into hits, alerts (A per client, B per transaction, C per client) and `data/out/alerts-<run>.csv`. July data: A 5,493, B 112, C 1,077. Run instructions in `engine/README.md`.
 - The AML review queue, first page of the UI, built from `docs/design/aml-review-queue` on mock data: header (open cases by rating, open a transaction by ID with ⌘K / Ctrl+K), tabs (the queue plus closable transaction tabs; detail content comes next) and the queue table with search, rating and status filters. The page always fits the window; only the table body scrolls, under a sticky header. Design tokens (MoroSystems palette, risk colours, Inter Tight) live in `src/app/globals.css` as Tailwind `@theme` values.
@@ -30,6 +31,7 @@
 
 ### Changed
 
+- `docs/rules/` is organised by alert type and follows the engine: each of A, B and C cites its seed rules, states its interpretation decisions, evidence contract, guardrails and a code-only triage policy. The Jev questions are gone (ADR-0032); D to G and the PR #9 scenarios are candidate rules in `candidates.md`; `jev-questions.md` and the D to G specs are removed.
 - Agent context and docs aligned with the decisions on record: `CLAUDE.md`, the READMEs, `docs/QUICKSTART.md`, `docs/ENVIRONMENT.md` and `docs/challenge/` now say that nothing is deployed, that the engine is CLI-only and the UI runs on mock data, and that the SPA/engine split is settled (`architecture.md` is no longer UNDECIDED). CI's `engine` job is listed. `.github/rulesets/main.json` matches the live ruleset (ADR-0026), so `pnpm freeze --undo` no longer brings back the PR requirement. ADR-0010, ADR-0011, ADR-0012 and ADR-0018 carry their supersession notes.
 - The frontend moved into `frontend/` (ADR-0029): run `pnpm` commands there. CI, the pre-commit hook and the data, freeze and skills scripts follow.
 - `docs/challenge/`: the decision notes record the no-deployment decision and the Kotlin-backend proposal; stale Vercel, Supabase and Playwright lines are gone; the lane overview is folded into the README; links to the context repo now point at GitLab.

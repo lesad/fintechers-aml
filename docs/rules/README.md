@@ -1,79 +1,62 @@
-# Rules: the specification we iterate on
+# Rules: the second layer, per alert type
 
-This folder is where the team designs the red-flag rules and the decisions that follow them. It is a specification, not code. The Kotlin backend implements what is written here, and a change to a rule starts here.
+This folder specifies what happens to an alert after the engine raises it: guardrails, triage, priority, route, reason and log, plus the interpretation decisions the engine's seed rules follow. It is organised by **alert type** (A, B, C), not by rule, because rules are configured at runtime (ADR-0032).
 
-Background and sources live in [`../challenge/`](../challenge/README.md). This folder only cites them.
+Detection itself (rules, CEL conditions, variables, parameters, layers, versions, runs, hits, evidence) is the engine's: [`docs/engine/rules-engine-design.md`](../engine/rules-engine-design.md) and the migrations in `engine/src/main/resources/db/migrations/`. This folder cites the engine and never restates a condition or a parameter value. Terms: [GLOSSARY.md](../GLOSSARY.md).
 
 ## Files
 
-| File                                                            | What                                                                      |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| [TEMPLATE.md](TEMPLATE.md)                                      | Copy this to start a new rule                                             |
-| [A-profile-discrepancy.md](A-profile-discrepancy.md)            | Rule A: daily volume or single transaction out of line with the profile   |
-| [B-high-risk-pep.md](B-high-risk-pep.md)                        | Rule B: high-risk jurisdiction or PEP                                     |
-| [C-flow-through.md](C-flow-through.md)                          | Rule C: money in and out again within hours                               |
-| [D-kyc-rating-inconsistent.md](D-kyc-rating-inconsistent.md)    | Rule D (proposal): AML risk rating inconsistent with the client's facts   |
-| [E-kyc-profile-implausible.md](E-kyc-profile-implausible.md)    | Rule E (proposal): declared profile implausible for the client type       |
-| [F-tail-payment-context.md](F-tail-payment-context.md)          | Rule F (proposal): tail payment with a country fact                       |
-| [G-unusual-corridor.md](G-unusual-corridor.md)                  | Rule G (proposal): unusual foreign corridor                               |
-| [priority.md](priority.md)                                      | The 0 to 100 priority scorecard shared by every rule                      |
-| [escalation.md](escalation.md)                                  | Who decides and who approves, with the conflict-of-interest checks        |
-| [jev-questions.md](jev-questions.md)                            | How to write a Jev question, what Jev returns, what we log                |
-| [candidates.md](candidates.md)                                  | Further red flags we considered, with the data verdict on each            |
+| File                                                            | What                                                                     |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [TEMPLATE.md](TEMPLATE.md)                                      | The shape of an alert-type spec                                          |
+| [A-profile-discrepancy.md](A-profile-discrepancy.md)            | Alert type A: activity out of line with the client's profile             |
+| [B-high-risk-pep.md](B-high-risk-pep.md)                        | Alert type B: high-risk country or PEP                                   |
+| [C-flow-through.md](C-flow-through.md)                          | Alert type C: money in and out again within hours                        |
+| [priority.md](priority.md)                                      | The 0 to 100 priority scorecard shared by every alert type               |
+| [escalation.md](escalation.md)                                  | Who decides and who approves, with the conflict-of-interest checks       |
+| [candidates.md](candidates.md)                                  | Rules we could add under A, B or C, with the data verdict and a CEL sketch |
 | [data-patterns.md](../challenge/data-patterns.md)               | Data run: the generator fingerprint and the verdict on every signal tried |
-| [aml-pattern-research.md](../challenge/aml-pattern-research.md) | The pattern research behind the data run and the candidates               |
+| [aml-pattern-research.md](../challenge/aml-pattern-research.md) | The pattern research behind the data run and the candidates              |
 
-## Anatomy of a rule
+## Two layers, and AI outside both
 
-Every alert goes through the same seven steps. Each rule spec fills in the steps that apply to it, and each step names who decides it.
+| #   | Step     | Owner        | Output                                                                  |
+| --- | -------- | ------------ | ----------------------------------------------------------------------- |
+| 1   | Detect   | engine       | hits with evidence (`rule_hit`), grouped into alerts per alert unit     |
+| 2   | Guard    | second layer | guardrails: triage gates, priority floors and caps, approver rules      |
+| 3   | Triage   | second layer | `FP` or `REVIEW` from the guardrails and the triage policy              |
+| 4   | Priority | second layer | 0 to 100 from [priority.md](priority.md), with its breakdown            |
+| 5   | Route    | second layer | executive role, person and approver from [escalation.md](escalation.md) |
+| 6   | Record   | second layer | `reason` from the template, an `audit_entry` per step                   |
 
-| #   | Step       | Decider       | Output                                                       |
-| --- | ---------- | ------------- | ------------------------------------------------------------ |
-| 1   | Detect     | Code          | The alert fires or not, per the brief's thresholds           |
-| 2   | Facts      | Code          | Named, computed values: ratios, hours, shares, bands         |
-| 3   | Gates      | Code          | Hard outcomes no model may override (always REVIEW, floors)  |
-| 4   | Judgements | Jev           | Typed answers with probabilities, one question per judgement |
-| 5   | Triage     | Code (policy) | FP or REVIEW from gates, facts, answers and thresholds       |
-| 6   | Priority   | Code          | 0 to 100 from the scorecard, with its breakdown              |
-| 7   | Route      | Code          | Executive role, person and approver from the matrix          |
+Every step is code. AI comes after: it writes the reviewer's summary from `llm_context` and the log, and drafts rule proposals for the engine. A proposal goes through the engine's checks and a person's approval, like any rule version.
 
-The `reason` and `log` columns are built from steps 2 to 7. Claude Sonnet 4.5 may write a readable story on top of the log, but it decides nothing.
+## Rules are configured, triage is not
 
-## Code or Jev
+A rule can be added, replaced or suppressed at runtime under any alert type. So triage must never test a rule key ("if A3 fired"). It reads:
 
-One test, agreed in [decision-architecture.md](../challenge/decision-architecture.md):
+- the alert type and its alert unit;
+- the hits: how many, and how many distinct rules;
+- the **evidence contract** of the alert type: the fields every rule of that type puts in its evidence;
+- the client's fields.
 
-- **Code** when the step is a formula, a threshold or a lookup; when the brief or the law states it; when it must give the same answer every time; or when it is a hard guardrail.
-- **Jev** when the step weighs soft facts that two analysts could read differently, and no formula exists. Each such step is one typed question with a written criterion.
+A new rule only has to meet its type's evidence contract to be triaged correctly. Each alert-type spec lists its contract and what `llm_context` must add.
 
-If you can write the step as `if x > 3`, it is code. If the honest answer to "how would you decide this?" is "it depends on the client", it is a Jev question.
+## How to change something
 
-## How to define a rule
+- **A threshold or a rule:** in the engine, as a new rule version or parameter override, through its checks and approval. Note the change and its counts in the alert type's change log here.
+- **An interpretation** (prorating, a window's start, what counts as outflow): here first, then in the engine's seed rules.
+- **Triage, priority, route, reason:** here, then in the second-layer code.
+- **A mentor answer:** write it in [mentor-questions.md](../challenge/mentor-questions.md) and in the spec it settles.
 
-Two simple formats, both in the rule's spec file:
-
-- **Parameters** (steps 1, 3, 5, 6) go in a table: name, value, unit, source, status. The status is `brief`, `law`, `default` (our choice, not yet confirmed) or `confirmed` (with who and when). The backend reads every threshold from one config with the same names, so changing a value never means changing code.
-- **Judgements** (step 4) are Jev question objects in the exact shape of the API request (`type`, `instructions`, `criteria`). The fenced JSON in the spec is the contract: copy it verbatim into the backend config. [jev-questions.md](jev-questions.md) explains how to write one.
-
-## Iterating on a rule
-
-1. Change the spec: a threshold, a fact, a question's wording.
-2. Run it on the labelled alerts (about 50 for tuning; the 25 held-out ones stay untouched until the final figure). Labelling plan: [decision-architecture.md](../challenge/decision-architecture.md#labelling-plan).
-3. Record the outcome in the rule's change log: what changed, alert count, FP share, agreement with our labels, and the sample size.
-4. When a mentor answers one of the rule's open questions, write the answer in [mentor-questions.md](../challenge/mentor-questions.md) and flip the parameter's status to `confirmed`.
-
-A rule is done when every parameter is `brief`, `law` or `confirmed`, it has hand-computed test cases, and its numbers on the held-out set are in its change log.
+An alert type is done when its guardrails and triage policy are code, its test cases pass, and its numbers on the labelled set are in its change log. Labelling plan: [decision-architecture.md](../challenge/decision-architecture.md#labelling-plan).
 
 ## Status
 
-| Rule     | Detect      | Jev              | Policy  | Tests | Open questions |
-| -------- | ----------- | ---------------- | ------- | ----- | -------------- |
-| A        | dry run     | draft            | draft   | none  | 2              |
-| B        | dry run     | none (by design) | draft   | none  | 2              |
-| C        | approximate | draft            | draft   | none  | 3              |
-| D        | proposal    | draft            | draft   | none  | 1              |
-| E        | proposal    | draft            | draft   | none  | 1              |
-| F        | proposal    | draft            | draft   | none  | 2              |
-| G        | proposal    | draft            | draft   | none  | 2              |
-| Priority | n/a         | input only       | draft   | none  | 1              |
-| Routing  | n/a         | none             | default | none  | 0              |
+| Alert type | Seed rules      | Engine run           | Triage policy | Tests             |
+| ---------- | --------------- | -------------------- | ------------- | ----------------- |
+| A          | `A1` `A2` `A3`  | 5,493 alerts         | draft         | detection only    |
+| B          | `B1` `B2`       | 112 alerts, 22 clients | always REVIEW | detection only  |
+| C          | `C1` (v2)       | 1,077 alerts         | always REVIEW | detection only    |
+| Priority   | n/a             | n/a                  | draft         | none              |
+| Routing    | n/a             | n/a                  | default       | none              |

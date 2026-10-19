@@ -95,7 +95,7 @@ Verdicts: RULE (coded threshold), PRIORITY (scorecard factor), JEV (typed questi
 
 ## Round 2: novel rules
 
-Round 2 looked for new alert types whose value is a well-posed Jev question, not a planted pattern. Three agents (kyc, tails, geo) tested each candidate against the generator's null. Nothing beats chance; four rules are kept because their tail probability is stated and their question is one an analyst would ask. They are proposals: [D](../rules/D-kyc-rating-inconsistent.md), [E](../rules/E-kyc-profile-implausible.md), [F](../rules/F-tail-payment-context.md), [G](../rules/G-unusual-corridor.md).
+Round 2 looked for new alert types whose value is a well-posed Jev question, not a planted pattern. Three agents (kyc, tails, geo) tested each candidate against the generator's null. Nothing beats chance; four rules are kept because their tail probability is stated and their question is one an analyst would ask. They are candidate rules under A or B, listed in [candidates.md](../rules/candidates.md) (ADR-0032 dropped their Jev questions).
 
 | Rule                        | Trigger                                                                | Count (strict / loose) | Under the null                          |
 | --------------------------- | ---------------------------------------------------------------------- | ---------------------- | --------------------------------------- |

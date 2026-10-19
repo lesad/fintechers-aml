@@ -14,6 +14,8 @@ Agreed 2026-10-19 on the way to the event. Builds on [ux-and-typed-ai.md](ux-and
 
 ## Who decides what
 
+> **Superseded in part by ADR-0032 (2026-10-19):** no model decides triage. The two Jev rows below (rule A triage, rule C typology) are dropped; triage, priority and routing are code, and AI only writes summaries and drafts rule proposals. The current split is in [`../rules/README.md`](../rules/README.md).
+
 Split agreed 2026-10-19, narrowed the same day. One test decides where each step goes:
 
 - **Kotlin code** when the step can be written as a formula, a threshold or a lookup: the brief or the law states it, the answer must be the same every time, or it is a hard guardrail.
