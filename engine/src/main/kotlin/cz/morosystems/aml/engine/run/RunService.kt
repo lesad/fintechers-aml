@@ -95,8 +95,9 @@ class RunService(
             val clientId = rs.getString("client_id")
             if (clientId in applicable) {
                 val tx = if (rule.grain == Grain.CLIENT_DAY) null else Vocabulary.tx.keys.associateWith { rs.getObject(it) }
+                val day = if (rule.grain == Grain.CLIENT_DAY) mapOf("month" to rs.getInt("day_month")) else null
                 val variables = rule.variables.associate { it.name to column(rs, it.name, it.agg) }
-                val activation = Activations.of(tx, clientsById.getValue(clientId), params, lists, variables)
+                val activation = Activations.of(tx, clientsById.getValue(clientId), params, lists, variables, day)
                 val fired = try {
                     program.evaluate(activation)
                 } catch (e: Exception) {

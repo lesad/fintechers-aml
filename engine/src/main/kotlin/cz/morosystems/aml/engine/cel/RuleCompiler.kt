@@ -38,7 +38,7 @@ class RuleCompiler {
             // A parameter is a double: an amount is CZK, a percentage or a multiple is the same number as before.
             paramNames.associate { "p.$it" to SimpleType.DOUBLE } +
             earlier +
-            (if (rule.grain.hasTransaction()) txVars else emptyMap())
+            (if (rule.grain.hasTransaction()) txVars else prefixed("day", Vocabulary.day))
         return CompiledRule(runtime.createProgram(check(rule.key, "condition", rule.condition, conditionVars)))
     }
 

@@ -32,6 +32,7 @@ class RunServiceTest {
 
     @AfterEach
     fun removeTestRules() {
+        jdbc.sql("truncate run cascade").update()
         jdbc.sql("delete from rule where author = 'test'").update()
     }
 
@@ -40,6 +41,21 @@ class RunServiceTest {
         val report = runs.run()
         assertThat(report.alertsPerType).isEqualTo(mapOf("B" to 1, "C" to 1))
         assertThat(report.hitsPerRule).isEqualTo(mapOf("B2" to 1, "C1" to 1))
+    }
+
+    @Test
+    fun seasonalRuleFiresOnlyInItsMonth() {
+        listOf("TJUL" to "tx.month == 7 && tx.amount > 0.0", "TDEC" to "tx.month == 12 && tx.amount > 0.0").forEach { (key, condition) ->
+            jdbc.sql(
+                """
+                insert into rule (key, version, alert_type, layer, grain, condition, status, author)
+                values (?, 1, 'A', 'company', 'transaction', ?, 'active', 'test')
+                """,
+            ).params(key, condition).update()
+        }
+        val hits = runs.run().hitsPerRule
+        assertThat(hits).containsEntry("TJUL", 3)
+        assertThat(hits).doesNotContainKey("TDEC")
     }
 
     @Test

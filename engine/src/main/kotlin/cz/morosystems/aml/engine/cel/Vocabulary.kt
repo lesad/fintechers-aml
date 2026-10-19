@@ -17,7 +17,10 @@ object Vocabulary {
         "payee_account" to SimpleType.STRING,
         "type" to SimpleType.STRING,
         "currency" to SimpleType.STRING,
+        "month" to SimpleType.INT,
     )
+
+    val day: Map<String, CelType> = mapOf("month" to SimpleType.INT)
 
     val client: Map<String, CelType> = mapOf(
         "id" to SimpleType.STRING,

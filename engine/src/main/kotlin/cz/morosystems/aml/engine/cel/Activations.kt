@@ -10,8 +10,10 @@ object Activations {
         params: Map<String, Double>,
         lists: Map<String, List<String>>,
         variables: Map<String, Any?>,
+        day: Map<String, Any?>? = null,
     ): Map<String, Any?> = buildMap {
         tx?.forEach { (name, value) -> put("tx.$name", celValue(value)) }
+        day?.forEach { (name, value) -> put("day.$name", celValue(value)) }
         client.forEach { (name, value) -> put("client.$name", celValue(value)) }
         params.forEach { (name, value) -> put("p.$name", value) }
         lists.forEach { (name, value) -> put("lists.$name", value) }

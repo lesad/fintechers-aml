@@ -112,6 +112,26 @@ class RuleCompilerTest {
         assertThat(predicate.evaluate(Activations.of(null, mapOf("q2_volume" to 101.0), emptyMap(), emptyMap(), emptyMap()))).isTrue()
     }
 
+    @Test
+    fun compilesTxMonthInATransactionCondition() {
+        val compiled = compiler.compile(rule("T1", Grain.TRANSACTION, "tx.month == 12 && tx.amount > p.max"), setOf("max"))
+        assertThat(compiled.evaluate(activation(tx = mapOf("month" to 12, "amount" to 10.0), params = mapOf("max" to 5.0)))).isTrue()
+        assertThat(compiled.evaluate(activation(tx = mapOf("month" to 7, "amount" to 10.0), params = mapOf("max" to 5.0)))).isFalse()
+    }
+
+    @Test
+    fun compilesDayMonthInAClientDayCondition() {
+        val compiled = compiler.compile(rule("T2", Grain.CLIENT_DAY, "day.month == 12 && day_volume > 0.0", variables = listOf(dayVolume)), emptySet())
+        assertThat(compiled.evaluate(activation(variables = mapOf("day_volume" to 5.0), day = mapOf("month" to 12)))).isTrue()
+        assertThat(compiled.evaluate(activation(variables = mapOf("day_volume" to 5.0), day = mapOf("month" to 7)))).isFalse()
+    }
+
+    @Test
+    fun rejectsDayMonthInATransactionCondition() {
+        assertThatThrownBy { compiler.compile(rule("T3", Grain.TRANSACTION, "day.month == 12"), emptySet()) }
+            .isInstanceOfSatisfying(RuleCompileException::class.java) { assertThat(it.part).isEqualTo("condition") }
+    }
+
     /** The test writes whole CZK; the engine carries CZK as a double. */
     private fun czk(amount: Long) = amount.toDouble()
 
@@ -121,7 +141,8 @@ class RuleCompilerTest {
         params: Map<String, Double> = emptyMap(),
         lists: Map<String, List<String>> = emptyMap(),
         variables: Map<String, Any?> = emptyMap(),
-    ) = Activations.of(tx, client, params, lists, variables)
+        day: Map<String, Any?>? = null,
+    ) = Activations.of(tx, client, params, lists, variables, day)
 
     private fun rule(
         key: String,

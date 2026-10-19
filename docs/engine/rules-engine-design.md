@@ -119,9 +119,9 @@ A rule is a CEL `condition` evaluated once per **grain row**, plus named **varia
 
 **Vocabulary** (declared with concrete types for the CEL compiler and the verifier):
 
-- `tx` — the grain's transaction (grains `transaction` and `client_anchor`): `amount` (double, CZK), `ts`, `direction` (string), `payer_country`, `payee_country`, `payer_account`, `payee_account`, `type`, `currency`.
+- `tx` — the grain's transaction (grains `transaction` and `client_anchor`): `amount` (double, CZK), `ts`, `direction` (string), `payer_country`, `payee_country`, `payer_account`, `payee_account`, `type`, `currency`, `month` (int 1–12, from `ts`).
 - `client` — `country`, `pep` (bool), `type`, `channel`, `risk`, `expected_monthly_volume`, `q2_volume`, `q2_tx_count`, `q2_max_tx`, `q2_days`, `contract_date`.
-- `day` — for grain `client_day`: the calendar date.
+- `day` — for grain `client_day`: `month` (int 1–12).
 - `p` — resolved parameters (doubles; an amount is CZK, a ratio a whole percentage).
 - `lists` — reference lists, e.g. `lists.high_risk` (list of strings).
 - each variable by name (`int` for `sum`/`max`/`min`/`count`, `list(string)` for `set`).

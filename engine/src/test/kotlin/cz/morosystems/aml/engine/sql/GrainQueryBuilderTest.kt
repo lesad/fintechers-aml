@@ -2,10 +2,12 @@ package cz.morosystems.aml.engine.sql
 
 import cz.morosystems.aml.engine.PostgresTest
 import cz.morosystems.aml.engine.rules.Agg
+import cz.morosystems.aml.engine.rules.Grain
 import cz.morosystems.aml.engine.rules.RuleDefinition
 import cz.morosystems.aml.engine.rules.RuleRepository
 import cz.morosystems.aml.engine.rules.VariableDefinition
 import cz.morosystems.aml.engine.rules.Window
+import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -43,6 +45,23 @@ class GrainQueryBuilderTest {
 
         val rows = run(a1).associate { it["grain_key"] to it["day_volume"] }
         assertThat(rows).isEqualTo(mapOf("2026-07-14" to czk(10_000), "2026-07-15" to czk(6_000)))
+    }
+
+    @Test
+    fun filtersByTxMonth() {
+        tx("T1", "K1", "2026-07-10 09:00", 100, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-06-30 12:00", 50, "in", payer = "ACZ1")
+        val june = VariableDefinition(1, "june", Agg.SUM, "amount", "tx.month == 6", Window.Relative(Duration.parse("-PT240H"), Duration.ZERO))
+
+        val rows = run(a1.copy(grain = Grain.TRANSACTION, variables = listOf(june))).associate { it["grain_key"] to it["june"] }
+        assertThat(rows["T1"]).isEqualTo(czk(50))
+    }
+
+    @Test
+    fun clientDayRowsCarryTheMonth() {
+        tx("T1", "K1", "2026-07-10 09:00", 100, "in", payer = "ACZ1")
+
+        assertThat(run(a1).single { it["grain_key"] == "2026-07-10" }["day_month"]).isEqualTo(7)
     }
 
     @Test

@@ -21,7 +21,7 @@ data class Period(val from: LocalDateTime, val toExclusive: LocalDateTime) {
  *
  * @param clientIds `null` for every client
  * @remarks Rows carry `grain_key`; transaction and anchor grains also carry every `transaction` column,
- * client-day grains carry `client_id` and `day`.
+ * client-day grains carry `client_id`, `day` and `day_month`.
  */
 @Component
 class GrainQueryBuilder(private val filters: FilterCompiler) {
@@ -42,7 +42,7 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
             }
             Grain.CLIENT_DAY ->
                 "with g as (select tx.client_id, tx.ts::date as day from $TX_SOURCE tx where tx.ts >= ? and tx.ts < ?$clientFilter group by 1, 2) " +
-                    "select g.client_id, g.day, to_char(g.day, 'YYYY-MM-DD') as grain_key"
+                    "select g.client_id, g.day, extract(month from g.day)::int as day_month, to_char(g.day, 'YYYY-MM-DD') as grain_key"
         }
 
         val variables = rule.variables.sortedBy { it.position }
@@ -95,8 +95,9 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
         // NOTE: CEL conditions see a missing account or country as "" (Activations); filters must see the same, not SQL NULL.
         const val TX_SOURCE = "(select id, client_id, ts, amount, volume, currency, fx_rate, type, direction, " +
             "coalesce(payer_country, '') as payer_country, coalesce(payee_country, '') as payee_country, " +
-            "coalesce(payer_account, '') as payer_account, coalesce(payee_account, '') as payee_account from transaction)"
+            "coalesce(payer_account, '') as payer_account, coalesce(payee_account, '') as payee_account, " +
+            "extract(month from ts)::int as month from transaction)"
         val IDENTIFIER = Regex("[a-z_][a-z0-9_]*")
-        val TRANSACTION_COLUMNS = Vocabulary.tx.keys + setOf("client_id", "ts", "volume", "fx_rate", "grain_key", "day")
+        val TRANSACTION_COLUMNS = Vocabulary.tx.keys + setOf("client_id", "ts", "volume", "fx_rate", "grain_key", "day", "day_month")
     }
 }
