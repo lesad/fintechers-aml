@@ -106,13 +106,13 @@ describe("saving from the rules page", () => {
   };
 
   const openB2Form = async () => {
-    render(<RulesPage author="J. Novák" onBack={() => {}} />);
+    render(<RulesPage author="J. Novák" />);
     fireEvent.click(
       within(await screen.findByRole("navigation", { name: "Rules" })).getByRole("button", {
         name: /B2/,
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "New version from this" }));
+    fireEvent.click(screen.getByRole("button", { name: "New version from v1" }));
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), {
       target: { value: "5000000" },
     });
@@ -130,7 +130,7 @@ describe("saving from the rules page", () => {
     expect(detail).toHaveTextContent("more than 50,000 CZK");
     expect(
       within(screen.getByRole("navigation", { name: "Rules" })).getByRole("button", { name: /B2/ }),
-    ).toHaveTextContent("v2 draft");
+    ).toHaveTextContent("draft v2");
   });
 
   it("a rejected save shows the engine's message under the condition and keeps the form", async () => {

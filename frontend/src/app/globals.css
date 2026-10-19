@@ -48,6 +48,16 @@
   --color-ai-fg: #5e3592;
   --color-ai-from: #f5f1fb;
   --color-ai-to: #e4d8f3;
+  --color-ai-bg: #efe8f7;
+
+  /* Rules: draft callouts, version dots, condition syntax on the indigo code block */
+  --color-indigo-hover: #3a3c63;
+  --color-draft-line: #f0d36a;
+  --color-draft-fg: #7a5c00;
+  --color-draft-dot: #e0b400;
+  --color-retired-dot: #a3a4b3;
+  --color-code-constant: #ff9a6e;
+  --color-code-keyword: #8b8ca3;
 
   /* Transaction detail: the current transaction's highlight, money-flow ribbons */
   --color-sel: #fff8d8;

@@ -50,7 +50,7 @@ export function App() {
         onToggleRules={() => setView(view === "rules" ? "review" : "rules")}
       />
 
-      {view === "rules" && <RulesPage author={CURRENT_USER} onBack={() => setView("review")} />}
+      {view === "rules" && <RulesPage author={CURRENT_USER} />}
 
       {/* NOTE: the review area stays mounted behind the rules page, so open tabs and half-written reasons survive. */}
       <div hidden={view === "rules"} className="flex min-h-0 flex-1 flex-col">

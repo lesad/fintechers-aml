@@ -36,6 +36,7 @@ const ruleVersion = z.object({
   ...ruleFields,
   id: z.number(),
   version: z.number(),
+  name: z.string().nullable(),
   status: z.enum(["draft", "approved", "active", "retired"]),
   author: z.string().nullable(),
   createdAt: z.string(),

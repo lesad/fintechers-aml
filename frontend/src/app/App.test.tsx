@@ -172,7 +172,7 @@ describe("App", () => {
     expect(screen.getByText("3 of 3 loaded")).toBeInTheDocument();
   });
 
-  it("the cog opens the rules page and back returns to the queue with tabs intact", async () => {
+  it("the cog opens the rules page and again returns to the queue with tabs intact", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
     const cog = screen.getByRole("button", { name: "Rules" });
@@ -182,7 +182,7 @@ describe("App", () => {
     expect(cog).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "← Review queue" }));
+    fireEvent.click(cog);
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
   });
 

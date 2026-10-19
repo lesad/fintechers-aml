@@ -55,6 +55,7 @@ class RuleControllerTest {
         list.extractingPath("$[4].params.pep_min.value").isEqualTo(10_000_000)
         list.extractingPath("$[4].params.pep_min.unit").isEqualTo("amount")
         list.extractingPath("$[0].params.projected_pct.unit").isEqualTo("percent")
+        list.extractingPath("$[4].name").isEqualTo("PEP outgoing payment above the limit")
         list.extractingPath("$[4].grain").isEqualTo("transaction")
         list.extractingPath("$[4].layer").isEqualTo("company")
         list.extractingPath("$[5].variables[0].window.kind").isEqualTo("relative")

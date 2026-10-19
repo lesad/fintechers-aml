@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@/test/render";
 
 import { RulesPage } from "../RulesPage";
-import { json, SEEDED } from "./fixtures";
+import { B2_V2, json, SEEDED } from "./fixtures";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -15,62 +15,101 @@ const serve = (...responses: (() => Response)[]) => {
 };
 
 const list = () => screen.findByRole("navigation", { name: "Rules" });
+const open = async (key: RegExp) =>
+  fireEvent.click(within(await list()).getByRole("button", { name: key }));
 
 describe("RulesPage", () => {
-  it("lists keys with version badges", async () => {
-    serve();
-    render(<RulesPage author="J. Novák" onBack={() => {}} />);
-    const c1 = within(await list()).getByRole("button", { name: /C1/ });
-    expect(c1).toHaveTextContent("v2 active");
-    expect(c1).toHaveTextContent("v1 retired");
+  it("lists rules by alert type with their name, active version and draft", async () => {
+    serve(() => json([...SEEDED, B2_V2]));
+    render(<RulesPage author="J. Novák" />);
+    const nav = await list();
+    expect(within(nav).getByText("Alert type A")).toBeInTheDocument();
+    expect(within(nav).getByText("Alert type C")).toBeInTheDocument();
+    const b2 = within(nav).getByRole("button", { name: /B2/ });
+    expect(b2).toHaveTextContent("PEP outgoing payment above the limit");
+    expect(b2).toHaveTextContent("v1 active");
+    expect(b2).toHaveTextContent("draft v2");
   });
 
-  it("selecting a key shows its newest version with explanation, condition and parameters", async () => {
+  it("filters rules by key or name", async () => {
     serve();
-    render(<RulesPage author="J. Novák" onBack={() => {}} />);
-    fireEvent.click(within(await list()).getByRole("button", { name: /B2/ }));
+    render(<RulesPage author="J. Novák" />);
+    const nav = await list();
+    fireEvent.change(screen.getByPlaceholderText("Filter rules"), {
+      target: { value: "flow-through" },
+    });
+    expect(
+      within(nav)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual([expect.stringContaining("C1")]);
+    fireEvent.change(screen.getByPlaceholderText("Filter rules"), { target: { value: "zzz" } });
+    expect(screen.getByText("No rules match “zzz”.")).toBeInTheDocument();
+  });
+
+  it("opens a rule on its active version with what it flags, condition and parameters", async () => {
+    serve(() => json([...SEEDED, B2_V2]));
+    render(<RulesPage author="J. Novák" />);
+    await open(/B2/);
 
     const detail = screen.getByRole("region", { name: "B2 v1" });
-    expect(detail).toHaveTextContent(
-      "Flags outgoing or unknown-direction transactions of more than 100,000 CZK",
+    expect(within(detail).getByRole("heading", { level: 1 })).toHaveTextContent(
+      "PEP outgoing payment above the limit",
     );
+    expect(detail).toHaveTextContent("Alert type B · Company-wide · Per transaction");
+    expect(detail).toHaveTextContent("more than 100,000 CZK");
     expect(detail).toHaveTextContent("client.pep && tx.amount > p.pep_min");
-    expect(detail).toHaveTextContent("pep_min");
-    expect(detail).toHaveTextContent("10,000,000 haléře (100,000 CZK)");
+    expect(detail).toHaveTextContent("100,000 CZK");
+    expect(within(detail).getByRole("tab", { name: "v1 active" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("a draft shows how its parameters differ from the active version", async () => {
+    serve(() => json([...SEEDED, B2_V2]));
+    render(<RulesPage author="J. Novák" />);
+    await open(/B2/);
+    fireEvent.click(screen.getByRole("tab", { name: "v2 draft" }));
+
+    const detail = screen.getByRole("region", { name: "B2 v2" });
+    expect(detail).toHaveTextContent("Draft — not evaluating transactions yet");
+    expect(detail).toHaveTextContent("pep_min100,000 CZK→50,000 CZK");
   });
 
   it("shows a percentage parameter with its unit, not as CZK", async () => {
     serve();
-    render(<RulesPage author="J. Novák" onBack={() => {}} />);
-    fireEvent.click(within(await list()).getByRole("button", { name: /C1/ }));
-    expect(screen.getByRole("region", { name: "C1 v2" })).toHaveTextContent("forward_pct = 80 %");
+    render(<RulesPage author="J. Novák" />);
+    await open(/C1/);
+    expect(screen.getByRole("region", { name: "C1 v2" })).toHaveTextContent("forward_pct80 %");
   });
 
-  it('shows "No explanation yet" when the explanation is null', async () => {
+  it("a retired version says so and has no explanation yet", async () => {
     serve();
-    render(<RulesPage author="J. Novák" onBack={() => {}} />);
-    fireEvent.click(within(await list()).getByRole("button", { name: /C1/ }));
-    fireEvent.click(screen.getByRole("button", { name: "v1 retired" }));
+    render(<RulesPage author="J. Novák" />);
+    await open(/C1/);
+    fireEvent.click(screen.getByRole("tab", { name: "v1 retired" }));
 
     const detail = screen.getByRole("region", { name: "C1 v1" });
+    expect(detail).toHaveTextContent("Kept for audit of cases flagged while it was active");
     expect(detail).toHaveTextContent("No explanation yet");
-    expect(detail).toHaveTextContent("payers");
-    expect(detail).toHaveTextContent("24 hours before the anchor, up to it");
+    expect(detail).toHaveTextContent("relative · −24 h → 0 h");
+  });
+
+  it("the version history selects a version", async () => {
+    serve();
+    render(<RulesPage author="J. Novák" />);
+    await open(/C1/);
+    const history = screen.getByRole("list", { name: "Version history" });
+    fireEvent.click(within(history).getByRole("button", { name: /v1/ }));
+    expect(screen.getByRole("region", { name: "C1 v1" })).toBeInTheDocument();
   });
 
   it("shows an error with retry when the rules fail to load", async () => {
     const fetch = serve(() => json({}, 500));
-    render(<RulesPage author="J. Novák" onBack={() => {}} />);
+    render(<RulesPage author="J. Novák" />);
     fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
     expect(within(await list()).getAllByRole("button")).not.toHaveLength(0);
     expect(fetch).toHaveBeenCalledTimes(2);
-  });
-
-  it("goes back to the review queue", async () => {
-    serve();
-    const onBack = vi.fn();
-    render(<RulesPage author="J. Novák" onBack={onBack} />);
-    fireEvent.click(screen.getByRole("button", { name: "← Review queue" }));
-    expect(onBack).toHaveBeenCalled();
   });
 });

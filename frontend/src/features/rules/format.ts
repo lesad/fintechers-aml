@@ -1,27 +1,34 @@
-import { formatCzk, type RuleParam, type RuleVersion, type RuleWindow } from "./api";
+import type { RuleParam, RuleVersion, RuleWindow } from "./api";
 
-const reading: Record<RuleParam["unit"], (value: number) => string> = {
-  amount: (value) => `${value.toLocaleString("en-US")} haléře (${formatCzk(value)})`,
-  percent: (value) => `${value} %`,
-  multiple: (value) => `${value}×`,
-  count: (value) => String(value),
+const unitSuffix: Record<RuleParam["unit"], string> = {
+  amount: "CZK",
+  percent: "%",
+  multiple: "×",
+  count: "",
 };
 
-/** `pep_min = 10,000,000 haléře (100,000 CZK)`, `forward_pct = 80 %`, `avg_multiple = 3×`. */
-export const paramLabel = (name: string, { value, unit }: RuleParam) =>
-  `${name} = ${reading[unit](value)}`;
+/** A parameter's display value and unit: an amount in whole CZK, the rest as stored. */
+export const paramParts = ({ value, unit }: RuleParam) => ({
+  value: (unit === "amount" ? Math.round(value / 100) : value).toLocaleString("en-US"),
+  unit: unitSuffix[unit],
+});
+
+export const paramText = (param: RuleParam) => {
+  const { value, unit } = paramParts(param);
+  return unit ? `${value} ${unit}` : value;
+};
 
 export const scopeLabel = (v: Pick<RuleVersion, "layer" | "scopeSegmentId" | "scopeClientId">) =>
   v.layer === "company"
-    ? "company-wide"
+    ? "Company-wide"
     : v.layer === "segment"
-      ? `segment ${v.scopeSegmentId}`
-      : `client ${v.scopeClientId}`;
+      ? `Segment ${v.scopeSegmentId}`
+      : `Client ${v.scopeClientId}`;
 
 export const grainLabel: Record<RuleVersion["grain"], string> = {
-  transaction: "per transaction",
-  client_day: "per client day",
-  client_anchor: "per anchor transaction",
+  transaction: "Per transaction",
+  client_day: "Per client day",
+  client_anchor: "Per anchor transaction",
 };
 
 /** ISO-8601 duration (`PT-24H`, `PT30M`, `PT0S`) → signed hours; null when it is not a whole number of minutes. */
@@ -32,15 +39,34 @@ export function isoHours(duration: string): number | null {
   return match[2] === "H" ? n : match[2] === "M" ? n / 60 : n === 0 ? 0 : null;
 }
 
-const span = (hours: number) =>
-  Number.isInteger(hours) ? `${hours} hours` : `${Math.round(hours * 60)} minutes`;
+const signedHours = (iso: string) => {
+  const h = isoHours(iso);
+  if (h === null) return iso;
+  return h < 0 ? `−${-h}` : h > 0 ? `+${h}` : "0";
+};
 
-export function windowLabel(window: RuleWindow): string {
-  if (window.kind === "day") return "the client's calendar day";
-  const from = isoHours(window.from);
-  const to = isoHours(window.to);
-  if (from === null || to === null) return `${window.from} to ${window.to} around the anchor`;
-  if (from < 0 && to === 0) return `${span(-from)} before the anchor, up to it`;
-  if (from === 0 && to >= 0) return `from the anchor to ${span(to)} after it`;
-  return `from ${span(-from)} before to ${span(to)} after the anchor`;
+export const windowShort = (window: RuleWindow) =>
+  window.kind === "day"
+    ? "day"
+    : `relative · ${signedHours(window.from)} h → ${signedHours(window.to)} h`;
+
+export type TokenKind = "param" | "variable" | "field" | "constant" | "keyword" | "plain";
+
+const KEYWORDS = new Set(["in", "true", "false"]);
+const TOKEN = /(p\.\w+)|("[^"]*")|([a-z_][\w.]*)|(\d[\d.]*)|(\s+)|(&&|\|\||==|!=|>=|<=|.)/gi;
+
+/** Splits a CEL condition into coloured tokens; joined back they are the source unchanged. */
+export function conditionTokens(src: string, variables: Set<string>) {
+  return [...src.matchAll(TOKEN)].map((m) => {
+    const text = m[0];
+    let kind: TokenKind = "plain";
+    if (m[1]) kind = "param";
+    else if (m[2] || m[4]) kind = "constant";
+    else if (m[3])
+      kind = KEYWORDS.has(text) ? "keyword" : variables.has(text) ? "variable" : "field";
+    return { text, kind, at: m.index };
+  });
 }
+
+/** `2026-10-19T16:42:05+02:00` → `2026-10-19 16:42`, as the engine wrote it. */
+export const shortDate = (iso: string) => iso.slice(0, 16).replace("T", " ");

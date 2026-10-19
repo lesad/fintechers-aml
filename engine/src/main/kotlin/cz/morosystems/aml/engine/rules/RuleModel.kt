@@ -49,6 +49,7 @@ data class RuleDefinition(
 /** A stored rule version with its lifecycle and explanation; [status] is `draft`, `approved`, `active` or `retired`. */
 data class RuleVersion(
     val rule: RuleDefinition,
+    val name: String?,
     val status: String,
     val author: String?,
     val createdAt: OffsetDateTime,

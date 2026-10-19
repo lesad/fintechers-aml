@@ -100,7 +100,7 @@ class RuleRepository(private val jdbc: JdbcClient) {
         return jdbc.sql(
             """
             select r.id, r.key, r.version, r.alert_type, r.layer, r.scope_segment_id, r.scope_client_id, r.grain, r.anchor,
-                   r.condition, r.replaces_key, r.status, r.author, r.created_at, r.explanation, r.explanation_model
+                   r.condition, r.replaces_key, r.name, r.status, r.author, r.created_at, r.explanation, r.explanation_model
             from rule r where $where order by r.key, r.version desc
             """,
         ).params(*args).query { rs, _ ->
@@ -121,6 +121,7 @@ class RuleRepository(private val jdbc: JdbcClient) {
                     variables = variables[id].orEmpty(),
                     params = params[id].orEmpty(),
                 ),
+                name = rs.getString("name"),
                 status = rs.getString("status"),
                 author = rs.getString("author"),
                 createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
