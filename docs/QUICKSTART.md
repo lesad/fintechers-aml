@@ -29,4 +29,4 @@ Nothing is deployed (ADR-0023). `dist/` is a static bundle any host can serve if
 
 ## Data and rules
 
-Persistence, the monitoring rules and the model calls live in the Kotlin + Spring Boot engine (ADR-0024, `docs/engine/rules-engine-design.md`), which the SPA talks to over HTTP. Run it from its own directory; this app needs nothing from it to boot.
+Persistence, the monitoring rules and the model calls live in the Kotlin + Spring Boot engine (ADR-0024, `docs/engine/rules-engine-design.md`), which the SPA will talk to over HTTP. The engine is CLI-only for now (import and run commands, see `engine/README.md`); it has no HTTP API yet, and the SPA runs on mock data. This app needs nothing from it to boot.

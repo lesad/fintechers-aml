@@ -28,7 +28,7 @@ Decided 2026-10-19 on the way to the event. The focus is AML, not fraud: it has 
 | [czech-aml-escalation.md](czech-aml-escalation.md)     | Czech AML roles, FAÚ reporting, 4-eyes, closure reasons, a draft escalation matrix                      |
 | [mentor-questions.md](mentor-questions.md)             | Questions for FINREG, ČNB and the crash course, our defaults, and the answers we get                    |
 | [decision-architecture.md](decision-architecture.md)   | Stack, who decides what, guardrails, labelling plan                                                     |
-| [architecture.md](architecture.md)                     | UNDECIDED: which component does what, and the open questions for the team                               |
+| [architecture.md](architecture.md)                     | Which component does what (settled by ADR-0024 and ADR-0025); the engine's API contract is still open    |
 | [ux-and-typed-ai.md](ux-and-typed-ai.md)               | AML triage UX patterns, graph libraries, the demo moment                                                |
 | [aws-account-setup.md](aws-account-setup.md)           | Our AWS profile setup (`hackathon`), daily commands, verified access and model behaviour                |
 | [aws-participant-guide.md](aws-participant-guide.md)   | Team AWS account: SSO sign-in, models and limits, budget, blocked services                              |

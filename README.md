@@ -53,7 +53,6 @@ No environment file and no database: the app is a client-only SPA. Persistence a
 - **Vite SPA over Next.js** — the engine owns the data and the rules, so the frontend had no server work left to do (ADR-0025).
 - **Fallow** — single tool replaces knip + jscpd + complexity tooling; native MCP for agents.
 - **English strings inline** — one locale, no i18n layer to thread through every component.
-- **No demo CRUD** — skeleton only. Project skills generate examples on demand.
 
 ## Scripts
 
@@ -87,15 +86,16 @@ pnpm setup:agentic
 
 Installs (globally) curated skills via `npx skills add`. The Fallow MCP server ships with the `fallow` npm package — no separate install.
 
-`.mcp.json` ships with **Fallow, Vercel**. Context7 is assumed globally installed.
+`.mcp.json` ships with **Fallow**. Context7 is assumed globally installed.
 
 ## CI
 
-`.github/workflows/ci.yml` runs three jobs on PRs and pushes to `main`:
+`.github/workflows/ci.yml` runs four jobs on PRs and pushes to `main`:
 
 1. `check` — typecheck / lint / format / unit
 2. `build` — Vite production build
-3. `fallow` — dead code / dupes / health; advisory (`continue-on-error`, `fail-on-issues: false`), posts a sticky PR comment. Uses a signed `fallow` binary (pinned ≥2.77.0).
+3. `engine` — Gradle build and tests of the Kotlin engine
+4. `fallow` — dead code / dupes / health; advisory (`continue-on-error`, `fail-on-issues: false`), posts a sticky PR comment. Uses a signed `fallow` binary (pinned ≥2.77.0).
 
 ## Deployment
 

@@ -78,6 +78,8 @@ _Superseded in part by ADR-0028: shadcn/ui and its `src/components/ui/**` exempt
 
 _Why:_ a template that ships a deprecated convention teaches it to every fork, and a config comment asserting something untrue is worse than no comment. _Trade-off:_ `proxy.ts` forecloses the `edge` runtime; if a fork needs it, the rename is what to revert.
 
+_Superseded by ADR-0025: `proxy.ts`, `next.config.ts` and the Next conventions went with Next.js._
+
 ### ADR-0017 — Test-harness reliability over test-harness speed
 
 **Accepted.** Four changes to the vitest/Playwright setup, each ported from a downstream fork that measured the failure first.
@@ -146,6 +148,8 @@ _Superseded by ADR-0025: the App Router error conventions and next-intl are gone
 
 _Why:_ collapses three ADR-era "exceptions" into one mental model, so contributors reason about a single boundary + a single enforcement mechanism rather than memorizing a list. _Trade-off:_ server/test-heavy members are always reached by direct path (no root-alias sugar), and the `server/`-folder path-lint is deferred, so today the client/server split is convention-guided but backstopped by the `server-only` build error.
 
+_Superseded in part by ADR-0025: `server-only` and the server/client split went with Next.js. What stands is the rule behind it: a barrel never drags node-only or test-only dependencies into the app graph, and `@/test/render` stays a deep import._
+
 ### ADR-0011 — `src/features/` vertical-slice layer; feature-owned queries; layering enforced via oxlint
 
 **Accepted.** Adds a fourth top-level `src/` folder, `features/`, for domain vertical slices. A feature (`src/features/<name>/`) owns its whole stack: client + presentational components, zod schema, stories, **Server Actions** (`actions.ts`), **data-access queries** (`queries.ts`), and co-located unit/integration/e2e tests. The `app/` route stays thin — it composes the feature and passes the action across the RSC boundary. The `guestbook` slice moved out of `src/components/guestbook` + `src/app/[locale]/guestbook` (route keeps only `page.tsx`); `src/components/` is now purely reusable (shadcn `ui/`). New alias: `@/features/*` → `src/features/*`.
@@ -158,11 +162,15 @@ _Why:_ collapses three ADR-era "exceptions" into one mental model, so contributo
 
 _Why:_ the old split tied a "reusable" component to a route (`components/guestbook` imported a type from `app/.../actions`) — direction backwards. A feature layer gives each domain one home for its full stack, makes `components/`/`core/` genuinely reusable, and machine-checks the boundary instead of trusting convention. _Trade-off:_ a per-zone override block, and the DB relational model lives centrally while its queries live in features (a deliberate split — the model is shared, the access is feature-local); cross-feature isolation is enforced via the `@/features/*` ban, but intra-feature relative imports are unchecked, and "only `queries.ts` may touch the raw `db` client" is convention, not linted (oxlint globs can't express the negation).
 
+_Amended by ADR-0025: features own their data access as `fetch` wrappers instead of server queries and actions; the layering and its oxlint enforcement stand._
+
 ### ADR-0010 — Canonical example slice, replaced-not-deleted; `pnpm eject:examples`
 
 **Accepted.** The template ships one interlocking `guestbook` slice exemplifying every core feature pattern: Drizzle table + companion RLS migration, server-only data-access fns, a Server Action (react-hook-form + zod + `useActionState`), a feature RSC + presentational list, the first testid `T` tree, the first `withRollback` integration test and `loc()` e2e, and an `/api/health` Route Handler. Examples are **intentional best-practice references an agent inherits in context**. When building a real feature, an agent **re-points** the pattern — replaces the example's usage with the real one — rather than deleting it, so the pattern is never lost, only re-aimed. For a fresh app with no use for the demo, `pnpm eject:examples` strips the whole slice back to a bare skeleton (`--clean-self` also removes the eject machinery). The slice wires into a few shared files (the `db`/`test` barrels, `messages/en.json`) via re-exports; eject reverts those from committed pristine snapshots under `scripts/eject/`, drops the `guestbook` i18n key, and removes generated artifacts (migrations, `supabase-types.ts`). Correctness gate: a worktree run of eject must leave `pnpm check` + `pnpm build` green.
 
 _Why:_ a fork (agent or human) gets a working, best-practice reference for each pattern instead of a blank slate, plus a one-command path back to bare when the demo isn't wanted. _Trade-off:_ the slice must stay wired through a small, documented set of shared files so eject remains a mechanical manifest operation.
+
+_Superseded by ADR-0020: the `guestbook` slice and `pnpm eject:examples` were removed when the app became `fintechers-aml`; the first real feature is `src/features/review-queue/`._
 
 ### ADR-0009 — `@/test` barrel excludes `withRollback` (second no-barrel exception)
 

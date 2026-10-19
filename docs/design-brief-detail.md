@@ -1,3 +1,5 @@
+> Superseded by the saved Claude Design export in `docs/design/` (see its README). Kept for history; the stack line below predates ADR-0025 and ADR-0028.
+
 # Design brief, step 2: transaction detail
 
 Brief for Claude Design. Builds on step 1 (the review overview with tabs). This step: **the content of one detail tab, one variant, basic form.** Same look and feel as step 1: data-dense, tight spacing, colour only for risk.

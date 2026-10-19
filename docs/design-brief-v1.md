@@ -1,3 +1,5 @@
+> Superseded by the saved Claude Design export in `docs/design/` (see its README). Kept for history; the stack line below predates ADR-0025 and ADR-0028.
+
 # Design brief v1: AML review overview
 
 Brief for Claude Design. We design the app step by step. This step is **one page only: the overview of transactions waiting for human AML review.** Keep it simple; we build on it.

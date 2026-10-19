@@ -4,12 +4,12 @@ Agreed 2026-10-19 on the way to the event. Builds on [ux-and-typed-ai.md](ux-and
 
 ## Stack
 
-- **App:** Next.js, from Adrian's `agentic-next-app` template (Next.js 16, strict TypeScript, Tailwind v4, shadcn/ui, zod, Vitest). Declared to the organisers; `hackathon-start` tags the template baseline.
+- **App:** a client-only Vite + React SPA in `frontend/` (ADR-0025, ADR-0029; strict TypeScript, Tailwind v4, own components per ADR-0028, zod, Vitest). It grew out of Adrian's `agentic-next-app` Next.js template, declared to the organisers; `hackathon-start` tags that baseline.
 - **No deployment (decided 2026-10-19):** everything runs locally on a team laptop, for the build and for the demo. Vercel is dropped.
-- **Split between Next.js and Kotlin: UNDECIDED.** Proposal in [architecture.md](architecture.md): all logic in the Kotlin backend, including the Jev calls; Next.js only presents. Needs full team agreement.
+- **Split between the SPA and Kotlin: decided (ADR-0024).** All logic lives in the Kotlin + Spring Boot engine in `engine/`, including the Jev calls; the SPA only presents. The engine's HTTP API is still to be written ([architecture.md](architecture.md)).
 - **Backend services:** AWS, chiefly Bedrock in Frankfurt. Claude Sonnet 4.5 (`eu.anthropic.claude-sonnet-4-5-20250929-v1:0`) is the default model for all runtime generative AI (decided 2026-10-19; we have credits for the 4.5 models). gpt-oss-120b stays available for high-volume batch work. The team account blocks IAM users and access keys ([aws-participant-guide.md](aws-participant-guide.md)), so local code takes temporary credentials from `AWS_PROFILE` through `aws sso login`. The session lasts 12 hours, so sign in again before the Tuesday demo. gpt-oss-120b has effectively unlimited throughput; Claude models share 50 requests/min.
-- **Typed decisions:** TypeSafe's Jev. There is no Kotlin SDK, so the Kotlin backend calls its HTTP API directly; the TypeScript SDK stays an option if Jev calls end up in Next.js. Laya is the proposed migration later, once velocity allows, behind the same request and answer shape.
-- **Database:** not settled for the Kotlin backend. The app repo runs Postgres 17 in Docker for local dev and CI (ADR-0021; Supabase is dropped). Without a deployment a local store is enough: that Postgres, or DuckDB, which also suits running the rules.
+- **Typed decisions:** TypeSafe's Jev. There is no Kotlin SDK, so the Kotlin backend calls its HTTP API directly; the TypeScript SDK stays an option if Jev calls end up in the SPA. Laya is the proposed migration later, once velocity allows, behind the same request and answer shape.
+- **Database:** Postgres 17 in Docker, owned by the engine (`engine/compose.yaml`, Liquibase SQL migrations; ADR-0024). Nothing is deployed, so the local container is the whole story.
 - **Batch jobs:** loading the ČNB CSVs, running rules A, B and C, and the first decision pass over all alerts run in the Kotlin backend, not in page requests. The app re-decides single alerts on demand through the same backend.
 
 ## Who decides what
@@ -107,5 +107,4 @@ The labelling screen is the analyst case view the demo needs, so the team builds
 
 - Jev access: keys from https://console.typesafe.ai/keys; whether signup is instant or gated, and any free credits, is not documented.
 - Jev hosting region is not documented. Acceptable for synthetic data; state it in the pitch.
-- The Kotlin stack (Spring Boot or Ktor) and the API contract between Next.js and the backend.
-- The database choice.
+- The API contract between the SPA and the engine; the Kotlin stack (Spring Boot) and the database (Postgres 17, engine-owned) are settled in ADR-0024.

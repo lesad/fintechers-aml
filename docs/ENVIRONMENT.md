@@ -4,11 +4,15 @@
 
 ## Required-vars manifest
 
-The app itself needs **none**. The Vite SPA is client-only (ADR-0025): the typed `env.ts` schema, `@t3-oss/env-nextjs`, the Postgres URLs and `.env.example` all went with the data layer. Database credentials are the Kotlin engine's business (ADR-0024) and are configured there.
+The frontend itself needs **none**. The Vite SPA is client-only (ADR-0025): the typed `env.ts` schema, `@t3-oss/env-nextjs`, the Postgres URLs and `.env.example` all went with the data layer. The engine reads its database settings from the variables below, all with local defaults (`engine/src/main/resources/application.yaml`, `engine/compose.yaml`).
 
-| Variable      | Required | Scope | Source          | Purpose                                                 |
-| ------------- | -------- | ----- | --------------- | ------------------------------------------------------- |
-| `AWS_PROFILE` | no       | shell | your SSO config | Used by `pnpm data:pull` (default profile: `hackathon`) |
+| Variable             | Required | Scope   | Source          | Purpose                                                              |
+| -------------------- | -------- | ------- | --------------- | -------------------------------------------------------------------- |
+| `AWS_PROFILE`        | no       | shell   | your SSO config | Used by `pnpm data:pull` (default profile: `hackathon`)              |
+| `ENGINE_DB_PORT`     | no       | compose | you             | Host port of the local Postgres (default `5440`)                     |
+| `ENGINE_DB_URL`      | no       | engine  | you             | JDBC URL (default `jdbc:postgresql://127.0.0.1:5440/postgres`)       |
+| `ENGINE_DB_USER`     | no       | engine  | you             | Database user (default `postgres`)                                   |
+| `ENGINE_DB_PASSWORD` | no       | engine  | you             | Database password (default `postgres`, local container only)         |
 
 ## Secure handling
 
@@ -19,4 +23,4 @@ The app itself needs **none**. The Vite SPA is client-only (ADR-0025): the typed
 
 ## MCP secrets (`.mcp.json`)
 
-`.mcp.json` holds no secrets; if a server ever needs one, read it via `${…}` interpolation, **never hardcode a token** in it. The Vercel MCP uses OAuth (browser auth on first connect), so it needs no token in the file.
+`.mcp.json` holds no secrets; if a server ever needs one, read it via `${…}` interpolation, **never hardcode a token** in it.

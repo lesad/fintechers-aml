@@ -27,6 +27,7 @@
 
 ### Changed
 
+- Agent context and docs aligned with the decisions on record: `CLAUDE.md`, the READMEs, `docs/QUICKSTART.md`, `docs/ENVIRONMENT.md` and `docs/challenge/` now say that nothing is deployed, that the engine is CLI-only and the UI runs on mock data, and that the SPA/engine split is settled (`architecture.md` is no longer UNDECIDED). CI's `engine` job is listed. `.github/rulesets/main.json` matches the live ruleset (ADR-0026), so `pnpm freeze --undo` no longer brings back the PR requirement. ADR-0010, ADR-0011, ADR-0012 and ADR-0018 carry their supersession notes.
 - The frontend moved into `frontend/` (ADR-0029): run `pnpm` commands there. CI, the pre-commit hook and the data, freeze and skills scripts follow.
 - `docs/challenge/`: the decision notes record the no-deployment decision and the Kotlin-backend proposal; stale Vercel, Supabase and Playwright lines are gone; the lane overview is folded into the README; links to the context repo now point at GitLab.
 - Renamed the app to `fintechers-aml`, removed the guestbook example, added the "Built during the hackathon" README section.
@@ -35,6 +36,7 @@
 
 ### Removed
 
+- The Vercel MCP server from `.mcp.json`, the Vercel deploy section and skills from `CLAUDE.md`, and `drizzle-kit` from the Claude permission allowlist: none of them had a target left (ADR-0023, ADR-0025).
 - shadcn/ui and its leftovers: `src/components/ui/`, `components.json`, `@base-ui/react`, `class-variance-authority`, `lucide-react`, `shadcn`, `tw-animate-css`, the shadcn MCP server and agent skill (ADR-0028).
 - `pnpm ship` (`scripts/ship.sh`): PRs are no longer required; changes are pushed to `main` directly. ADR-0026.
 - **Next.js** and everything that only served it: `next`, `next.config.ts`, the App Router tree under `src/app/[locale]/`, `src/proxy.ts`, `postcss.config.mjs`, and the `@swc/plugin-react-remove-properties` / `STRIP_TEST_IDS` test-id strip (ADR-0014 — `data-testid` now ships in the bundle).

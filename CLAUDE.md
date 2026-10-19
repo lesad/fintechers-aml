@@ -17,7 +17,7 @@ This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FI
 - TypeScript strict, `noUncheckedIndexedAccess` on
 - Tailwind v4 (CSS-first via `@theme`, through `@tailwindcss/vite`)
 - Own UI components on Tailwind (`src/components/`), no component library — no shadcn/ui (ADR-0028); design tokens from `docs/design/` live in `src/app/globals.css`
-- Data comes from the Kotlin + Spring Boot rules engine over HTTP (ADR-0024) — `fetch`, no client query lib, no axios
+- Data will come from the Kotlin + Spring Boot rules engine (ADR-0024) over `fetch`, validated with zod; no client query lib, no axios. **Today the engine is CLI-only (import and run commands, no HTTP API) and the UI runs on mock data** in `src/features/review-queue/mock.ts`; the API contract is still open (`docs/challenge/architecture.md`).
 - Vitest (one unit project, config in `vite.config.ts`)
 - Oxlint + Oxfmt (NOT ESLint/Prettier)
 - Fallow for dead code / duplication / health
@@ -67,7 +67,7 @@ The `rerender-memo`, `rerender-memo-with-default-value`, `rerender-dependencies`
 - New reusable component: a PascalCase file in `src/components/`, styled with Tailwind and the `@theme` tokens, exported from `src/components/index.ts`.
 - New feature: create `src/features/<name>/` (components + zod schema + its `fetch`-based data access + co-located tests) with an `index.ts` barrel; `src/app/App.tsx` imports the barrel and stays thin. Reusable, non-domain UI goes in `src/components/`.
 - New UI copy: inline English in the component. There is no message catalog (ADR-0025).
-- Data access: `fetch` against the Kotlin engine, validated with zod at the boundary — never trust a response shape. No client query lib, no axios (ADR-0005).
+- Data access: `fetch` against the Kotlin engine, validated with zod at the boundary — never trust a response shape. No client query lib, no axios (ADR-0005). Until the engine exposes an API, a feature keeps its mock data in its own `mock.ts`.
 
 ## Documentation discipline
 
@@ -86,8 +86,6 @@ Read `docs/README.md` first (the memory map).
 
 - `react-best-practices` — React patterns (vercel-labs, via `vercel-deploy` pkg). Its Next.js-specific rules no longer apply here.
 - `react-view-transitions` — View Transitions API (vercel-labs, via `vercel-deploy` pkg)
-- `deploy-to-vercel` — Vercel deploy (vercel-labs, via `vercel-deploy` pkg — bundled at user level)
-- `vercel-cli-with-tokens` — token-based Vercel CLI (vercel-labs, via `vercel-deploy` pkg — bundled at user level)
 - `anthropics/skills/frontend-design`
 - `vercel-labs/agent-skills/web-design-guidelines`
 
@@ -104,18 +102,13 @@ Install project ones: `pnpm dlx skills add <owner/repo> --skill <name> --agent c
 
 ## Deployment
 
-- **Platform:** Vercel — project linked to `adriven-development/agentic-next-app`
-- Preview deploy: `vercel deploy -y --no-wait --scope adriven-development`
-- Production deploy: `vercel deploy --prod -y --no-wait --scope adriven-development`
-- Env vars: `vercel env ls --scope adriven-development`
-- Never `vercel deploy` without explicit user approval for production.
+Nothing is deployed (ADR-0023). `pnpm build` emits a static `dist/`; the engine runs locally from `engine/` (`engine/README.md`). There is no Vercel project, no deploy command and no hosted environment.
 
 ## MCPs
 
-`.mcp.json` ships: fallow, vercel.
+`.mcp.json` ships: fallow.
 Fallow MCP ships in the npm `fallow` package — no Rust/cargo needed.
 Context7 is globally installed in user environment — not in `.mcp.json`.
-Vercel MCP at `https://mcp.vercel.com` (HTTP, OAuth auth required on first connect).
 
 ## Testing
 
@@ -127,11 +120,11 @@ Vercel MCP at `https://mcp.vercel.com` (HTTP, OAuth auth required on first conne
 
 - Pre-commit (Claude PreToolUse hook → `.claude/hooks/pre-commit.sh`, per ADR-0006 — husky dropped): typecheck + lint + format-check + `pnpm test:changed` (unit, changed only). The script re-checks the command from the hook payload and exits 0 for non-commits, because the `if` filter fails open on shell `for`/`while`/`if` blocks (ADR-0015) — keep that guard if you edit the hook.
 - `pnpm check` (fast, no DB): typecheck + lint + format-check + unit
-- CI jobs: `check` (unit) + `build` (Vite) + `fallow`. They run on pushes to `main` and on PRs; none of them gates a push (ADR-0026).
+- CI jobs: `check` (unit) + `build` (Vite) + `engine` (Gradle build and tests) + `fallow`. They run on pushes to `main` and on PRs; none of them gates a push (ADR-0026).
 
 ## Shipping (ADR-0026)
 
-Changes go straight to `main`; PRs are optional, not required. CI (`check`, `build`, `fallow`) still runs on every push to `main` and on any PR, but it no longer gates the merge.
+Changes go straight to `main`; PRs are optional, not required. CI (`check`, `build`, `engine`, `fallow`) still runs on every push to `main` and on any PR, but it no longer gates the merge.
 
 - Run `pnpm check` locally before pushing. A red `main` is fixed forward right away.
 - Commit messages on `main` are Conventional Commits.

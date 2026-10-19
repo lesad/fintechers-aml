@@ -16,7 +16,7 @@ The team leans to frontend, so the UX of the triage workflow is our edge. Nobody
 - **Track 5, Compliance and RegTech copilots.** Can't be switched after registration.
 - **Challenge: FINREG PARTNERS "AML transaction monitoring: triage and red-flag escalation"** on ČNB's synthetic data. Generate red flags from rules A, B and C, then sort, rate and escalate each one to the right person, with every decision explainable, justified and auditable. Full text in [finreg-challenge.md](finreg-challenge.md).
 - **Why:** typed AI decisions (our first lead's core idea), AML as an area of interest for Moro and its customers, and a triage workflow our frontend-heavy team can make excellent. Even without a win, it shows we know the regulatory work.
-- **Stack:** runs locally, no deployment. Next.js and a simple Kotlin backend, split UNDECIDED ([architecture.md](architecture.md)); Bedrock in Frankfurt for models; TypeSafe's Jev for typed decisions, with Laya as a later migration; Claude Sonnet 4.5 (EU profile) as the default model for runtime generated text, never for decisions ([decision-architecture.md](decision-architecture.md)). The AWS team account allows no access keys, so local code uses `aws sso login` credentials ([aws-account-setup.md](aws-account-setup.md)).
+- **Stack:** runs locally, no deployment. a client-only Vite + React SPA in `frontend/` and a Kotlin + Spring Boot engine in `engine/` that owns the rules and the Postgres database (ADR-0024, ADR-0025; [architecture.md](architecture.md)); Bedrock in Frankfurt for models; TypeSafe's Jev for typed decisions, with Laya as a later migration; Claude Sonnet 4.5 (EU profile) as the default model for runtime generated text, never for decisions ([decision-architecture.md](decision-architecture.md)). The AWS team account allows no access keys, so local code uses `aws sso login` credentials ([aws-account-setup.md](aws-account-setup.md)).
 
 ## Timeline
 
@@ -61,6 +61,6 @@ FINREG scores its own prize separately: triage and priority 40% (30 to 45 sample
 
 - The escalation matrix and conflict-of-interest rules, which high-risk list, the period of the expected volume and the Q2 day count: our defaults and the answers we get are in [mentor-questions.md](mentor-questions.md).
 - Jev access (signup may be gated) and its hosting region.
-- The Kotlin stack, the API contract between Next.js and the backend, and the database ([architecture.md](architecture.md)).
+- The API contract between the SPA and the engine ([architecture.md](architecture.md)); the Kotlin stack and the database are settled (ADR-0024).
 - IP terms for Enterprise teams.
 - Judges' access to this private repo before the 13:30 code freeze.
