@@ -145,6 +145,11 @@ class TransactionControllerTest {
             .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T3", "T2")
         assertThat(mvc.get().uri("/api/transactions?status=NEW")).hasStatusOk()
             .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T1", "T4")
+
+        // Reported comes last however severe: T1 is the most severe case in the queue.
+        jdbc.sql("update alert set status = 'REPORTED' where transaction_id = 'T1'").update()
+        assertThat(mvc.get().uri("/api/transactions?status=ESCALATED&status=REPORTED")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T3", "T1", "T2")
     }
 
     @Test
