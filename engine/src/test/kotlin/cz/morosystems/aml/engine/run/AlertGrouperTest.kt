@@ -42,5 +42,5 @@ class AlertGrouperTest {
     }
 
     private fun hit(id: Int, rule: String, type: String, client: String, key: String, grain: Grain) =
-        Hit(id.toLong(), 0, rule, type, client, key, grain, emptyMap())
+        Hit(id.toLong(), 0, rule, 1, type, client, key, grain, emptyMap())
 }

@@ -4,6 +4,8 @@ import cz.morosystems.aml.engine.importer.DataImporter
 import cz.morosystems.aml.engine.importer.ImportReport
 import cz.morosystems.aml.engine.run.RunReport
 import cz.morosystems.aml.engine.run.RunService
+import cz.morosystems.aml.engine.triage.TriageRepository
+import cz.morosystems.aml.engine.triage.TriageService
 import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -18,13 +20,15 @@ import java.io.PrintStream
 class CommandRunnerTest {
     private val importer = mock(DataImporter::class.java)
     private val runs = mock(RunService::class.java)
+    private val triage = mock(TriageService::class.java)
+    private val triageRuns = mock(TriageRepository::class.java)
 
     private fun run(vararg args: String): String {
         val captured = ByteArrayOutputStream()
         val original = System.out
         System.setOut(PrintStream(captured, true))
         try {
-            EngineApplication().commandRunner(importer, runs).run(DefaultApplicationArguments(*args))
+            EngineApplication().commandRunner(importer, runs, triage, triageRuns).run(DefaultApplicationArguments(*args))
         } finally {
             System.setOut(original)
         }
@@ -56,7 +60,7 @@ class CommandRunnerTest {
     @Test
     fun unknownCommandPrintsUsage() {
         val out = run("nonsense")
-        verifyNoInteractions(importer, runs)
+        verifyNoInteractions(importer, runs, triage, triageRuns)
         assertThat(out).contains("Usage")
     }
 }

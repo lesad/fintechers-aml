@@ -7,6 +7,7 @@ data class Hit(
     val id: Long,
     val ruleId: Long,
     val ruleKey: String,
+    val ruleVersion: Int,
     val alertType: String,
     val clientId: String,
     val grainKey: String,

@@ -39,6 +39,7 @@ Run from `engine/`:
 ```sh
 ./gradlew bootRun --args=import   # load data/raw/ into Postgres
 ./gradlew bootRun --args=run      # run the rules into hits, alerts and data/out/alerts-<run>.csv
+./gradlew bootRun --args=triage   # re-triage the latest run; add a run id to pick one
 ./gradlew test                    # tests use a throwaway Postgres container, never the dev database
 ./gradlew build                   # compile, test, package (what CI runs)
 ```
@@ -53,6 +54,31 @@ Run from `engine/`:
 
 - `GET /api/alerts`: alerts of the latest finished run, with the hit count. `?runId=` picks another run.
 - `GET /api/alerts/{id}`: one alert. 404 for an unknown id.
+
+## Triage
+
+Every alert gets a disposition — `AUTO_CLOSE`, `REVIEW_LOW`, `REVIEW_MEDIUM`, `REVIEW_HIGH`, `ESCALATE` — decided in code, with no model (ADR-0033). `--args=run` triages as part of the run; `--args=triage [runId]` re-decides a stored run after a config change, overwriting its rows. On run 1 of the July data:
+
+```
+AUTO_CLOSE 299 · REVIEW_LOW 3825 · REVIEW_MEDIUM 1849 · REVIEW_HIGH 672 · ESCALATE 37
+```
+
+`Triage.decide(input, config)` is a pure function: no clock, no connection, no randomness. Six steps in a fixed order — base score per rule key, risk factors, score to band, the auto-close gate, the missing-data floor, the hard floors. A floor is applied with `maxOf` over the enum, so it can only make an outcome **stricter**, never milder. `asOf` (the run period's end) and every amount arrive on the input; amounts stay `Long` haléře and `CanonicalJson` throws if a float ever reaches the input hash.
+
+Each decision stores its reasons, `config_version` and a SHA-256 `input_hash` in `alert_triage`, so any past decision can be reconstructed and re-checked. Re-triaging is idempotent: the same input gives the same hash and the same row.
+
+Tuning lives in `src/main/resources/triage/triage-config-v1.json`, validated on load — weights, bands, the auto-close whitelist, the required fields and the floors. **Change a number and you must bump the file and its `configVersion`**, so decisions already taken stay explicable under the config that made them.
+
+Two things the config deliberately leaves empty, filled at runtime or waiting for data:
+
+- `highRiskCountries` — injected from `reference_list` (`list = 'high_risk'`); the database is the single source.
+- `sanctionedCountries` / `sanctionedClients` — placeholders. There is **no sanctions list in the organisers' data**, so the `SANCTIONS_MATCH → ESCALATE` floor is implemented and tested but fires on nothing until a list is loaded.
+
+Three calibration decisions the July data forced, worth re-reading before trusting the numbers:
+
+- **Rule A carries no signal by itself** — it fires for 5,493 of 5,493 clients. Only its intensity (4 to 88 hits, median 43) separates clients, so `intensityBands` scores hit counts per alert type; a raw hit count is not comparable across types.
+- **A1/A2/A3 are on the auto-close whitelist.** That is the judgement call in this config: it lets a low-scoring profile-discrepancy alert close without a person. Empty the whitelist and those 299 become `REVIEW_LOW`.
+- **PEP is not scored twice.** All 112 type B alerts are PEP clients because rule `B2` requires PEP; `pepImpliedByRules` suppresses the PEP factor when every rule on the alert already implies it.
 
 Schema changes are Liquibase SQL files in `src/main/resources/db/migrations/`, listed in `db/changelog-master.xml`.
 

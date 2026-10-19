@@ -12,6 +12,7 @@ import cz.morosystems.aml.engine.rules.RuleRepository
 import cz.morosystems.aml.engine.rules.RuleResolver
 import cz.morosystems.aml.engine.sql.GrainQueryBuilder
 import cz.morosystems.aml.engine.sql.Period
+import cz.morosystems.aml.engine.triage.TriageService
 import java.sql.ResultSet
 import java.sql.Timestamp
 import javax.sql.DataSource
@@ -32,6 +33,7 @@ class RunService(
     private val resolver: RuleResolver,
     private val queries: GrainQueryBuilder,
     private val picker: TransactionPicker,
+    private val triage: TriageService,
     private val props: EngineProperties,
 ) {
     // NOTE: Postgres only streams a result set with a fetch size inside a transaction, hence a dedicated template.
@@ -64,8 +66,9 @@ class RunService(
 
         val alerts = AlertGrouper.group(withIds, clients.alertUnits()).map { it.copy(transactionId = picker.pick(it)) }
         val stored = alerts.map { insertAlert(runId, it) to it }
+        val decisions = triage.triageRun(runId).associateBy { it.alertId }
         val csv = props.outDir.resolve("alerts-$runId.csv")
-        CsvExporter.write(csv, stored)
+        CsvExporter.write(csv, stored, decisions)
 
         val report = RunReport(
             runId = runId,
@@ -105,7 +108,7 @@ class RunService(
                 }
                 if (fired) {
                     val evidence = variables + params.mapKeys { "p.${it.key}" } + (tx?.let { mapOf("tx.amount" to it["amount"]) } ?: emptyMap())
-                    hits += Hit(0, rule.id, rule.key, rule.alertType, clientId, rs.getString("grain_key"), rule.grain, evidence)
+                    hits += Hit(0, rule.id, rule.key, rule.version, rule.alertType, clientId, rs.getString("grain_key"), rule.grain, evidence)
                 }
             }
         }
