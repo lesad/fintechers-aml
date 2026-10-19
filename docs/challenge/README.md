@@ -15,6 +15,8 @@ Track 5, FINREG PARTNERS "AML transaction monitoring: triage and red-flag escala
 | [decision-architecture.md](decision-architecture.md) | Stack, who decides what, guardrails, labelling plan                                              |
 | [rule-b-reference-data.md](rule-b-reference-data.md) | EU and FATF high-risk lists for July 2026 (data in `reference/high-risk-countries-2026-07.json`) |
 | [czech-aml-escalation.md](czech-aml-escalation.md)   | Czech AML roles, FAÚ reporting, 4-eyes, closure reasons, a draft escalation matrix               |
+| [aml-legal-sources.md](aml-legal-sources.md)         | Czech, EU and guidance sources with links, mapped to rules, priority, escalation and records     |
+| [mentor-questions.md](mentor-questions.md)           | Questions for FINREG, ČNB and the crash course, with what the law and data already answer        |
 | [ux-and-typed-ai.md](ux-and-typed-ai.md)             | AML triage UX patterns, Bedrock models with structured output, graph libraries                   |
 | [aws-account-setup.md](aws-account-setup.md)         | Our AWS profile setup (`hackathon`), daily commands, verified access and model behaviour         |
 | [aws-participant-guide.md](aws-participant-guide.md) | Team AWS account: SSO sign-in, models and limits, budget, blocked services                       |

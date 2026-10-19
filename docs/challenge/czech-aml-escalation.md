@@ -13,7 +13,7 @@ Not legal advice. Statute text read on zakonyprolidi.cz (consolidated versions),
 | odklad splnění příkazu klienta      | postponing the client's order                      | §20 Act [1]       |
 
 - **Contact person limits.** At a credit institution the contact person may not be a board member, unless justified. It also may not be someone who concludes or settles trades, or works in internal audit. The contact person must be able to reach the board directly [1].
-- **Deadline.** There is no day count. Report "bez zbytečného odkladu" (without undue delay), and immediately where delay is risky [1]. The 5-working-day figure in AMLR is the deadline for answering FIU information requests, not for filing [3].
+- **Deadline.** There is no day count. Report "bez zbytečného odkladu" (without undue delay), and immediately where delay is risky [1]. The 5-working-day figure in AMLR is the deadline for answering FIU information requests, not for filing [3]. FAÚ guidance MP 4 reads "without undue delay" as shorter than 5 calendar days (see [aml-legal-sources.md](aml-legal-sources.md), CZ4).
 - **Postponement.** The bank may execute a suspicious order no earlier than 24 hours after FAÚ receives the report, and must secure the assets. FAÚ may extend by up to 2 working days, or order up to 3 working days at the bank holding the assets [1].
 - **Tipping-off.** §38 imposes confidentiality about reports and investigations [1].
 - **Retention.** 10 years [1].
@@ -34,7 +34,7 @@ Not legal advice. Statute text read on zakonyprolidi.cz (consolidated versions),
 - The Decree requires "oddělení neslučitelných funkcí" (separation of incompatible functions) in role appointments [2].
 - EBA: consult the compliance officer before senior management approves high-risk or PEP relationships. If management overrides that advice, record the decision and the mitigation (para 43) [7].
 - PEP: under Czech law a board member or their delegate approves (§9a(3)(d)) [1]. Under AMLR, senior management approves [3].
-- Rule that an analyst must not review a client they manage: **UNVERIFIED** in Czech or EU primary sources. The nearest is a MAS (Singapore, non-EU) finding that analysts closed alerts by accepting relationship-manager representations [8].
+- Rule that an analyst must not review a client they manage: **UNVERIFIED** in Czech or EU primary sources. The nearest is a MAS (Singapore, non-EU) finding that analysts closed alerts by accepting relationship-manager representations [8]. Rechecked on 2026-10-19 across the Act, the Decree, FAÚ guidance, AMLD, AMLR, EBA/GL/2022/05 and ČNB benchmark 2/2023: still not found, and no source requires four-eyes on alert closure either ([aml-legal-sources.md](aml-legal-sources.md)).
 
 ## 4. Alert closure record
 
