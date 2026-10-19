@@ -28,6 +28,8 @@ Several labels that can all apply are several Nouls, not one Choice.
 }
 ```
 
+Shape per type: a `noul` takes optional `criteria` with `true` and `false`; a `choice` takes `criteria` as a map of option to description (up to 255 options); a `score` takes `criteria` as an ordered array of 2 to 10 levels. `instructions` may be a string, or an object that holds the question in one field and supporting guidance in others (rules D, E and G use `question` and `guidance`). Checked against the HTTP API page on 2026-10-19.
+
 The response carries `model` (the exact version that answered), `answers` keyed by question id, and `usage` (input and output tokens). `POST https://api.typesafe.ai/v1/systemone`; the key stays server-side.
 
 All questions about one alert go in one request. They run in parallel and can't see each other's answers, so latency barely changes. A second request is only needed when an answer decides what to ask next.

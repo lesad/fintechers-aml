@@ -6,6 +6,7 @@
 
 ### Added
 
+- `docs/challenge/data-patterns.md` and `aml-pattern-research.md`: the data run on the synthetic data (no planted patterns; the generator ignores the profile) and the research behind it. Rule A, rule C, the priority scorecard and the candidates list now carry the data verdicts and proposals.
 - `docs/rules/`: the rule specifications to iterate on. One spec per rule (A, B, C) in a shared seven-step shape (detect, facts, gates, Jev judgements, triage, priority, route) with parameter tables, Jev questions in the API's request shape, reason templates and test cases; plus the priority scorecard, the escalation matrix, a guide to writing Jev questions and what Jev returns for the audit trail, and a backlog of further red flags.
 - `docs/challenge/`: `aml-legal-sources.md`, `mentor-questions.md`, `architecture.md` and `hackathon.md` (team, timeline, rules, judging, deliverables). The folder is now the single source of hackathon context; the context repo is frozen (ADR-0023).
 - `pnpm freeze` (`scripts/freeze.sh`): tag `origin/main` as `hackathon-submit` and lock `main` for the code freeze; `--undo` unlocks.

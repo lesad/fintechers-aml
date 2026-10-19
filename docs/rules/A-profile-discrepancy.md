@@ -27,35 +27,47 @@ For each client and each July day, compute the day's volume in CZK. The client g
 
 Prorating: a client contracted on 1 June 2026 has 30 days in Q2, so its Q2 average day is the Q2 volume divided by 30, not 91.
 
+K005492 (contracted 30 June, `q2_cnt` 0, `q2_max` 0) is the one client inactive in Q2. Per the rule text it is compared to projected volume only: it never enters the Q2 day branch or the single-transaction branch. The round 2 count of that branch (tails results) included 60 of its July payments, measured against `2 × q2_max = 0`. Code must skip both Q2 branches when `q2_cnt` is 0.
+
 ## 2. Facts (code)
 
-| Fact                      | Meaning                                                    | Unit or band                                                                                                                                                    |
-| ------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `branches_fired`          | Which of the three branches tripped                        | list                                                                                                                                                            |
-| `worst_day`               | July day with the highest ratio                            | date                                                                                                                                                            |
-| `day_vs_expected_monthly` | Worst day volume over expected monthly volume              | ratio                                                                                                                                                           |
-| `day_vs_q2_avg_day`       | Worst day volume over the (prorated) Q2 average day        | ratio                                                                                                                                                           |
-| `tx_vs_q2_max`            | Largest July transaction over the Q2 maximum               | ratio                                                                                                                                                           |
-| `breach_days`             | July days on which any day branch tripped                  | count of 31                                                                                                                                                     |
-| `czk_day_vs_q2_avg_day`   | As above, CZK payments only                                | ratio                                                                                                                                                           |
-| `czk_tx_vs_q2_max`        | As above, CZK payments only                                | ratio                                                                                                                                                           |
-| `czk_spike_band`          | Band of the CZK-only facts                                 | `normal` (CZK day at most 3x, CZK transaction at most 2x), `elevated` (CZK day above 3x, up to 10x), `extreme` (CZK day above 10x, or CZK transaction above 2x) |
-| `fx_share`                | Share of July CZK-equivalent volume in foreign currency    | 0 to 1                                                                                                                                                          |
-| `cross_border_share`      | Share of July volume with a foreign payer or payee country | 0 to 1                                                                                                                                                          |
-| `relationship_years`      | Years from the contract date to 1 July 2026                | years, and band `new` (< 1), `established` (1 to 3), `long` (> 3)                                                                                               |
-| `contracted_in_q2`        | Contract signed on or after 1 April 2026                   | bool                                                                                                                                                            |
-| `other_alerts`            | Rule B or C alerts on the same client                      | list                                                                                                                                                            |
+| Fact                      | Meaning                                                                                 | Unit or band                                                                                                                                                    |
+| ------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `branches_fired`          | Which of the three branches tripped                                                     | list                                                                                                                                                            |
+| `worst_day`               | July day with the highest ratio                                                         | date                                                                                                                                                            |
+| `day_vs_expected_monthly` | Worst day volume over expected monthly volume                                           | ratio                                                                                                                                                           |
+| `day_vs_q2_avg_day`       | Worst day volume over the (prorated) Q2 average day                                     | ratio                                                                                                                                                           |
+| `tx_vs_q2_max`            | Largest July transaction over the Q2 maximum                                            | ratio                                                                                                                                                           |
+| `breach_days`             | July days on which any day branch tripped                                               | count of 31                                                                                                                                                     |
+| `czk_day_vs_q2_avg_day`   | As above, CZK payments only                                                             | ratio                                                                                                                                                           |
+| `czk_tx_vs_q2_max`        | As above, CZK payments only                                                             | ratio                                                                                                                                                           |
+| `czk_spike_band`          | Band of the CZK-only facts                                                              | `normal` (CZK day at most 3x, CZK transaction at most 2x), `elevated` (CZK day above 3x, up to 10x), `extreme` (CZK day above 10x, or CZK transaction above 2x) |
+| `fx_share`                | Share of July CZK-equivalent volume in foreign currency                                 | 0 to 1                                                                                                                                                          |
+| `cross_border_share`      | Share of July volume with a foreign payer or payee country                              | 0 to 1                                                                                                                                                          |
+| `relationship_years`      | Years from the contract date to 1 July 2026                                             | years, and band `new` (< 1), `established` (1 to 3), `long` (> 3)                                                                                               |
+| `contracted_in_q2`        | Contract signed on or after 1 April 2026                                                | bool                                                                                                                                                            |
+| `other_alerts`            | Rule B or C alerts on the same client                                                   | list                                                                                                                                                            |
+| `count_gap`               | July count over the prorated Q2 monthly count (data run)                                | ratio                                                                                                                                                           |
+| `count_gap_rel_peer`      | `count_gap` over the peer group's median `count_gap` (data run)                         | ratio; percentile in the peer group                                                                                                                             |
+| `max_tx_raw_peer_pct`     | Percentile of the largest July payment in raw `amount` within the peer group (data run) | 0 to 1                                                                                                                                                          |
+| `thin_baseline`           | No Q2 transaction, or tenure under 7 days (data run)                                    | bool                                                                                                                                                            |
 
 Why the CZK-only facts: the generator drew amounts without regard to currency, and the Q2 statistics behave like unconverted amounts. After conversion every client trips rule A; on CZK payments alone, 2,003 clients have a single payment above 2x the Q2 maximum or a day above 10x the Q2 average day. The converted ratios decide that the alert fires, as the brief says; the CZK-only facts decide how worrying it is. The 10x cut-off is an illustration from the dry run, not a tuned value.
 
+Data run ([data-patterns.md](../challenge/data-patterns.md)): every client does about 72 payments in July whatever its profile, so the converted ratio sorts clients by a small expected count (about 119 / `exp_cnt`). The new facts rank on behaviour instead: `count_gap_rel_peer` because a natural person's median gap is 3.5x a legal entity's, and `max_tx_raw_peer_pct` because the CZK form of the largest payment picks EUR payments (254 of 282). Evidence on the CZK-only facts:
+
+- `czk_tx_vs_q2_max` is kept: a CZK payment above 2x the Q2 maximum (702 clients) is a triage and priority fact.
+- `czk_day_vs_q2_avg_day`, and the day half of `czk_spike_band`, are superseded by `count_gap_rel_peer`: a CZK-only day above 3x the Q2 average day holds for 4,162 clients, and the worst day ranks like the count gap (corr of logs 0.92).
+
 ## 3. Gates (code)
 
-| Gate                                | Outcome | Basis                                                                 |
-| ----------------------------------- | ------- | --------------------------------------------------------------------- |
-| Client is a PEP                     | REVIEW  | No source allows auto-closing PEP alerts                              |
-| AML risk score is high              | REVIEW  | AMLA draft para 78: no automated closure for higher risk              |
-| Client also has a rule B or C alert | REVIEW  | Linked transactions are a suspicion factor (AMLR Art. 69(2)); default |
-| Client was inactive in Q2           | REVIEW  | Activity after dormancy (EBA 9.6(b)(iv)); one client; default         |
+| Gate                                | Outcome | Basis                                                                                                           |
+| ----------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| Client is a PEP                     | REVIEW  | No source allows auto-closing PEP alerts                                                                        |
+| AML risk score is high              | REVIEW  | AMLA draft para 78: no automated closure for higher risk                                                        |
+| Client also has a rule B or C alert | REVIEW  | Linked transactions are a suspicion factor (AMLR Art. 69(2)); default                                           |
+| Client was inactive in Q2           | REVIEW  | Activity after dormancy (EBA 9.6(b)(iv)); one client; default                                                   |
+| Tenure under 90 days                | REVIEW  | Activity soon after opening (FATF, FAÚ); 230 clients, including the 12 with a thin baseline; default (data run) |
 
 ## 4. Judgements (Jev)
 
@@ -116,6 +128,8 @@ Questions:
 
 The relationship length and risk score mitigator (EBA 9.7(a)) is a fact in `state`, not a question: years and a score are computable, and asking Jev to compare numbers is its weak spot.
 
+Data run: `profile_consistent` has no behavioural signal to learn from. Risk score, PEP, channel, tenure and country make no difference to July behaviour, and the gap itself is arithmetic the code already computes. Proposed instead (not yet the contract; the question above stays until the team agrees): ask whether the client's named risk factors (type, AML risk score, PEP, contract channel, relationship length, country) together with the code-computed gap facts give an analyst reason to review, with criteria `true` "the risk factors and the gap facts together call for a human look" and `false` "the gap is explained by currency conversion and the risk factors give no reason to look further". The readable story stays with the reason template.
+
 ## 5. Triage policy (code)
 
 | Condition                                                          | Triage |
@@ -168,7 +182,9 @@ In [mentor-questions.md](../challenge/mentor-questions.md): currency conversion 
 
 ## Change log
 
-| Date       | Change                                    | Alerts               | FP share | Agreement (n) |
-| ---------- | ----------------------------------------- | -------------------- | -------- | ------------- |
-| 2026-10-19 | Dry run as written, converted to CZK      | 5,493 (every client) | n/a      | n/a           |
-| 2026-10-19 | Same, not converted (for comparison only) | 4,669                | n/a      | n/a           |
+| Date       | Change                                                                                                                                                                           | Alerts               | FP share                | Agreement (n) |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ----------------------- | ------------- |
+| 2026-10-19 | Dry run as written, converted to CZK                                                                                                                                             | 5,493 (every client) | n/a                     | n/a           |
+| 2026-10-19 | Same, not converted (for comparison only)                                                                                                                                        | 4,669                | n/a                     | n/a           |
+| 2026-10-19 | Data run, triage proposal A: REVIEW if count or amount gap at or above peer P95, raw largest payment at or above peer P95, tenure under 90 days, thin baseline, high risk or PEP | 5,493: REVIEW 1,150  | FP-eligible 4,343 (79%) | n/a           |
+| 2026-10-19 | Data run, triage proposal B: as A with the gap at peer P90 and a CZK payment above 2x the Q2 maximum                                                                             | 5,493: REVIEW 1,856  | FP-eligible 3,637       | n/a           |
