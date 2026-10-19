@@ -1,0 +1,180 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn",
+    "pedantic": "off"
+  },
+  "plugins": ["typescript", "react", "jsx-a11y", "import", "unicorn"],
+  "rules": {
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-param-reassign": [
+      "error",
+      {
+        "props": true,
+        "ignorePropertyModificationsForRegex": ["^draft", "^accumulator"]
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "react",
+            "importNames": ["useMemo", "useCallback", "memo"],
+            "message": "React Compiler handles memoization. Remove useMemo/useCallback/memo."
+          }
+        ]
+      }
+    ],
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "max-params": ["error", 3],
+    "complexity": ["warn", 15],
+    "import/no-duplicates": "error",
+    "import/no-unassigned-import": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error",
+    "react/jsx-key": "error",
+    "react/react-in-jsx-scope": "off",
+    "react/self-closing-comp": "error"
+  },
+  "overrides": [
+    {
+      // Module augmentation cannot use a `type` alias — the one legitimate exemption.
+      "files": ["global.ts"],
+      "rules": {
+        "typescript/consistent-type-definitions": "off"
+      }
+    },
+    {
+      "files": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/*.e2e.{ts,tsx}",
+        "**/*.stories.{ts,tsx}",
+        "tests/**",
+        "src/core/test/**"
+      ],
+      "rules": {
+        "no-console": "off",
+        "max-lines-per-function": "off",
+        "max-params": "off",
+        "no-await-in-loop": "off"
+      }
+    },
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["src/core/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "importNames": ["useMemo", "useCallback", "memo"],
+                "message": "React Compiler handles memoization. Remove useMemo/useCallback/memo."
+              }
+            ],
+            "patterns": [
+              {
+                "group": [
+                  "@/app",
+                  "@/app/**",
+                  "@/features",
+                  "@/features/**",
+                  "@/components",
+                  "@/components/**"
+                ],
+                "message": "core/ is the bottom infrastructure layer — it must not import app/, features/, or components/. Invert the dependency."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "importNames": ["useMemo", "useCallback", "memo"],
+                "message": "React Compiler handles memoization. Remove useMemo/useCallback/memo."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["@/app", "@/app/**", "@/features", "@/features/**"],
+                "message": "components/ must stay reusable — no imports from app/ (routes) or features/ (domain slices). Feature-specific UI belongs in src/features/<name>/."
+              },
+              {
+                "group": ["@/db", "@/db/**", "@/supabase/server"],
+                "message": "components/ must stay presentational and data-free — no direct DB/server access. Fetch in a route or feature and pass data down as props."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "importNames": ["useMemo", "useCallback", "memo"],
+                "message": "React Compiler handles memoization. Remove useMemo/useCallback/memo."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["@/app", "@/app/**", "@/features", "@/features/**"],
+                "message": "features/ are isolated slices — never import app/ (routes); import siblings by relative path and never reach another feature via @/features/* (hoist shared code to components/ or core/)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/components/**/*.tsx"],
+      "rules": {
+        "unicorn/filename-case": ["error", { "case": "pascalCase" }]
+      }
+    },
+    {
+      // shadcn generates these — keep upstream conventions so `shadcn add` stays a no-edit
+      // operation. Must stay LAST: overrides apply in order and the later block wins per rule.
+      "files": ["src/components/ui/**"],
+      "rules": {
+        "unicorn/filename-case": "off",
+        "typescript/consistent-type-definitions": "off",
+        "jsx-a11y/label-has-associated-control": "off",
+        "react/no-array-index-key": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "node_modules",
+    ".next",
+    "dist",
+    "playwright-report",
+    "test-results",
+    "supabase/migrations",
+    "next-env.d.ts",
+    "storybook-static"
+  ]
+}

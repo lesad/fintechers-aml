@@ -1,0 +1,80 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,loading,error,not-found,route}.{ts,tsx}",
+    "src/proxy.ts",
+    "src/instrumentation.ts",
+    "scripts/**/*.ts",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "drizzle.config.ts",
+    "next.config.ts",
+    "src/**/*.e2e.ts",
+    "src/features/*/index.ts",
+    "src/core/*/index.ts",
+    "src/core/supabase/{client,server}.ts",
+    "src/core/i18n/request.ts",
+    "src/core/test/server-only-stub.ts",
+    "global.ts"
+  ],
+  "ignorePatterns": [
+    "**/*.generated.ts",
+    "src/components/ui/**",
+    "src/docs/**",
+    "scripts/eject/pristine/**",
+    "supabase/migrations/**",
+    ".next/**",
+    "messages/**",
+    ".storybook/**",
+    "storybook-static/**"
+  ],
+  "ignoreExports": [
+    {
+      "file": "src/app/**/*.{ts,tsx}",
+      "exports": [
+        "dynamic",
+        "dynamicParams",
+        "revalidate",
+        "fetchCache",
+        "runtime",
+        "preferredRegion",
+        "maxDuration",
+        "alt",
+        "size",
+        "contentType"
+      ]
+    }
+  ],
+  "rules": {
+    "unused-files": "error",
+    "unused-exports": "error",
+    "unused-types": "error",
+    "unused-dependencies": "error",
+    "circular-dependencies": "error"
+  },
+  "health": {
+    "ignore": ["*.config.ts", "scripts/**", "src/core/test/**", "**/*.e2e.ts"]
+  },
+  "ignoreDependencies": [
+    "@base-ui/react",
+    "@hookform/resolvers",
+    "class-variance-authority",
+    "lucide-react",
+    "react-hook-form",
+    "react-dom",
+    "@supabase/supabase-js",
+    "@swc/plugin-react-remove-properties",
+    "shadcn",
+    "@chromatic-com/storybook",
+    "@storybook/addon-a11y",
+    "@storybook/addon-docs",
+    "@storybook/addon-mcp",
+    "@storybook/addon-onboarding",
+    "tw-animate-css"
+  ],
+  "duplicates": {
+    "minTokens": 50,
+    "minLines": 5,
+    "ignore": ["src/app/globals.css"]
+  }
+}

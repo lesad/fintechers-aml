@@ -1,0 +1,44 @@
+{
+  "home": {
+    "title": "agentic-next-app",
+    "subtitle": "Agentic Next.js template — start building.",
+    "cta": "Get started"
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. You can try again.",
+    "retry": "Try again",
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you're looking for doesn't exist."
+    },
+    "global": {
+      "title": "Application error",
+      "description": "A critical error occurred. Please reload the page."
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "too_small": {
+      "string": "Must be at least {minimum} characters",
+      "number": "Must be at least {minimum}"
+    },
+    "invalid_format": {
+      "email": "Enter a valid email address"
+    },
+    "custom": "This value isn't allowed"
+  },
+  "guestbook": {
+    "title": "Guestbook",
+    "subtitle": "Leave a message for future visitors.",
+    "nameLabel": "Name",
+    "messageLabel": "Message",
+    "submit": "Sign guestbook",
+    "submitting": "Signing…",
+    "success": "Thanks for signing!",
+    "empty": "No entries yet — be the first to sign.",
+    "errors": {
+      "unexpected": "Couldn't save your message — please try again."
+    }
+  }
+}

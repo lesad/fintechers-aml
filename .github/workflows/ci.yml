@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-for-build
+  SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
+  POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+  SKIP_ENV_VALIDATION: "true"
+
+jobs:
+  check:
+    name: typecheck / lint / format / unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
+  integration:
+    name: integration (Vitest + Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - run: supabase start
+      - run: pnpm test:integration
+
+  e2e:
+    name: e2e (Playwright + Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: supabase start
+      - run: pnpm build
+      - run: pnpm test:e2e
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  fallow:
+    name: fallow (dead code / dupes / health)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write # sticky findings comment
+      checks: write # Fallow Check Run
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fallow-rs/fallow@v2
+        with:
+          format: sarif
+          # Advisory job (see continue-on-error above): surface findings as PR
+          # annotations but don't hard-fail the check on them. Default is true.
+          fail-on-issues: false
+          # Post a sticky PR comment + Fallow Check Run so findings are prominent,
+          # not just inline annotations (GitHub caps those at 10 per type per step).
+          comment: true

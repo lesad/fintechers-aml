@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(npx *)",
+      "Bash(supabase *)",
+      "Bash(drizzle-kit *)",
+      "Bash(oxlint *)",
+      "Bash(oxfmt *)",
+      "Bash(fallow *)",
+      "Bash(playwright *)",
+      "Bash(storybook *)",
+      "Bash(gh *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "out=$(bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit.sh\" 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
+            "if": "Bash(git commit *)",
+            "timeout": 180,
+            "statusMessage": "Pre-commit checks"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/docs-drift-reminder.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking docs/ sync"
+          }
+        ]
+      }
+    ]
+  }
+}

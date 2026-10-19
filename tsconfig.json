@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["dom", "dom.iterable", "ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "verbatimModuleSyntax": false,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/db": ["./src/core/db"],
+      "@/db/*": ["./src/core/db/*"],
+      "@/env": ["./src/core/env"],
+      "@/hooks": ["./src/core/hooks"],
+      "@/i18n": ["./src/core/i18n"],
+      "@/supabase/*": ["./src/core/supabase/*"],
+      "@/test": ["./src/core/test"],
+      "@/test/*": ["./src/core/test/*"],
+      "@/utils": ["./src/core/utils"],
+      "@/validation": ["./src/core/validation"],
+      "@/features/*": ["./src/features/*"],
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "playwright-report",
+    "test-results",
+    "scripts/eject/pristine"
+  ]
+}

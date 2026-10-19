@@ -1,0 +1,44 @@
+# Node / pnpm
+node_modules
+.pnpm-store
+
+# Next.js
+.next
+out
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Environment
+.env
+.env*.local
+
+# Tests
+playwright-report
+test-results
+coverage
+
+# Supabase
+supabase/.temp
+supabase/.branches
+
+# Fallow
+.fallow
+
+# OS / editors
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+*storybook.log
+storybook-static
+.vercel
+.claude/skills/
+.claude/settings.local.json
+
+# Git worktrees created inside the repo (gittr)
+.worktrees/
+
+# Superpowers agent runtime docs — branch-runtime notes + plan/spec drafts, never committed (ADR-0004)
+docs/superpowers/

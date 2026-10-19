@@ -1,0 +1,1 @@
+-- Minimal seed. Add project-specific seed data here.
