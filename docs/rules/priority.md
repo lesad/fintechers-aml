@@ -18,6 +18,25 @@ The brief lists the factors: AML risk score, PEP, country, amount or volume, con
 | Multiple flags      | 2 rule types on the client 5, all 3 rule types 10                                                                                                                   | 10  | all alerts   |
 | **Total**           |                                                                                                                                                                     | 100 |              |
 
+### Data run
+
+Proposals from the data run ([data-patterns.md](../challenge/data-patterns.md)), status default (data run). They are not fitted (the data has no labels) and do not replace the weights above until the team agrees. Main finding: risk score, PEP, channel, tenure and country make no difference to behaviour in this data; they score because the brief names them, not because they predict anything.
+
+| Factor                   | Data run note                                                                                            | Proposed points (default (data run))                                                                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| AML risk score           | No behavioural difference between high, medium and low (same July count and amounts)                     | Unchanged: high 20, medium 10                                                                                         |
+| PEP                      | Behaviour indistinguishable from other clients; a static attribute only                                  | Unchanged: 15                                                                                                         |
+| Country                  | Zero hits on the July 2026 lists; TR and ZA on older lists give 398 transactions                         | Unchanged; live only if the list changes                                                                              |
+| Amount or volume, rule A | `czk_spike_band` mostly measures FX: the CZK form of the largest payment picks EUR payments              | Raw largest payment at or above peer P95 10 (282 clients); a CZK payment above 2x the Q2 maximum 5 (702 clients)      |
+| Amount or volume, rule C | Half of hits send out more than 1.5x what came in: one large unrelated outflow, not a pass-through       | Forwarded share 0.8 to 1.2: +10; above 2: −5; all outflow legs abroad: +5 (S1) or at most +3 (S8). Weights UNVERIFIED |
+| Conduct discrepancy      | `profile_consistent` has no behavioural signal to learn from; the count gap is arithmetic                | Count gap percentile in the peer group: P95 and above 20, P90 to P95 12, P75 to P90 6 (exceeds the current 15 cap)    |
+| Relationship length      | No behavioural difference once the Q2 baseline is prorated; scores as a named factor                     | Under 90 days 10, 90 to 365 days 5 (230 and about 626 clients)                                                        |
+| Contract channel         | Only effect found: CZK share of volume 0.106 distant against 0.087 in person                             | Unchanged: distant 5                                                                                                  |
+| Multiple flags           | Not computed with B and C together                                                                       | B or C on the same client 10 each, at most 20                                                                         |
+| Further flags            | Near-zero balance (25 clients), night activity, foreign counterparty share carry no signal beyond chance | Near-zero balance +3 or drop; night at most 3 or drop; foreign share 0 to 5 (UNVERIFIED)                              |
+
+On the rule A factors the data run computed (no country, no multiple flags), the proposed points give p50 10, p90 25, p99 40, max 65; under 20: 4,382 clients, 20 to 39: 1,055, 40 and above: 56. K005492 has no Q2 baseline; the score script set its percentiles to 1. Decide that explicitly in code.
+
 ## Floors
 
 Applied after the sum. The highest floor that matches wins.

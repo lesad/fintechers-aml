@@ -10,16 +10,18 @@
 
 For each incoming payment, open a 24-hour window ending at it and sum the incoming payments inside. If the sum is above the threshold, sum the outgoing payments in the 6 hours after the window's last inflow, counting only payees that were not payers in the window. The client gets one alert if any window qualifies; the strongest window (highest forwarded share) goes into the facts.
 
-| Parameter             | Value                                   | Unit                  | Source                         | Status        |
-| --------------------- | --------------------------------------- | --------------------- | ------------------------------ | ------------- |
-| `c_in_window_hours`   | 24, floating                            | hours                 | brief; floating is our reading | default (ask) |
-| `c_in_min_czk`        | 100,000, on the window's sum            | CZK, strictly above   | brief; "sum" is our reading    | default (ask) |
-| `c_out_window_hours`  | 6, starting at the window's last inflow | hours                 | brief; start point is ours     | default (ask) |
-| `c_forward_share_min` | 0.80                                    | out over in, at least | brief                          | brief         |
-| `c_exclude_payers`    | payees that paid in during the window   | accounts              | brief                          | brief         |
-| `c_remittances`       | excluded on both sides                  | no payer account      | data                           | default (ask) |
+| Parameter             | Value                                   | Unit                  | Source                                                           | Status        |
+| --------------------- | --------------------------------------- | --------------------- | ---------------------------------------------------------------- | ------------- |
+| `c_in_window_hours`   | 24, floating                            | hours                 | brief; floating is our reading                                   | default (ask) |
+| `c_in_min_czk`        | 100,000, on the window's sum            | CZK, strictly above   | brief; "sum" is our reading                                      | default (ask) |
+| `c_out_window_hours`  | 6, starting at the window's last inflow | hours                 | brief; start point is ours                                       | default (ask) |
+| `c_forward_share_min` | 0.80                                    | out over in, at least | brief                                                            | brief         |
+| `c_exclude_payers`    | payees that paid in during the window   | accounts              | brief                                                            | brief         |
+| `c_remittances`       | counted as outflow; never as inflow     | no payer account      | data run: 1,077 clients with remittances as outflow, 720 without | default (ask) |
 
 Windows cross midnight often (16,217 qualifying windows span two dates), so calendar days would miss most of them.
+
+Data run ([data-patterns.md](../challenge/data-patterns.md)): the same rule with the outflow window placed in the 6 hours before the inflow gives the same counts (1,080 clients against 1,077; 740 against 720 without remittances). On this data rule C finds coincidences of large amounts, not planted pass-throughs, so its triage and priority rest on the facts, the scorecard and Jev.
 
 ## 2. Facts (code)
 
@@ -77,6 +79,7 @@ State: the client facts as in rule A (type, country, channel, relationship, risk
 Notes for iteration:
 
 - `own_account_sweep` cannot be evidenced on this data: no transaction runs between two clients, and an account id only encodes its country. Expect it near zero; drop it if the labels agree.
+- `payroll_pass_through` and `trade_settlement` can be evidenced only in part: client type, payee count, amounts, payee country and the currency of each leg exist, but there is no payment purpose, industry or history beyond July. `mule_pattern` is the one typology every distinguishing fact exists for. The data run suggests Jev answer "consistent / not consistent / cannot tell" and name the missing fact, rather than return a typology label.
 - Jev favours the first option in a Choice. Keep the order fixed and logged, and test once with the order reversed on the labelled set.
 
 ## 5. Triage policy (code)
@@ -123,7 +126,12 @@ In [mentor-questions.md](../challenge/mentor-questions.md): floating window or c
 
 ## Change log
 
-| Date       | Change                                    | Alerts        | FP share       | Agreement (n) |
-| ---------- | ----------------------------------------- | ------------- | -------------- | ------------- |
-| 2026-10-19 | Approximate dry run, converted            | 1,077 clients | 0 (all REVIEW) | n/a           |
-| 2026-10-19 | Same, not converted (for comparison only) | 16 clients    | 0              | n/a           |
+| Date       | Change                                                                                                      | Alerts        | FP share       | Agreement (n) |
+| ---------- | ----------------------------------------------------------------------------------------------------------- | ------------- | -------------- | ------------- |
+| 2026-10-19 | Approximate dry run, converted                                                                              | 1,077 clients | 0 (all REVIEW) | n/a           |
+| 2026-10-19 | Same, not converted (for comparison only)                                                                   | 16 clients    | 0              | n/a           |
+| 2026-10-19 | Data run, variant A (floating 24 h, 6 h after each inflow), remittances as outflow; without remittances 720 | 1,077 clients | 0 (all REVIEW) | n/a           |
+| 2026-10-19 | Data run, variant B (calendar day, 6 h after the day's last inflow); without remittances 408                | 631 clients   | n/a            | n/a           |
+| 2026-10-19 | Data run, variant B2 (calendar day, same-day outflow); without remittances 1,174                            | 1,660 clients | n/a            | n/a           |
+| 2026-10-19 | Data run, variant C (single inflow above 100,000); without remittances 490                                  | 758 clients   | n/a            | n/a           |
+| 2026-10-19 | Data run, variant A with the 6 h outflow window before the inflow (null model); without remittances 740     | 1,080 clients | n/a            | n/a           |

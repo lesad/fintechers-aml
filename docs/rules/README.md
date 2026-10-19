@@ -6,16 +6,18 @@ Background and sources live in [`../challenge/`](../challenge/README.md). This f
 
 ## Files
 
-| File                                                 | What                                                                    |
-| ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| [TEMPLATE.md](TEMPLATE.md)                           | Copy this to start a new rule                                           |
-| [A-profile-discrepancy.md](A-profile-discrepancy.md) | Rule A: daily volume or single transaction out of line with the profile |
-| [B-high-risk-pep.md](B-high-risk-pep.md)             | Rule B: high-risk jurisdiction or PEP                                   |
-| [C-flow-through.md](C-flow-through.md)               | Rule C: money in and out again within hours                             |
-| [priority.md](priority.md)                           | The 0 to 100 priority scorecard shared by every rule                    |
-| [escalation.md](escalation.md)                       | Who decides and who approves, with the conflict-of-interest checks      |
-| [jev-questions.md](jev-questions.md)                 | How to write a Jev question, what Jev returns, what we log              |
-| [candidates.md](candidates.md)                       | Further red flags we considered, with the data verdict on each          |
+| File                                                            | What                                                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [TEMPLATE.md](TEMPLATE.md)                                      | Copy this to start a new rule                                             |
+| [A-profile-discrepancy.md](A-profile-discrepancy.md)            | Rule A: daily volume or single transaction out of line with the profile   |
+| [B-high-risk-pep.md](B-high-risk-pep.md)                        | Rule B: high-risk jurisdiction or PEP                                     |
+| [C-flow-through.md](C-flow-through.md)                          | Rule C: money in and out again within hours                               |
+| [priority.md](priority.md)                                      | The 0 to 100 priority scorecard shared by every rule                      |
+| [escalation.md](escalation.md)                                  | Who decides and who approves, with the conflict-of-interest checks        |
+| [jev-questions.md](jev-questions.md)                            | How to write a Jev question, what Jev returns, what we log                |
+| [candidates.md](candidates.md)                                  | Further red flags we considered, with the data verdict on each            |
+| [data-patterns.md](../challenge/data-patterns.md)               | Data run: the generator fingerprint and the verdict on every signal tried |
+| [aml-pattern-research.md](../challenge/aml-pattern-research.md) | The pattern research behind the data run and the candidates               |
 
 ## Anatomy of a rule
 
