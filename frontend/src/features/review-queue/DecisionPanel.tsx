@@ -3,6 +3,9 @@ import { useState } from "react";
 
 import { Card, type CaseStatus } from "@/components";
 
+import { formatTs } from "./queue";
+
+import type { CaseEvent } from "./api";
 import type { Decision } from "./decisions";
 import type { Role } from "./queue";
 
@@ -50,8 +53,51 @@ const copy = {
   },
 } as const;
 
+const ACTION_LABEL: Record<CaseEvent["action"], string> = {
+  ASSIGNED: "Assigned",
+  REASSIGNED: "Reassigned",
+  NEW: "Reopened",
+  ESCALATED: "Escalated",
+  FALSE_POSITIVE: "False positive",
+  REPORTED: "Reported",
+};
+
+const logEntry = cva("flex flex-col gap-1 rounded-md border px-3 py-2.5", {
+  variants: {
+    action: {
+      ASSIGNED: "border-indigo",
+      REASSIGNED: "border-indigo",
+      NEW: "border-indigo",
+      ESCALATED: "border-indigo",
+      FALSE_POSITIVE: "border-low-bg bg-low-bg",
+      REPORTED: "border-high-bg bg-high-bg",
+    },
+  },
+});
+
+/** The case's decision log, newest first; a step without an actor is the engine's own routing. */
+function DecisionLog({ log }: { log: CaseEvent[] }) {
+  if (log.length === 0) return null;
+  return (
+    <ol aria-label="Decision log" className="flex flex-col gap-1.5">
+      {log.map((e) => (
+        <li key={`${e.at}-${e.action}`} className={logEntry({ action: e.action })}>
+          <span className="text-[13px] font-bold">
+            {ACTION_LABEL[e.action]}
+            {e.assignee && <span className="font-normal text-fg-muted"> → {e.assignee}</span>}
+          </span>
+          <span className="text-xs text-fg-muted">
+            {e.actor ?? "Triage"} · {formatTs(e.at)}
+          </span>
+          {e.reason && <span className="text-[13px] text-pretty">{e.reason}</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 type DecisionPanelProps = {
-  decision: Decision | undefined;
+  log: CaseEvent[];
   /** The case status the engine holds; an escalated case moves on to false positive or report. */
   saved: CaseStatus;
   role: Role;
@@ -61,9 +107,10 @@ type DecisionPanelProps = {
 
 /**
  * New cases: false positive or escalate. Escalated cases belong to the manager (false positive or report);
- * a reviewer only sees that they wait. Every choice needs a reason; once decided, shows who decided what and why.
+ * a reviewer only sees that they wait. Every choice needs a reason. Below, the decision log: who routed, decided
+ * or reassigned what and why.
  */
-export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanelProps) {
+export function DecisionPanel({ log, saved, role, onDecide }: DecisionPanelProps) {
   const choices: Choice[] =
     saved === "Escalated" ? ["falsePositive", "report"] : ["falsePositive", "escalate"];
   const [choice, setChoice] = useState<Choice | null>(null);
@@ -79,6 +126,7 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
     setSaving(true);
     setError(null);
     call()
+      .then(() => setChoice(null))
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setSaving(false));
   };
@@ -89,21 +137,6 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
     </span>
   );
 
-  if (decision) {
-    return (
-      <Card raised className="overflow-hidden pb-3.5">
-        <span className="pt-0.5 text-sm font-bold text-fg">Decision</span>
-        <div className="flex flex-col gap-1.5 rounded-md bg-sel px-3 py-2.5">
-          <span className="text-[13px] font-bold">{decision.action}</span>
-          <span className="text-xs text-fg-muted">
-            {decision.by} · {decision.at}
-          </span>
-          <span className="text-[13px] text-pretty">{decision.reason}</span>
-        </div>
-      </Card>
-    );
-  }
-
   if (saved === "Escalated" && role !== "Manager") {
     return (
       <Card raised className="overflow-hidden pb-3.5">
@@ -111,6 +144,7 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
         <span className="text-[13px] text-fg-muted">
           <b className="text-fg">Escalated</b>. A manager decides now: false positive or report.
         </span>
+        <DecisionLog log={log} />
       </Card>
     );
   }
@@ -120,8 +154,9 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
       <Card raised className="overflow-hidden pb-3.5">
         <span className="pt-0.5 text-sm font-bold text-fg">Decision</span>
         <span className="text-[13px] text-fg-muted">
-          Resolved as <b className="text-fg">{saved}</b>. The reason is not stored yet.
+          Resolved as <b className="text-fg">{saved}</b>.
         </span>
+        <DecisionLog log={log} />
       </Card>
     );
   }
@@ -175,6 +210,7 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
       ) : (
         <span className="text-xs text-fg-subtle">Reason is required after decision.</span>
       )}
+      <DecisionLog log={log} />
     </Card>
   );
 }

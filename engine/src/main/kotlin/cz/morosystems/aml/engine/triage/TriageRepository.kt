@@ -179,6 +179,37 @@ class TriageRepository(private val jdbc: JdbcClient) {
         }
     }
 
+    /**
+     * Assigns every case of the run nobody has assigned yet: one escalated by triage to the manager, any other
+     * to the reviewer, and logs that as the engine's step. Run it after [save], which sets the escalations.
+     */
+    fun route(runId: Long) {
+        jdbc.sql(
+            """
+            with routed as (
+                select transaction_id, bool_or(status = 'ESCALATED') as escalated
+                from alert where run_id = :run and transaction_id is not null group by transaction_id
+            )
+            update alert a set assignee_id = (
+                select min(id) from app_user where role = case when r.escalated then 'MANAGER' else 'REVIEWER' end
+            )
+            from routed r
+            where a.run_id = :run and a.transaction_id = r.transaction_id and a.assignee_id is null
+            """,
+        ).param("run", runId).update()
+        jdbc.sql(
+            """
+            insert into case_event (run_id, transaction_id, action, assignee_id)
+            select a.run_id, a.transaction_id, case when bool_or(a.status = 'ESCALATED') then 'ESCALATED' else 'ASSIGNED' end,
+                   min(a.assignee_id)
+            from alert a
+            where a.run_id = :run and a.transaction_id is not null
+              and not exists (select 1 from case_event e where e.run_id = a.run_id and e.transaction_id = a.transaction_id)
+            group by a.run_id, a.transaction_id
+            """,
+        ).param("run", runId).update()
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun evidence(raw: String?): Map<String, Any?> =
         // The column is `jsonb` of a flat object written by the run; Jackson hands back a LinkedHashMap of it.

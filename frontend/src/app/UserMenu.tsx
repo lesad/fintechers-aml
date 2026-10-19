@@ -2,19 +2,7 @@ import { cva } from "class-variance-authority";
 import { useId, useRef, useState } from "react";
 
 import { Popover } from "@/components";
-
-import type { User } from "@/user";
-
-/** `J. Novák` → `JN` */
-const initials = (name: string) =>
-  name
-    .split(/[\s.]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("")
-    .slice(0, 2);
-
-const ROLE_LABEL: Record<User["role"], string> = { REVIEWER: "Reviewer", MANAGER: "Manager" };
+import { initials, ROLE_LABEL, type User } from "@/user";
 
 const choice = cva(
   "flex w-full cursor-pointer items-baseline gap-1 rounded px-2 py-1.5 text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-purple/40",

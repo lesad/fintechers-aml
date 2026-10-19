@@ -3,7 +3,8 @@ import { useState } from "react";
 import { AiLabel, Card, Toast } from "@/components";
 
 import { AiNotConnected } from "./AiNotConnected";
-import { fetchSuggestion } from "./api";
+import { assign, fetchSuggestion } from "./api";
+import { AssigneeCard } from "./AssigneeCard";
 import { caseState } from "./case-state";
 import { ClientCard } from "./ClientCard";
 import { ClientHistoryCard } from "./ClientHistoryCard";
@@ -17,11 +18,14 @@ import { useDetail } from "./use-detail";
 import type { TransactionDetail as Detail, SuggestedRule, Suggestion } from "./api";
 import type { Decision } from "./decisions";
 import type { Role } from "./queue";
+import type { User } from "@/user";
 
 type TransactionDetailProps = {
   id: string;
   decisions: Record<string, Decision>;
   role: Role;
+  /** Everyone the case can be handed to. */
+  users: User[];
   /** Saves the status on the engine, then records the decision. */
   onDecide: (d: Pick<Decision, "action" | "reason">) => Promise<void>;
   /** Saves an accepted rule suggestion as a draft and returns the new version's id. */
@@ -32,7 +36,8 @@ type TransactionDetailProps = {
 /** Loads one transaction from the engine and shows it; a decision saves the case status on the engine. */
 export function TransactionDetail({ id, ...rest }: TransactionDetailProps) {
   const detail = useDetail(id);
-  if (detail.status === "ready") return <DetailView detail={detail.data} {...rest} />;
+  if (detail.status === "ready")
+    return <DetailView detail={detail.data} reload={detail.reload} {...rest} />;
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-2 text-fg-subtle">
       {detail.status === "loading" && (
@@ -67,10 +72,12 @@ function DetailView({
   detail,
   decisions,
   role,
+  users,
   onDecide,
   onAcceptSuggestion,
   onOpen,
-}: Omit<TransactionDetailProps, "id"> & { detail: Detail }) {
+  reload,
+}: Omit<TransactionDetailProps, "id"> & { detail: Detail; reload: () => Promise<void> }) {
   const { transaction: tx, client, rating } = detail;
   const decision = decisions[tx.id];
   const state = caseState(detail, decision);
@@ -85,6 +92,7 @@ function DetailView({
     const result =
       alertId === undefined ? null : await fetchSuggestion(alertId, reason).catch(() => undefined);
     await onDecide({ action: "False Positive", reason });
+    void reload();
     if (result?.kind === "rule_version") setSuggestion(result);
     else if (result === undefined)
       setToast({ message: "Marked as false positive. The rule suggestion failed." });
@@ -163,6 +171,17 @@ function DetailView({
           </div>
 
           <div className="sticky top-3 flex flex-col gap-3">
+            {rating && (
+              <AssigneeCard
+                assignee={detail.assignee}
+                users={users}
+                closed={state.saved === "False Positive" || state.saved === "Reported"}
+                onAssign={async (u) => {
+                  await assign(tx.id, u.id);
+                  await reload();
+                }}
+              />
+            )}
             <ClientCard client={client} />
             {state.decides === "triage" && !decision && (
               <Card raised title="Decision">
@@ -174,13 +193,13 @@ function DetailView({
             )}
             {rating && state.decides === "reviewer" && (
               <DecisionPanel
-                decision={decision}
+                log={detail.log}
                 saved={state.saved}
                 role={role}
                 onDecide={(action, reason) =>
                   action === "False Positive"
                     ? markFalsePositive(reason)
-                    : onDecide({ action, reason })
+                    : onDecide({ action, reason }).then(reload)
                 }
               />
             )}

@@ -107,6 +107,27 @@ class TriageServiceTest {
         assertThat(status(decided)).isEqualTo("FALSE_POSITIVE")
     }
 
+    @Test
+    fun routesAnEscalatedCaseToTheManagerAndAnyOtherToTheReviewerOnceAndLogsIt() {
+        val runId = runs.run().runId
+        val misrouted = jdbc.sql(
+            """
+            select count(*) from alert a left join app_user u on u.id = a.assignee_id
+            where a.run_id = ? and a.transaction_id is not null
+              and u.role is distinct from (case when a.status = 'ESCALATED' then 'MANAGER' else 'REVIEWER' end)
+            """,
+        ).param(runId).query(Long::class.java).single()
+        assertThat(misrouted).isZero()
+
+        val cases = jdbc.sql("select count(distinct transaction_id) from alert where run_id = ? and transaction_id is not null")
+            .param(runId).query(Long::class.java).single()
+        assertThat(cases).isPositive()
+        triage.triageRun(runId)
+        val logged = jdbc.sql("select count(*) from case_event where run_id = ? and actor_id is null and action in ('ASSIGNED', 'ESCALATED')")
+            .param(runId).query(Long::class.java).single()
+        assertThat(logged).isEqualTo(cases)
+    }
+
     private fun status(alertId: Long) =
         jdbc.sql("select status from alert where id = ?").param(alertId).query(String::class.java).single()
 

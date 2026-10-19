@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.transaction
 
+import cz.morosystems.aml.engine.user.AppUser
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -43,7 +44,7 @@ data class TransactionPage(
     val size: Int,
     /** Rows matching the filters, across all pages. */
     val total: Long,
-    /** Transactions in the queue per rating, ignoring the filters. */
+    /** Transactions in the queue per rating, ignoring every filter but the assignee. */
     val countsByRating: Map<String, Long>,
 )
 
@@ -125,12 +126,25 @@ data class TransactionDetail(
     val disposition: String?,
     /** The most advanced status of its alerts, as in the queue; null when the latest run raised none. */
     val status: String?,
+    /** Who works the case; null when the latest run raised no alert on it or it was never routed. */
+    val assignee: AppUser?,
+    /** The case's decision log, newest first. */
+    val log: List<CaseEvent>,
     val alerts: List<TransactionAlert>,
     /** The client's transactions on this transaction's day, newest first (it among them): the money flow. */
     val day: List<HistoryTransaction>,
     /** All of the client's transactions; `GET /api/transactions/{id}/history` pages through them. */
     val historyCount: Int,
 )
+
+/**
+ * One step in a case's decision log (table `case_event`).
+ *
+ * @property action `ASSIGNED`, `REASSIGNED`, or the status a decision set (`ESCALATED`, `FALSE_POSITIVE`, `REPORTED`, `NEW`)
+ * @property actor the user's name; null when the engine took the step on its own (routing at triage)
+ * @property assignee who works the case after this step
+ */
+data class CaseEvent(val at: OffsetDateTime, val action: String, val actor: String?, val reason: String?, val assignee: String?)
 
 /** A batch of the client's transactions next to another one, newest first. */
 data class HistoryPage(val items: List<HistoryTransaction>, val more: Boolean)

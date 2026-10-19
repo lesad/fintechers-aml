@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { userHeaders } from "@/user";
+import { userHeaders, userSchema } from "@/user";
 
 // The engine's /api/transactions contract (engine/.../transaction/TransactionModel.kt).
 // Amounts arrive in CZK; everything else is parsed here, so the UI never trusts a raw shape.
@@ -63,6 +63,15 @@ const historyTx = z.object({
   alertTypes: z.array(z.string()),
 });
 
+/** One step in a case's decision log; `actor` is null when the engine took it on its own. */
+const caseEvent = z.object({
+  at: z.string(),
+  action: z.enum(["ASSIGNED", "REASSIGNED", "NEW", "ESCALATED", "FALSE_POSITIVE", "REPORTED"]),
+  actor: z.string().nullable(),
+  reason: z.string().nullable(),
+  assignee: z.string().nullable(),
+});
+
 const detail = z.object({
   transaction: z.object({
     id: z.string(),
@@ -97,6 +106,10 @@ const detail = z.object({
   rating: rating.nullable(),
   disposition: disposition.nullable(),
   status: alertStatus.nullable(),
+  /** Who works the case; null when it was never routed. */
+  assignee: userSchema.nullable(),
+  /** The case's decision log, newest first. */
+  log: z.array(caseEvent),
   alerts: z.array(
     z.object({
       id: z.number(),
@@ -133,6 +146,7 @@ export type TransactionDetail = z.infer<typeof detail>;
 export type DetailClient = TransactionDetail["client"];
 export type HistoryTransaction = z.infer<typeof historyTx>;
 export type HistoryPage = z.infer<typeof historyPage>;
+export type CaseEvent = z.infer<typeof caseEvent>;
 
 export class NotFoundError extends Error {}
 
@@ -147,25 +161,45 @@ async function get<T>(url: string, schema: z.ZodType<T>, signal?: AbortSignal): 
 }
 
 export function fetchFlagged(
-  params: { q: string; rating: string; status: string; page: number; size: number },
+  params: {
+    q: string;
+    rating: string;
+    status: string;
+    /** A user id: only that user's cases, and the counts scoped to them. */
+    assignee: number | undefined;
+    page: number;
+    size: number;
+  },
   signal?: AbortSignal,
 ): Promise<TransactionPage> {
   const qs = new URLSearchParams({ page: String(params.page), size: String(params.size) });
   if (params.q.trim()) qs.set("q", params.q.trim());
   if (params.rating !== "all") qs.set("rating", params.rating);
   if (params.status) qs.set("status", params.status);
+  if (params.assignee !== undefined) qs.set("assignee", String(params.assignee));
   return get(`/api/transactions?${qs}`, page, signal);
 }
 
-/** Pins the status of the transaction's alerts in the latest run, e.g. `ESCALATED`. */
-export async function setStatus(id: string, status: string): Promise<void> {
+/** Pins the status of the transaction's alerts in the latest run, e.g. `ESCALATED`, and logs it with the reason. */
+export async function setStatus(id: string, status: string, reason: string): Promise<void> {
   const url = `/api/transactions/${encodeURIComponent(id)}/status`;
   const res = await fetch(url, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...userHeaders() },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, reason }),
   });
   if (!res.ok) throw new Error(`Saving the status failed (HTTP ${res.status}).`);
+}
+
+/** Hands the case to another user and logs it. */
+export async function assign(id: string, userId: number): Promise<void> {
+  const url = `/api/transactions/${encodeURIComponent(id)}/assignee`;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...userHeaders() },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) throw new Error(`Reassigning failed (HTTP ${res.status}).`);
 }
 
 /** Up to 5 of the client's transactions right before (`older`) or after (`newer`) transaction `id`. */

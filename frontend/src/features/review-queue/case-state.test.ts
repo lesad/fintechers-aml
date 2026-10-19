@@ -39,6 +39,8 @@ const base: TransactionDetail = {
   rating: "Low",
   disposition: "AUTO_CLOSE",
   status: "NEW",
+  assignee: null,
+  log: [],
   alerts: [],
   day: [
     {

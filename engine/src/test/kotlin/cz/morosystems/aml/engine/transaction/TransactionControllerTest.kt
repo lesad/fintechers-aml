@@ -104,9 +104,87 @@ class TransactionControllerTest {
         assertThat(by).isEqualTo(reviewer)
     }
 
-    private fun putStatus(id: String, status: String, user: Long? = firstUser()) =
-        mvc.put().uri("/api/transactions/$id/status").contentType(MediaType.APPLICATION_JSON).content("""{"status": "$status"}""")
+    @Test
+    fun escalatingHandsTheCaseToTheManagerAndLogsTheReason() {
+        val (reviewer, manager) = users()
+        jdbc.sql("update alert set assignee_id = ? where transaction_id = 'T3'").param(reviewer).update()
+
+        assertThat(putStatus("T3", "ESCALATED", user = reviewer, reason = "Source of funds not documented")).hasStatus(HttpStatus.NO_CONTENT)
+
+        val body = assertThat(mvc.get().uri("/api/transactions/T3")).hasStatusOk().bodyJson()
+        body.extractingPath("$.assignee.id").isEqualTo(manager.toInt())
+        body.extractingPath("$.assignee.role").isEqualTo("MANAGER")
+        body.extractingPath("$.log[*].action").asArray().containsExactly("ESCALATED")
+        body.extractingPath("$.log[0].actor").isEqualTo("J. Novák")
+        body.extractingPath("$.log[0].reason").isEqualTo("Source of funds not documented")
+        body.extractingPath("$.log[0].assignee").isEqualTo("M. Svobodová")
+    }
+
+    @Test
+    fun theAssigneeFilterKeepsOnlyThatUsersCasesAndScopesTheCounts() {
+        val (reviewer, manager) = users()
+        jdbc.sql("update alert set assignee_id = ?").param(reviewer).update()
+        jdbc.sql("update alert set assignee_id = ? where transaction_id = 'T1'").param(manager).update()
+
+        val mine = assertThat(mvc.get().uri("/api/transactions?assignee=$manager")).hasStatusOk().bodyJson()
+        mine.extractingPath("$.items[*].id").asArray().containsExactly("T1")
+        mine.extractingPath("$.total").isEqualTo(1)
+        mine.extractingPath("$.countsByRating.High").isEqualTo(1)
+        mine.extractingPath("$.countsByRating.Low").isEqualTo(0)
+        assertThat(mvc.get().uri("/api/transactions?assignee=$reviewer")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T4", "T3", "T2")
+    }
+
+    @Test
+    fun aDecisionNeedsAReason() {
+        assertThat(putStatus("T3", "ESCALATED", reason = "  ")).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(putStatus("T3", "ESCALATED", reason = null)).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun reassignsTheCaseAndLogsIt() {
+        val (reviewer, manager) = users()
+        assertThat(putAssignee("T3", manager, user = reviewer)).hasStatus(HttpStatus.NO_CONTENT)
+
+        val body = assertThat(mvc.get().uri("/api/transactions/T3")).hasStatusOk().bodyJson()
+        body.extractingPath("$.assignee.name").isEqualTo("M. Svobodová")
+        body.extractingPath("$.log[0].action").isEqualTo("REASSIGNED")
+        body.extractingPath("$.log[0].actor").isEqualTo("J. Novák")
+        body.extractingPath("$.log[0].assignee").isEqualTo("M. Svobodová")
+        val earlier = jdbc.sql("select count(assignee_id) from alert where transaction_id = 'T3' and run_id = (select min(id) from run)")
+            .query(Long::class.java).single()
+        assertThat(earlier).isZero()
+
+        assertThat(putAssignee("T3", 999_999, user = reviewer)).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(putAssignee("T3", manager, user = null)).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(putAssignee("T9", manager, user = reviewer)).hasStatus(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun aClosedCaseCannotBeReassigned() {
+        val (reviewer, manager) = users()
+        assertThat(putStatus("T3", "FALSE_POSITIVE", user = reviewer)).hasStatus(HttpStatus.NO_CONTENT)
+        assertThat(putAssignee("T3", manager, user = reviewer)).hasStatus(HttpStatus.CONFLICT)
+        assertThat(putStatus("T2", "REPORTED", user = manager)).hasStatus(HttpStatus.NO_CONTENT)
+        assertThat(putAssignee("T2", reviewer, user = manager)).hasStatus(HttpStatus.CONFLICT)
+
+        val reassigned = jdbc.sql("select count(*) from case_event where action = 'REASSIGNED'").query(Long::class.java).single()
+        assertThat(reassigned).isZero()
+    }
+
+    private fun putStatus(id: String, status: String, user: Long? = firstUser(), reason: String? = "checked") =
+        mvc.put().uri("/api/transactions/$id/status").contentType(MediaType.APPLICATION_JSON)
+            .content(if (reason == null) """{"status": "$status"}""" else """{"status": "$status", "reason": "$reason"}""")
             .apply { if (user != null) header("X-User-Id", user.toString()) }
+
+    private fun putAssignee(id: String, assignee: Long, user: Long?) =
+        mvc.put().uri("/api/transactions/$id/assignee").contentType(MediaType.APPLICATION_JSON).content("""{"userId": $assignee}""")
+            .apply { if (user != null) header("X-User-Id", user.toString()) }
+
+    private fun users(): Pair<Long, Long> {
+        val byRole = jdbc.sql("select role, id from app_user").query { rs, _ -> rs.getString("role") to rs.getLong("id") }.list().toMap()
+        return byRole.getValue("REVIEWER") to byRole.getValue("MANAGER")
+    }
 
     private fun firstUser(): Long = jdbc.sql("select min(id) from app_user").query(Long::class.java).single()
 
@@ -130,25 +208,6 @@ class TransactionControllerTest {
 
         assertThat(mvc.get().uri("/api/transactions/T1/history?direction=sideways")).hasStatus(HttpStatus.BAD_REQUEST)
         assertThat(mvc.get().uri("/api/transactions/NOPE/history?direction=older")).hasStatus(HttpStatus.NOT_FOUND)
-    }
-
-    @Test
-    fun aUserSeesOnlyTheirRolesCasesInTheListAndTheCounts() {
-        jdbc.sql("update alert set status = 'ESCALATED' where transaction_id = 'T1'").update()
-        val reviewer = jdbc.sql("select id from app_user where role = 'REVIEWER'").query(Long::class.java).single()
-        val manager = jdbc.sql("select id from app_user where role = 'MANAGER'").query(Long::class.java).single()
-
-        val asReviewer = assertThat(mvc.get().uri("/api/transactions").header("X-User-Id", reviewer)).hasStatusOk().bodyJson()
-        asReviewer.extractingPath("$.items[*].id").asArray().containsExactly("T4", "T3", "T2")
-        asReviewer.extractingPath("$.countsByRating.High").isEqualTo(1)
-
-        val asManager = assertThat(mvc.get().uri("/api/transactions").header("X-User-Id", manager)).hasStatusOk().bodyJson()
-        asManager.extractingPath("$.items[*].id").asArray().containsExactly("T1")
-        asManager.extractingPath("$.countsByRating.High").isEqualTo(1)
-        asManager.extractingPath("$.countsByRating.Low").isEqualTo(0)
-
-        assertThat(mvc.get().uri("/api/transactions?status=ESCALATED").header("X-User-Id", reviewer)).hasStatus(HttpStatus.BAD_REQUEST)
-        assertThat(mvc.get().uri("/api/transactions").header("X-User-Id", 999_999)).hasStatus(HttpStatus.BAD_REQUEST)
     }
 
     @Test

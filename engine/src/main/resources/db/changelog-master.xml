@@ -22,4 +22,5 @@
     <include file="db/migrations/0016-no-count-unit.sql" />
     <include file="db/migrations/0017-escalate-status.sql" />
     <include file="db/migrations/0018-users.sql" />
+    <include file="db/migrations/0019-assignee-and-case-log.sql" />
 </databaseChangeLog>

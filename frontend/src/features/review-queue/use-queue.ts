@@ -30,8 +30,16 @@ const EMPTY: QueueState = {
  * Flagged transactions from the engine, a page at a time: `loadMore` appends the next page.
  * A new search, rating or status starts over from page 0; all three filter on the engine; the search waits 300 ms for typing to stop.
  */
-/** `status` is the engine's comma-separated status codes (`statusParam`). */
-export function useQueue(query: string, rating: RiskLevel | "all", status: string) {
+type QueueParams = {
+  query: string;
+  rating: RiskLevel | "all";
+  /** The engine's comma-separated status codes (`statusParam`). */
+  status: string;
+  /** A user id, or undefined for everyone's cases. */
+  assignee: number | undefined;
+};
+
+export function useQueue({ query, rating, status, assignee }: QueueParams) {
   const [state, setState] = useState<QueueState>(EMPTY);
   const inFlight = useRef<AbortController | null>(null);
 
@@ -45,7 +53,7 @@ export function useQueue(query: string, rating: RiskLevel | "all", status: strin
       loading: true,
       error: null,
     }));
-    fetchFlagged({ q: query, rating, status, page, size: PAGE_SIZE }, ctrl.signal)
+    fetchFlagged({ q: query, rating, status, assignee, page, size: PAGE_SIZE }, ctrl.signal)
       .then((res) =>
         setState((s) => ({
           items: [...(reset ? [] : s.items), ...res.items.map(toQueueItem)],
@@ -72,9 +80,9 @@ export function useQueue(query: string, rating: RiskLevel | "all", status: strin
       clearTimeout(timer);
       inFlight.current?.abort();
     };
-    // `load` closes over query, rating and status, the only inputs that start a new list.
+    // `load` closes over query, rating, status and assignee, the only inputs that start a new list.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, rating, status]);
+  }, [query, rating, status, assignee]);
 
   const done = !state.loading && state.items.length >= state.total;
   return {

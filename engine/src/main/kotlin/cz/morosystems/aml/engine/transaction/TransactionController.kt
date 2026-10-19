@@ -19,30 +19,23 @@ class TransactionController(private val transactions: TransactionRepository, pri
     /**
      * Flagged transactions of the latest finished run, one page at a time.
      * `q` matches a transaction or client id; `rating` is `High`, `Medium` or `Low`; `status` (repeatable or
-     * comma-separated) keeps transactions whose case status is one of those. With `X-User-Id` the list and the
-     * counts hold only that user's role's statuses (reviewer `NEW`/`FALSE_POSITIVE`, manager
-     * `ESCALATED`/`REPORTED`), and a `status` outside them is a 400.
+     * comma-separated) keeps transactions whose case status is one of those; `assignee` (a user id) keeps that
+     * user's cases, and scopes `countsByRating` to them too.
      */
     @GetMapping
     fun list(
         @RequestParam(required = false) q: String?,
         @RequestParam(required = false) rating: String?,
         @RequestParam(required = false) status: List<String>?,
+        @RequestParam(required = false) assignee: Long?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "50") size: Int,
-        @RequestHeader("X-User-Id", required = false) userId: Long?,
     ): TransactionPage {
         if (page < 0 || size !in 1..MAX_SIZE) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "page >= 0, size 1..$MAX_SIZE")
         if (rating != null && rating !in RATINGS) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "rating is one of $RATINGS")
         val statuses = status.orEmpty()
         if (!STATUSES.containsAll(statuses)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $STATUSES")
-        // A user sees only their role's cases: the list and the counts both. No user, no limit.
-        val scope = userId?.let { users.find(it) ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "X-User-Id names no known user") }
-            ?.queueStatuses.orEmpty()
-        if (scope.isNotEmpty() && !scope.containsAll(statuses)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $scope for this user")
-        }
-        return transactions.flagged(q, rating, statuses.ifEmpty { scope }, scope, page, size)
+        return transactions.flagged(q, rating, statuses, assignee, page, size)
     }
 
     /** One transaction with its client, its alerts and their evidence, and the client's other transactions. */
@@ -67,8 +60,8 @@ class TransactionController(private val transactions: TransactionRepository, pri
     }
 
     /**
-     * Sets the status of the transaction's alerts in the latest run, e.g. `{"status": "ESCALATED"}`, on behalf
-     * of the user in `X-User-Id`, which is stored with it.
+     * Sets the status of the transaction's alerts in the latest run, e.g. `{"status": "ESCALATED", "reason": "…"}`,
+     * on behalf of the user in `X-User-Id`, and logs it. Escalating hands the case to the manager.
      */
     @PutMapping("/{id}/status")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -77,17 +70,45 @@ class TransactionController(private val transactions: TransactionRepository, pri
         @RequestHeader("X-User-Id", required = false) userId: Long?,
         @RequestBody body: StatusChange,
     ) {
-        if (userId == null || !users.exists(userId)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "X-User-Id names no known user")
+        val actor = knownUser(userId)
         if (body.status !in STATUSES) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $STATUSES")
-        if (!transactions.setStatus(id, body.status, userId)) throw ResponseStatusException(HttpStatus.NOT_FOUND, "transaction $id has no alert in the latest run")
+        val reason = body.reason?.trim().orEmpty()
+        if (reason.isEmpty()) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "a decision needs a reason")
+        if (!transactions.setStatus(id, body.status, actor, reason)) throw noAlert(id)
     }
+
+    /**
+     * Hands the case to another user, e.g. `{"userId": 2}`, on behalf of the user in `X-User-Id`, and logs it.
+     * A closed case (false positive or reported) stays with whoever closed it: 409.
+     */
+    @PutMapping("/{id}/assignee")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun assignee(
+        @PathVariable id: String,
+        @RequestHeader("X-User-Id", required = false) userId: Long?,
+        @RequestBody body: AssigneeChange,
+    ) {
+        val actor = knownUser(userId)
+        if (!users.exists(body.userId)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "userId names no known user")
+        val status = transactions.caseStatus(id) ?: throw noAlert(id)
+        if (status in CLOSED) throw ResponseStatusException(HttpStatus.CONFLICT, "a closed case ($status) cannot be reassigned")
+        if (!transactions.assign(id, body.userId, actor)) throw noAlert(id)
+    }
+
+    private fun knownUser(userId: Long?): Long =
+        userId?.takeIf(users::exists) ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "X-User-Id names no known user")
+
+    private fun noAlert(id: String) = ResponseStatusException(HttpStatus.NOT_FOUND, "transaction $id has no alert in the latest run")
 
     private companion object {
         const val MAX_SIZE = 200
         val RATINGS = setOf("High", "Medium", "Low")
         val STATUSES = setOf("NEW", "ESCALATED", "FALSE_POSITIVE", "REPORTED")
         val DIRECTIONS = setOf("older", "newer")
+        val CLOSED = setOf("FALSE_POSITIVE", "REPORTED")
     }
 }
 
-data class StatusChange(val status: String)
+data class StatusChange(val status: String, val reason: String?)
+
+data class AssigneeChange(val userId: Long)

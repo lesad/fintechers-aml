@@ -4,7 +4,7 @@ export {
   NO_FILTER,
   type QueueFilter,
   type Role,
-  ROLE_STATUSES,
+  CASE_STATUSES,
   STATUS_CODE,
   statusParam,
 } from "./queue";

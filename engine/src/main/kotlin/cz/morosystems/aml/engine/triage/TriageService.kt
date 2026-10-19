@@ -46,6 +46,7 @@ class TriageService(private val repository: TriageRepository) {
             Triage.decide(input, config)
         }
         repository.save(decisions)
+        repository.route(runId)
         return decisions
     }
 

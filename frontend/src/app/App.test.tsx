@@ -117,7 +117,7 @@ const routes: Record<string, (url: URL) => unknown> = {
       countsByRating: { High: 1, Medium: 1, Low: 1 },
     };
   },
-  "/api/transactions/TX1": () => ({ ...detail, status: detailStatus }),
+  "/api/transactions/TX1": () => ({ ...detail, status: detailStatus, assignee, log }),
   "/api/rules": () => [],
   "/api/users": () => users,
 };
@@ -182,11 +182,42 @@ const history = (url: URL) => {
 };
 /** The case status the engine reports for TX1. */
 let detailStatus = "NEW";
+let assignee: (typeof users)[number] | null = null;
+let log: {
+  at: string;
+  action: string;
+  actor: string | null;
+  reason: string | null;
+  assignee: string | null;
+}[] = [];
+
+/** A fake engine: a decision or a reassignment changes the case and lands in its log. */
+function fakeEnginePut(init: RequestInit) {
+  const body = JSON.parse(String(init.body)) as {
+    status?: string;
+    reason?: string;
+    userId?: number;
+  };
+  const actor = users.find((u) => String(u.id) === new Headers(init.headers).get("X-User-Id"));
+  if (body.userId !== undefined) assignee = users.find((u) => u.id === body.userId) ?? null;
+  else if (body.status === "ESCALATED") assignee = users[1] ?? null;
+  if (body.status) detailStatus = body.status;
+  log.unshift({
+    at: "2026-10-19T11:42:10+02:00",
+    action: body.status ?? "REASSIGNED",
+    actor: actor?.name ?? null,
+    reason: body.reason ?? null,
+    assignee: assignee?.name ?? null,
+  });
+  return new Response(null, { status: 204 });
+}
 
 beforeEach(() => {
   suggestionReply = noSuggestion;
   observers = [];
   detailStatus = "NEW";
+  assignee = null;
+  log = [];
   // Node's own experimental localStorage shadows happy-dom's and throws without a backing file.
   const stored = new Map<string, string>();
   vi.stubGlobal("localStorage", {
@@ -207,8 +238,8 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (input: string, init?: RequestInit) => {
       const url = new URL(input, "http://test");
-      if (init?.method === "PUT" && url.pathname === "/api/transactions/TX1/status") {
-        return new Response(null, { status: 204 });
+      if (init?.method === "PUT" && url.pathname.startsWith("/api/transactions/TX1/")) {
+        return fakeEnginePut(init);
       }
       if (url.pathname === "/api/alerts/7/suggestion") return json(suggestionReply);
       if (init?.method === "POST" && url.pathname === "/api/rules") {
@@ -257,21 +288,19 @@ const lastQueueCall = () =>
 const queueTable = () => screen.getByRole("table");
 
 describe("App", () => {
-  it("loads the role's statuses from the engine and offers only those", async () => {
+  it("asks the engine for the signed-in user's cases only, in any status unless one is picked", async () => {
     render(<App />);
-    const lastStatus = () =>
-      new URL(String(lastQueueCall()?.[0]), "http://test").searchParams.get("status");
-    await waitFor(() => expect(lastStatus()).toBe("NEW,FALSE_POSITIVE"));
-    const status = screen.getByRole("combobox", { name: "Status" });
-    expect(within(status).queryByRole("option", { name: "Escalated" })).not.toBeInTheDocument();
+    const lastParams = () => new URL(String(lastQueueCall()?.[0]), "http://test").searchParams;
+    await waitFor(() => expect(lastParams().get("assignee")).toBe("1"));
+    expect(lastParams().has("status")).toBe(false);
 
-    fireEvent.change(status, { target: { value: "False Positive" } });
-    await waitFor(() => expect(lastStatus()).toBe("FALSE_POSITIVE"));
+    const status = screen.getByRole("combobox", { name: "Status" });
+    fireEvent.change(status, { target: { value: "Escalated" } });
+    await waitFor(() => expect(lastParams().get("status")).toBe("ESCALATED"));
 
     await switchUser("M. Svobodová");
-    await waitFor(() => expect(lastStatus()).toBe("ESCALATED,REPORTED"));
-    expect(within(status).getByRole("option", { name: "Reported" })).toBeInTheDocument();
-    expect(within(status).queryByRole("option", { name: "New" })).not.toBeInTheDocument();
+    await waitFor(() => expect(lastParams().get("assignee")).toBe("2"));
+    expect(lastParams().get("status")).toBe("ESCALATED");
   });
 
   it("loads the queue from the engine and the next page when the list end comes into view", async () => {
@@ -476,7 +505,49 @@ describe("App", () => {
       await screen.findByText("Funds forwarded abroad the same day.", { selector: "span" }),
     ).toBeInTheDocument();
     expect(put()).toHaveLength(2);
-    expect(put()[1]?.[1]).toMatchObject({ body: JSON.stringify({ status: "ESCALATED" }) });
+    expect(put()[1]?.[1]).toMatchObject({
+      body: JSON.stringify({ status: "ESCALATED", reason: "Funds forwarded abroad the same day." }),
+    });
+    expect(screen.getByText("M. Svobodová", { selector: "span" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Decision log" })).toHaveTextContent(
+      "Escalated → M. SvobodováJ. Novák · 2026-10-19 11:42",
+    );
+  });
+
+  it("hands the case to the other user and logs who did it", async () => {
+    assignee = users[0] ?? null;
+    log = [
+      {
+        at: "2026-10-18T09:00:00+02:00",
+        action: "ASSIGNED",
+        actor: null,
+        reason: null,
+        assignee: "J. Novák",
+      },
+    ];
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    const entries = await screen.findByRole("list", { name: "Decision log" });
+    expect(entries).toHaveTextContent("Assigned → J. NovákTriage · 2026-10-18 09:00");
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Change" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    fireEvent.click(screen.getByRole("button", { name: /M\. Svobodová/ }));
+    await waitFor(() =>
+      expect(within(entries).getAllByRole("listitem")[0]).toHaveTextContent(
+        "Reassigned → M. SvobodováJ. Novák",
+      ),
+    );
+    expect(screen.getByText("Manager", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("offers no reassignment on a closed case", async () => {
+    detailStatus = "REPORTED";
+    assignee = users[1] ?? null;
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    expect(await screen.findByText("Manager", { selector: "span" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Change" })).not.toBeInTheDocument();
   });
 
   it("leaves an escalated case to the manager: no decision for a reviewer, false positive or report for a manager", async () => {
@@ -501,7 +572,9 @@ describe("App", () => {
     const lastPut = vi
       .mocked(fetch)
       .mock.calls.findLast(([, init]) => (init as RequestInit | undefined)?.method === "PUT");
-    expect(lastPut?.[1]).toMatchObject({ body: JSON.stringify({ status: "REPORTED" }) });
+    expect(lastPut?.[1]).toMatchObject({
+      body: JSON.stringify({ status: "REPORTED", reason: "Pattern matches layering." }),
+    });
   });
 
   it("shows two of the client's transactions before this one, oldest first, and loads earlier ones above", async () => {

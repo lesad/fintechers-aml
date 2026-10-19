@@ -1,13 +1,27 @@
 import { z } from "zod";
 
 /** A person who works the queue (`GET /api/users`): a reviewer takes the first line, a manager the escalations. */
-const userSchema = z.object({
+export const userSchema = z.object({
   id: z.number(),
   name: z.string(),
   role: z.enum(["REVIEWER", "MANAGER"]),
 });
 
 export type User = z.infer<typeof userSchema>;
+
+/** `J. Novák` → `JN` */
+export const initials = (name: string) =>
+  name
+    .split(/[\s.]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("")
+    .slice(0, 2);
+
+export const ROLE_LABEL: Record<User["role"], string> = {
+  REVIEWER: "Reviewer",
+  MANAGER: "Manager",
+};
 
 const KEY = "aml.user";
 

@@ -8,7 +8,7 @@ type DetailState =
   | { status: "not-found" }
   | { status: "error"; message: string };
 
-/** One transaction's detail from the engine, fetched once per id. */
+/** One transaction's detail from the engine, fetched once per id and again on `reload`. */
 export function useDetail(id: string) {
   const [state, setState] = useState<DetailState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -27,5 +27,14 @@ export function useDetail(id: string) {
     return () => ctrl.abort();
   }, [id, attempt]);
 
-  return { ...state, retry: () => setAttempt((a) => a + 1) };
+  return {
+    ...state,
+    retry: () => setAttempt((a) => a + 1),
+    /** Fetches again without the loading state, so what is shown stays until the new data arrives. */
+    reload: () =>
+      fetchDetail(id)
+        .then((data) => setState({ status: "ready", data }))
+        // A failed reload keeps the detail shown; the next one catches up.
+        .catch(() => {}),
+  };
 }

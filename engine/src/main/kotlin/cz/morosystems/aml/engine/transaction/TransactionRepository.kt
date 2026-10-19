@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.transaction
 
+import cz.morosystems.aml.engine.user.AppUser
 import java.sql.ResultSet
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -12,26 +13,91 @@ import tools.jackson.databind.json.JsonMapper
 class TransactionRepository(private val jdbc: JdbcClient) {
     private val json = JsonMapper()
 
-    /** Sets the status of the transaction's alerts in the latest finished run, and who set it; false when it has none there. */
-    fun setStatus(id: String, status: String, userId: Long): Boolean =
-        jdbc.sql("update alert set status = ?, status_by = ? where transaction_id = ? and run_id = ($LATEST_RUN)")
-            .params(status, userId, id).update() > 0
+    /**
+     * Sets the status of the transaction's alerts in the latest finished run and who set it, hands an escalated
+     * case to the manager, and logs the decision with its reason; false when the transaction has no alert there.
+     */
+    fun setStatus(id: String, status: String, userId: Long, reason: String): Boolean =
+        jdbc.sql(
+            """
+            with changed as (
+                update alert set status = :status, status_by = :user,
+                    assignee_id = case when :status = 'ESCALATED'
+                        then (select min(id) from app_user where role = 'MANAGER') else assignee_id end
+                where transaction_id = :tx and run_id = ($LATEST_RUN)
+                returning run_id, assignee_id
+            )
+            insert into case_event (run_id, transaction_id, actor_id, action, reason, assignee_id)
+            select run_id, :tx, :user, :status, :reason, max(assignee_id) from changed group by run_id
+            """,
+        ).params(mapOf("status" to status, "user" to userId, "tx" to id, "reason" to reason)).update() > 0
+
+    /** The case's status in the latest run, the most advanced of its alerts' as in the queue; null when it has no alert there. */
+    fun caseStatus(id: String): String? =
+        jdbc.sql("select status from alert where transaction_id = ? and run_id = ($LATEST_RUN)").param(id)
+            .query(String::class.java).list().maxByOrNull { STATUSES.indexOf(it) }
+
+    /** Hands the case to [assigneeId] on behalf of [userId] and logs it; false when the transaction has no alert in the latest run. */
+    fun assign(id: String, assigneeId: Long, userId: Long): Boolean =
+        jdbc.sql(
+            """
+            with changed as (
+                update alert set assignee_id = :assignee
+                where transaction_id = :tx and run_id = ($LATEST_RUN)
+                returning run_id
+            )
+            insert into case_event (run_id, transaction_id, actor_id, action, assignee_id)
+            select distinct run_id, :tx, :user, 'REASSIGNED', :assignee from changed
+            """,
+        ).params(mapOf("assignee" to assigneeId, "tx" to id, "user" to userId)).update() > 0
+
+    /** Who works the transaction's case in the latest run; null when nobody was assigned or it has no alert there. */
+    private fun assignee(transactionId: String): AppUser? =
+        jdbc.sql(
+            """
+            select u.id, u.name, u.role from alert a join app_user u on u.id = a.assignee_id
+            where a.transaction_id = ? and a.run_id = ($LATEST_RUN) order by a.id limit 1
+            """,
+        ).param(transactionId).query { rs, _ -> AppUser(rs.getLong("id"), rs.getString("name"), rs.getString("role")) }
+            .optional().orElse(null)
+
+    /** The case's decision log in the latest run, newest first. */
+    private fun log(transactionId: String): List<CaseEvent> =
+        jdbc.sql(
+            """
+            select e.at, e.action, e.reason, actor.name as actor, assignee.name as assignee
+            from case_event e
+            left join app_user actor on actor.id = e.actor_id
+            left join app_user assignee on assignee.id = e.assignee_id
+            where e.transaction_id = ? and e.run_id = ($LATEST_RUN)
+            order by e.at desc, e.id desc
+            """,
+        ).param(transactionId).query { rs, _ ->
+            CaseEvent(
+                at = rs.getObject("at", OffsetDateTime::class.java),
+                action = rs.getString("action"),
+                actor = rs.getString("actor"),
+                reason = rs.getString("reason"),
+                assignee = rs.getString("assignee"),
+            )
+        }.list()
 
     /**
      * The review queue: transactions the latest finished run alerted on and triage did not close on its own,
      * reported last, then most severe disposition first, then highest score. `statuses` keeps a transaction whose
-     * case status is one of them; empty keeps all. The per-rating counts cover the `scope` statuses (the
-     * caller's role), whatever the other filters; empty counts the whole queue.
+     * case status is one of them; empty keeps all. [assignee] keeps only that user's cases, in the counts too;
+     * null keeps all.
      */
-    fun flagged(query: String?, rating: String?, statuses: List<String>, scope: List<String>, page: Int, size: Int): TransactionPage {
+    fun flagged(query: String?, rating: String?, statuses: List<String>, assignee: Long?, page: Int, size: Int): TransactionPage {
+        val mine = "(:assignee = 0 or q.assignee_id = :assignee)"
         val filter = """
-            where (:q = '' or q.id ilike :like or t.client_id ilike :like)
+            where $mine
+              and (:q = '' or q.id ilike :like or t.client_id ilike :like)
               and (:rating = '' or q.rating = :rating)
               and (:statuses = '' or q.status = any(string_to_array(:statuses, ',')))
         """
         val q = query?.trim().orEmpty()
-        val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty(), "statuses" to statuses.joinToString(","))
-        val inScope = "where (:scope = '' or q.status = any(string_to_array(:scope, ',')))"
+        val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty(), "statuses" to statuses.joinToString(","), "assignee" to (assignee ?: 0L))
 
         val items = jdbc.sql(
             """
@@ -65,8 +131,8 @@ class TransactionRepository(private val jdbc: JdbcClient) {
         val total = jdbc.sql("$QUEUE select count(*) from queue q join transaction t on t.id = q.id $filter")
             .params(params).query(Long::class.java).single()
 
-        val counts = jdbc.sql("$QUEUE select q.rating, count(*) as n from queue q $inScope group by 1")
-            .param("scope", scope.joinToString(",")).query { rs, _ -> rs.getString("rating") to rs.getLong("n") }.list().toMap()
+        val counts = jdbc.sql("$QUEUE select q.rating, count(*) as n from queue q where $mine group by 1")
+            .param("assignee", assignee ?: 0L).query { rs, _ -> rs.getString("rating") to rs.getLong("n") }.list().toMap()
 
         return TransactionPage(items, page, size, total, RATINGS.associateWith { counts[it] ?: 0L })
     }
@@ -125,7 +191,9 @@ class TransactionRepository(private val jdbc: JdbcClient) {
         val status = alerts.map { it.status }.maxByOrNull { STATUSES.indexOf(it) }
         val historyCount = jdbc.sql("select count(*) from transaction where client_id = ?").param(client.id)
             .query(Int::class.java).single()
-        return TransactionDetail(tx, client, worst?.let(::ratingOf), worst, status, alerts, day(client.id, tx.ts), historyCount)
+        return TransactionDetail(
+            tx, client, worst?.let(::ratingOf), worst, status, assignee(id), log(id), alerts, day(client.id, tx.ts), historyCount,
+        )
     }
 
     private fun alerts(transactionId: String): List<TransactionAlert> {
@@ -251,7 +319,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
          */
         const val QUEUE = """
             with alert_sev as (
-                select a.id, a.transaction_id, a.alert_type, a.status, a.created_at, tr.score,
+                select a.id, a.transaction_id, a.alert_type, a.status, a.assignee_id, a.created_at, tr.score,
                        array_position(array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'], tr.disposition) as sev
                 from alert a join alert_triage tr on tr.alert_id = a.id
                 where a.run_id = ($LATEST_RUN) and a.transaction_id is not null
@@ -263,10 +331,10 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                        (array['NEW','FALSE_POSITIVE','ESCALATED','REPORTED'])[
                            max(array_position(array['NEW','FALSE_POSITIVE','ESCALATED','REPORTED'], status))
                        ] as status,
-                       max(sev) as sev, max(score) as score, min(created_at) as flagged_at
+                       max(sev) as sev, max(score) as score, min(created_at) as flagged_at, max(assignee_id) as assignee_id
                 from alert_sev group by transaction_id
             ), queue as (
-                select p.id, p.alert_types, p.statuses, p.status, p.sev, p.score, p.flagged_at,
+                select p.id, p.alert_types, p.statuses, p.status, p.sev, p.score, p.flagged_at, p.assignee_id,
                        coalesce(rk.rules, '{}') as rules, coalesce(rk.rule_names, '{}') as rule_names,
                        (array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'])[p.sev] as disposition,
                        (case when p.sev >= 4 then 'High' when p.sev = 3 then 'Medium' else 'Low' end) as rating

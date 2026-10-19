@@ -69,15 +69,11 @@ export const STATUS_CODE: Record<CaseStatus, AlertStatus> = {
 
 export type Role = "Reviewer" | "Manager";
 
-/** The case statuses each role works: the reviewer the first line, the manager what was escalated. */
-export const ROLE_STATUSES: Record<Role, CaseStatus[]> = {
-  Reviewer: ["New", "False Positive"],
-  Manager: ["Escalated", "Reported"],
-};
+/** Every case status, in workflow order: the status filter offers these. */
+export const CASE_STATUSES: CaseStatus[] = ["New", "Escalated", "False Positive", "Reported"];
 
-/** The engine's `status` parameter: the chosen status, or all of the role's when none is chosen. */
-export const statusParam = (role: Role, status: StatusFilter) =>
-  (status === "all" ? ROLE_STATUSES[role] : [status]).map((s) => STATUS_CODE[s]).join(",");
+/** The engine's `status` parameter: the chosen status, or none (every status) when none is chosen. */
+export const statusParam = (status: StatusFilter) => (status === "all" ? "" : STATUS_CODE[status]);
 
 /** The case status the UI shows for each engine status. */
 export const CASE_STATUS: Record<AlertStatus, CaseStatus> = {

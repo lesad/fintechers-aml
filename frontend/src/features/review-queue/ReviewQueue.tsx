@@ -31,7 +31,7 @@ type ReviewQueueProps = {
   onRetry: () => void;
   filter: QueueFilter;
   onFilter: (f: QueueFilter) => void;
-  /** The statuses the current role works; the status filter offers only these. */
+  /** The statuses the status filter offers. */
   statuses: CaseStatus[];
   /** Ids open in a tab: their rows are highlighted. */
   openIds: string[];

@@ -9,7 +9,7 @@ import {
   type QueueFilter,
   ReviewQueue,
   type Role,
-  ROLE_STATUSES,
+  CASE_STATUSES,
   STATUS_CODE,
   setStatus,
   statusParam,
@@ -54,7 +54,12 @@ export function App() {
     // Loads the users once; `chooseUser` only wraps setters.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const queue = useQueue(filter.query, filter.rating, statusParam(role, filter.status));
+  const queue = useQueue({
+    query: filter.query,
+    rating: filter.rating,
+    status: statusParam(filter.status),
+    assignee: user?.id,
+  });
   const items = review.apply(queue.items);
   const rating = new Map(items.map((r) => [r.id, r.rule]));
   // The engine counts only the signed-in user's cases (X-User-Id).
@@ -67,11 +72,7 @@ export function App() {
         openByRating={queue.countsByRating}
         user={user}
         users={users}
-        onUser={(u) => {
-          chooseUser(u);
-          // A status chosen for one role may not exist for the other.
-          setFilter((f) => ({ ...f, status: "all" }));
-        }}
+        onUser={chooseUser}
         onJump={async (id) => {
           try {
             await fetchDetail(id);
@@ -138,7 +139,7 @@ export function App() {
             onRetry={queue.retry}
             filter={filter}
             onFilter={setFilter}
-            statuses={ROLE_STATUSES[role]}
+            statuses={CASE_STATUSES}
             openIds={tabs.open}
             onOpen={tabs.openTab}
           />
@@ -150,9 +151,9 @@ export function App() {
               id={id}
               decisions={review.decisions}
               role={role}
+              users={users}
               onDecide={async (d) => {
-                // The status goes to the engine's alerts; the reason is not stored yet.
-                await setStatus(id, STATUS_CODE[d.action]);
+                await setStatus(id, STATUS_CODE[d.action], d.reason);
                 review.decide(id, { ...d, by: user?.name ?? "" });
                 // The case may have left this user's queue (escalated); the engine's list says.
                 queue.reload();
