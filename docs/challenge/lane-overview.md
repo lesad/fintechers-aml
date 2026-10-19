@@ -44,6 +44,7 @@ Confirmed on 2026-10-19 from the full page and the current brief (`AML_challenge
 | [rule-b-reference-data.md](rule-b-reference-data.md) | EU and FATF high-risk lists for July 2026 (31 ISO codes), ČNB rate files for CZK conversion                     |
 | [czech-aml-escalation.md](czech-aml-escalation.md)   | Czech AML roles, FAÚ reporting, 4-eyes, closure reasons, AI expectations, a draft escalation matrix             |
 | [data-profile.md](data-profile.md)                   | The ČNB dataset as delivered: columns, values, and five findings for the build (no high-risk countries, no MCC) |
+| [aws-account-setup.md](aws-account-setup.md)         | AWS profile setup, daily commands, verified access and model behaviour                                          |
 | [aws-demo-guidance.md](aws-demo-guidance.md)         | AWS's flow and five demo criteria from the event, mapped to our design                                          |
 | [decision-architecture.md](decision-architecture.md) | Stack, who decides what, guardrails, the labelling plan (supersedes the build shape below)                      |
 | [ux-and-typed-ai.md](ux-and-typed-ai.md)             | How AML tools present triage, Bedrock models with structured output, graph libraries, the demo moment           |
