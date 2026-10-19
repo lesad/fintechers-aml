@@ -3,12 +3,11 @@
     "allow": [
       "Bash(pnpm *)",
       "Bash(npx *)",
-      "Bash(supabase *)",
+      "Bash(docker compose *)",
       "Bash(drizzle-kit *)",
       "Bash(oxlint *)",
       "Bash(oxfmt *)",
       "Bash(fallow *)",
-      "Bash(playwright *)",
       "Bash(storybook *)",
       "Bash(gh *)",
       "Bash(git status)",

@@ -26,8 +26,6 @@
       "@/env": ["./src/core/env"],
       "@/hooks": ["./src/core/hooks"],
       "@/i18n": ["./src/core/i18n"],
-      "@/supabase/*": ["./src/core/supabase/*"],
-      "@/test": ["./src/core/test"],
       "@/test/*": ["./src/core/test/*"],
       "@/utils": ["./src/core/utils"],
       "@/validation": ["./src/core/validation"],
@@ -42,12 +40,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".next",
-    "dist",
-    "playwright-report",
-    "test-results",
-    "scripts/eject/pristine"
-  ]
+  "exclude": ["node_modules", ".next", "dist", "scripts/eject/pristine"]
 }

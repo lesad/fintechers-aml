@@ -6,10 +6,7 @@ on:
     branches: [main]
 
 env:
-  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-for-build
-  SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-key
-  POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+  POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
   SKIP_ENV_VALIDATION: "true"
 
 jobs:
@@ -27,8 +24,17 @@ jobs:
       - run: pnpm check
 
   integration:
-    name: integration (Vitest + Supabase)
+    name: integration (Vitest + Postgres)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 5s --health-retries 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -36,37 +42,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
       - run: pnpm install --frozen-lockfile
-      - run: supabase start
+      - run: pnpm db:migrate && pnpm db:seed
       - run: pnpm test:integration
-
-  e2e:
-    name: e2e (Playwright + Supabase)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: supabase start
-      - run: pnpm build
-      - run: pnpm test:e2e
-      - if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
-          retention-days: 7
 
   build:
     name: build

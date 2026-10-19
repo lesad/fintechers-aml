@@ -1,6 +1,4 @@
-import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import react from "@vitejs/plugin-react";
-import { playwright } from "@vitest/browser-playwright";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
@@ -19,7 +17,7 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "happy-dom",
-          // `.test` = unit, `.spec` = integration, `.e2e` = Playwright (co-located taxonomy)
+          // `.test` = unit, `.spec` = integration (co-located taxonomy)
           include: ["src/**/*.test.{ts,tsx}"],
           setupFiles: ["./src/core/test/setup.ts"],
           globals: true,
@@ -51,31 +49,6 @@ export default defineConfig({
           },
         },
       },
-      // Opt-in: `storybookTest` loads Storybook's main config at *config* time,
-      // so including it unconditionally made every `vitest` invocation — even
-      // `--project=unit` — boot Storybook. Measured here: ~2.2s of config-load
-      // overhead on a run whose unit tests take 0.3s. `pnpm test:storybook` sets
-      // the flag; `pnpm test:all` sets it too, so it still covers all three
-      // projects (a `--project=storybook` run without the flag simply won't find
-      // the project — that's what `test:storybook` is for).
-      // See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
-      ...(process.env.STORYBOOK_TEST
-        ? [
-            {
-              extends: true as const,
-              plugins: [storybookTest({ configDir: path.join(dirname, ".storybook") })],
-              test: {
-                name: "storybook",
-                browser: {
-                  enabled: true,
-                  headless: true,
-                  provider: playwright({}),
-                  instances: [{ browser: "chromium" as const }],
-                },
-              },
-            },
-          ]
-        : []),
     ],
   },
 });

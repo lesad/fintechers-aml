@@ -15,13 +15,13 @@ function localUrl(): string {
   const url = process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL;
   if (!url) {
     throw new Error(
-      "POSTGRES_URL_NON_POOLING (or POSTGRES_URL) is not set. Integration tests need the local Supabase stack — run `pnpm db:start`.",
+      "POSTGRES_URL_NON_POOLING (or POSTGRES_URL) is not set. Integration tests need the local Postgres container — run `pnpm db:start`.",
     );
   }
   const { hostname } = new URL(url);
   if (!["127.0.0.1", "localhost", "::1", "[::1]"].includes(hostname)) {
     throw new Error(
-      `Refusing to run integration tests against non-loopback host "${hostname}" — resetDb() truncates every table. Point POSTGRES_URL at the local stack (postgresql://postgres:postgres@127.0.0.1:54322/postgres).`,
+      `Refusing to run integration tests against non-loopback host "${hostname}" — resetDb() truncates every table. Point POSTGRES_URL at the local stack (postgresql://postgres:postgres@127.0.0.1:5432/postgres).`,
     );
   }
   return url;

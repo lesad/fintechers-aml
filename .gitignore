@@ -13,13 +13,7 @@ tsconfig.tsbuildinfo
 .env*.local
 
 # Tests
-playwright-report
-test-results
 coverage
-
-# Supabase
-supabase/.temp
-supabase/.branches
 
 # Fallow
 .fallow

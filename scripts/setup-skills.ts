@@ -17,10 +17,7 @@ const PROJECT_SKILLS = [
   "vercel-labs/next-skills/next-best-practices",
   "wshobson/agents/tailwind-design-system",
   "vercel-labs/agent-skills/vercel-react-best-practices",
-  "supabase/agent-skills/supabase",
-  "supabase/agent-skills/supabase-postgres-best-practices",
   "shadcn/ui/shadcn",
-  "currents-dev/playwright-best-practices-skill",
 ] as const;
 
 function skillCmd(path: string, global: boolean): string {

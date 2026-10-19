@@ -14,7 +14,7 @@ import { execSync } from "node:child_process";
  * it cannot mask vitest's exit code, which `vitest run …; pnpm db:seed` would,
  * because a chained command's status becomes the script's.
  *
- * `scripts/seed.ts` applies `supabase/seed.sql`, which must stay idempotent.
+ * `scripts/seed.ts` applies `db/seed.sql`, which must stay idempotent.
  */
 export function teardown() {
   execSync("pnpm -s db:seed", { stdio: "inherit" });

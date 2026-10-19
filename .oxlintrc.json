@@ -51,7 +51,6 @@
       "files": [
         "**/*.test.{ts,tsx}",
         "**/*.spec.{ts,tsx}",
-        "**/*.e2e.{ts,tsx}",
         "**/*.stories.{ts,tsx}",
         "tests/**",
         "src/core/test/**"
@@ -118,7 +117,7 @@
                 "message": "components/ must stay reusable — no imports from app/ (routes) or features/ (domain slices). Feature-specific UI belongs in src/features/<name>/."
               },
               {
-                "group": ["@/db", "@/db/**", "@/supabase/server"],
+                "group": ["@/db", "@/db/**"],
                 "message": "components/ must stay presentational and data-free — no direct DB/server access. Fetch in a route or feature and pass data down as props."
               }
             ]
@@ -171,9 +170,7 @@
     "node_modules",
     ".next",
     "dist",
-    "playwright-report",
-    "test-results",
-    "supabase/migrations",
+    "db/migrations",
     "next-env.d.ts",
     "storybook-static"
   ]
