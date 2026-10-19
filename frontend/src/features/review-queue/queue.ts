@@ -1,3 +1,6 @@
+import { czk, type FlaggedTransaction } from "./api";
+import { rulesSummary } from "./rules";
+
 import type { AiRating, CaseStatus, RiskLevel } from "@/components";
 
 export type QueueItem = {
@@ -14,36 +17,40 @@ export type QueueItem = {
   flagged: Date;
 };
 
+/** `2026-07-01T00:15:25` → `2026-07-01 00:15` */
+export const formatTs = (ts: string) => ts.slice(0, 16).replace("T", " ");
+
+export function toQueueItem(f: FlaggedTransaction): QueueItem {
+  return {
+    id: f.id,
+    client: f.clientId,
+    rule: f.rating,
+    ruleReason: rulesSummary(f.rules),
+    // No model rates cases (ADR-0032); the AI part of the badge stays empty.
+    ai: "none",
+    amount: czk(f.amountHalere),
+    date: formatTs(f.ts),
+    // The engine has no case status yet; decisions live in the browser (useDecisions).
+    status: "New",
+    flagged: new Date(f.flaggedAt),
+  };
+}
+
+export type StatusFilter = CaseStatus | "all" | "open";
+
 export type QueueFilter = {
+  /** Transaction or client id, matched by the engine. */
   query: string;
   rating: RiskLevel | "all";
-  status: CaseStatus | "all" | "open";
+  status: StatusFilter;
 };
 
 export const NO_FILTER: QueueFilter = { query: "", rating: "all", status: "all" };
 
-const rank: Record<RiskLevel, number> = { High: 0, Medium: 1, Low: 2 };
-
-/** Filters, then sorts by rule rating (High first) and age (oldest first). */
-export function filterQueue(items: QueueItem[], f: QueueFilter): QueueItem[] {
-  const q = f.query.trim().toLowerCase();
-  return items
-    .filter((r) => f.rating === "all" || r.rule === f.rating)
-    .filter(
-      (r) =>
-        f.status === "all" || (f.status === "open" ? r.status !== "Closed" : r.status === f.status),
-    )
-    .filter((r) => !q || r.id.toLowerCase().includes(q) || r.client.toLowerCase().includes(q))
-    .toSorted((a, b) => rank[a.rule] - rank[b.rule] || a.flagged.getTime() - b.flagged.getTime());
-}
-
-export function openCountByRating(items: QueueItem[]): Record<RiskLevel, number> {
-  const open = items.filter((r) => r.status !== "Closed");
-  return {
-    High: open.filter((r) => r.rule === "High").length,
-    Medium: open.filter((r) => r.rule === "Medium").length,
-    Low: open.filter((r) => r.rule === "Low").length,
-  };
+/** The status filter runs in the browser: only decisions made here change a status. */
+export function byStatus(items: QueueItem[], status: StatusFilter): QueueItem[] {
+  if (status === "all") return items;
+  return items.filter((r) => (status === "open" ? r.status !== "Closed" : r.status === status));
 }
 
 /** "12 min", "5h 3m", "2d 4h". */
@@ -55,5 +62,5 @@ export function formatAge(flagged: Date, now: Date): string {
   return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
-export const formatAmount = (czk: number) =>
-  czk.toLocaleString("en-US", { minimumFractionDigits: 2 });
+export const formatAmount = (czkAmount: number) =>
+  czkAmount.toLocaleString("en-US", { minimumFractionDigits: 2 });

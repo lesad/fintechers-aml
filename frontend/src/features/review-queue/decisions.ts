@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { QueueItem } from "./queue";
+import type { RiskLevel } from "@/components";
 
 export type Decision = {
   action: "Closed" | "Escalated";
@@ -8,31 +9,24 @@ export type Decision = {
   /** `YYYY-MM-DD HH:mm` */
   at: string;
   by: string;
-  /** Came with the mock data; can't be undone. */
-  seed?: boolean;
+  /** The case's rule rating, so the header's open counts can drop closed cases. */
+  rating: RiskLevel | null;
 };
 
-// The design's one pre-decided case.
-const SEED: Record<string, Decision> = {
-  TX000004801: {
-    action: "Closed",
-    reason: "Location matches the card travel notice; confirmed with the client by phone.",
-    at: "2026-10-15 17:10",
-    by: "M. Svobodová",
-    seed: true,
-  },
-};
+const pad = (n: number) => String(n).padStart(2, "0");
+const stamp = (d: Date) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-/** Decisions per transaction id, in memory until the engine stores them. */
+/** Decisions per transaction id, in browser memory until the engine stores them. */
 export function useDecisions() {
-  const [decisions, setDecisions] = useState<Record<string, Decision>>(SEED);
+  const [decisions, setDecisions] = useState<Record<string, Decision>>({});
   return {
     decisions,
-    decide: (id: string, action: Decision["action"], reason: string) =>
+    decide: (id: string, d: Pick<Decision, "action" | "reason" | "rating">) =>
       setDecisions((s) => ({
         ...s,
-        // shortcut: the mock clock and a fixed reviewer, until there is a signed-in user and real time
-        [id]: { action, reason, at: "2026-10-19 14:30", by: "J. Novák" },
+        // shortcut: a fixed reviewer, until there is a signed-in user
+        [id]: { ...d, at: stamp(new Date()), by: "J. Novák" },
       })),
     undo: (id: string) =>
       setDecisions((s) => {
@@ -45,5 +39,12 @@ export function useDecisions() {
         const d = decisions[r.id];
         return d ? { ...r, status: d.action } : r;
       }),
+    /** Server counts per rating, minus the cases closed here. */
+    openCounts: (counts: Record<RiskLevel, number>): Record<RiskLevel, number> => {
+      const open = { ...counts };
+      for (const d of Object.values(decisions))
+        if (d.action === "Closed" && d.rating) open[d.rating] = Math.max(0, open[d.rating] - 1);
+      return open;
+    },
   };
 }

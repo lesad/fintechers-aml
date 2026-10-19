@@ -5,8 +5,8 @@ import type { RiskLevel } from "@/components";
 
 type HeaderProps = {
   openByRating: Record<RiskLevel, number>;
-  /** Opens the transaction if it exists; returns false when the id is unknown. */
-  onJump: (id: string) => boolean;
+  /** Opens the transaction if it exists; resolves to false when the id is unknown. */
+  onJump: (id: string) => Promise<boolean>;
 };
 
 const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl ";
@@ -67,8 +67,9 @@ export function Header({ openByRating, onJump }: HeaderProps) {
         className="relative m-0 flex min-w-[200px] flex-[0_1_420px] items-center"
         onSubmit={(e) => {
           e.preventDefault();
-          if (onJump(value.trim().toUpperCase())) setValue("");
-          else setMiss(true);
+          const id = value.trim().toUpperCase();
+          if (!id) return;
+          void onJump(id).then((found) => (found ? setValue("") : setMiss(true)));
         }}
       >
         <span className="pointer-events-none absolute left-2.5 font-bold text-yellow">→</span>

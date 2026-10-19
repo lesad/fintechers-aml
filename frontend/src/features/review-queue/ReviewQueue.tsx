@@ -1,11 +1,9 @@
 import { cva } from "class-variance-authority";
-import { useState } from "react";
 
-import { type Column, RatingBadge, Select, StatusLabel, Table } from "@/components";
+import { type Column, LoadMore, RatingBadge, Select, StatusLabel, Table } from "@/components";
 
-import { MOCK_NOW } from "./mock";
 import {
-  filterQueue,
+  byStatus,
   formatAge,
   formatAmount,
   NO_FILTER,
@@ -14,7 +12,17 @@ import {
 } from "./queue";
 
 type ReviewQueueProps = {
+  /** Loaded so far, decisions applied. */
   items: QueueItem[];
+  /** Rows matching the search and rating on the server. */
+  total: number;
+  loading: boolean;
+  done: boolean;
+  error: string | null;
+  onLoadMore: () => void;
+  onRetry: () => void;
+  filter: QueueFilter;
+  onFilter: (f: QueueFilter) => void;
   /** Ids open in a tab: their rows are highlighted. */
   openIds: string[];
   onOpen: (id: string, background: boolean) => void;
@@ -29,17 +37,35 @@ const age = cva("", {
   },
 });
 
-export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
-  const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
-  const rows = filterQueue(items, filter);
+export function ReviewQueue({
+  items,
+  total,
+  loading,
+  done,
+  error,
+  onLoadMore,
+  onRetry,
+  filter,
+  onFilter,
+  openIds,
+  onOpen,
+}: ReviewQueueProps) {
+  const now = new Date();
+  const rows = byStatus(items, filter.status);
   const hasFilters = filter.query !== "" || filter.rating !== "all" || filter.status !== "all";
 
   const columns: Column<QueueItem>[] = [
     {
       key: "rating",
       header: "Rating",
-      width: 210,
+      width: 110,
       cell: (r) => <RatingBadge rule={r.rule} ai={r.ai} />,
+    },
+    {
+      key: "reason",
+      header: "Rule",
+      className: "text-ellipsis text-fg-muted",
+      cell: (r) => <span title={r.ruleReason}>{r.ruleReason}</span>,
     },
     {
       key: "id",
@@ -57,6 +83,7 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
     {
       key: "amount",
       header: "Amount (CZK)",
+      width: 140,
       align: "right",
       className: "tabular-nums",
       cell: (r) => formatAmount(r.amount),
@@ -71,15 +98,15 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
     { key: "status", header: "Status", width: 100, cell: (r) => <StatusLabel status={r.status} /> },
     {
       key: "flagged",
-      header: "Flagged ↑",
+      header: "Flagged",
       width: 84,
       align: "right",
       className: "tabular-nums",
       cell: (r) => {
         const closed = r.status === "Closed";
-        const overdue = MOCK_NOW.getTime() - r.flagged.getTime() > 72 * 3_600_000;
+        const overdue = now.getTime() - r.flagged.getTime() > 72 * 3_600_000;
         const state = closed ? "closed" : overdue ? "overdue" : "open";
-        return <span className={age({ state })}>{formatAge(r.flagged, MOCK_NOW)}</span>;
+        return <span className={age({ state })}>{formatAge(r.flagged, now)}</span>;
       },
     },
   ];
@@ -91,15 +118,13 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
           aria-label="Search transaction or client ID"
           placeholder="Search transaction or client ID"
           value={filter.query}
-          onChange={(e) => setFilter({ ...filter, query: e.target.value })}
+          onChange={(e) => onFilter({ ...filter, query: e.target.value })}
           className="h-7 w-[260px] rounded border border-border bg-bg px-2.5 text-[13px] text-fg outline-none focus:border-purple focus:ring-2 focus:ring-purple/25"
         />
         <Select
           aria-label="Rule rating"
           value={filter.rating}
-          onChange={(e) =>
-            setFilter({ ...filter, rating: e.target.value as QueueFilter["rating"] })
-          }
+          onChange={(e) => onFilter({ ...filter, rating: e.target.value as QueueFilter["rating"] })}
         >
           <option value="all">All rule ratings</option>
           <option value="High">High</option>
@@ -109,9 +134,7 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
         <Select
           aria-label="Status"
           value={filter.status}
-          onChange={(e) =>
-            setFilter({ ...filter, status: e.target.value as QueueFilter["status"] })
-          }
+          onChange={(e) => onFilter({ ...filter, status: e.target.value as QueueFilter["status"] })}
         >
           <option value="all">All statuses</option>
           <option value="open">Open (not closed)</option>
@@ -123,16 +146,14 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
         {hasFilters && (
           <button
             type="button"
-            onClick={() => setFilter(NO_FILTER)}
+            onClick={() => onFilter(NO_FILTER)}
             className="h-7 cursor-pointer border-0 bg-transparent px-2 text-[13px] text-fg-muted underline hover:text-purple"
           >
             Clear
           </button>
         )}
-        <span className="ml-auto text-xs text-fg-subtle">
-          {hasFilters
-            ? `${rows.length} of ${items.length} transactions`
-            : `${rows.length} transactions`}
+        <span className="ml-auto text-xs text-fg-subtle tabular-nums">
+          {items.length.toLocaleString("en-US")} of {total.toLocaleString("en-US")} loaded
         </span>
       </div>
 
@@ -143,8 +164,17 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
         rowTitle={(r) => `Open ${r.id} in a new tab`}
         rowClassName={(r) => (openIds.includes(r.id) ? "bg-bg-sub" : undefined)}
         onRowClick={(r, e) => onOpen(r.id, e.metaKey || e.ctrlKey)}
-        minWidth={960}
-        empty="No transactions match these filters."
+        minWidth={1100}
+        empty={loading || error ? undefined : "No transactions match these filters."}
+        footer={
+          <LoadMore
+            onLoadMore={onLoadMore}
+            loading={loading}
+            done={done}
+            error={error}
+            onRetry={onRetry}
+          />
+        }
       />
     </main>
   );

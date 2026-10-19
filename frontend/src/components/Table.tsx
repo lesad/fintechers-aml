@@ -27,6 +27,8 @@ type TableProps<T> = {
   /** Below this width the table scrolls sideways instead of squeezing columns. */
   minWidth?: number;
   empty?: ReactNode;
+  /** Under the rows, inside the scroll area: a loader for the next page. */
+  footer?: ReactNode;
   /**
    * Inside a card: dense rows, a plain non-sticky header, sideways scroll only.
    * Default is a page table that fills its flex column and scrolls under a sticky header.
@@ -84,6 +86,7 @@ export function Table<T>({
   rowClassName,
   minWidth,
   empty,
+  footer,
   embedded = false,
 }: TableProps<T>) {
   const edge = (i: number) => (i === 0 ? "first" : i === columns.length - 1 ? "last" : "none");
@@ -135,6 +138,7 @@ export function Table<T>({
         </tbody>
       </table>
       {rows.length === 0 && empty && <div className="px-4 py-10 text-fg-subtle">{empty}</div>}
+      {footer}
     </div>
   );
 }

@@ -3,8 +3,8 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/utils";
 
 export type RiskLevel = "High" | "Medium" | "Low";
-/** The AI assessment: a level once done, or its pending/failed state. */
-export type AiRating = RiskLevel | "running" | "failed";
+/** The AI assessment: a level once done, its pending/failed state, or `none` when no model rates. */
+export type AiRating = RiskLevel | "running" | "failed" | "none";
 
 /** The small square/round marker in a risk colour (badges, tabs). */
 export const riskDot = cva("", {
@@ -68,6 +68,14 @@ export function RiskBadge({ level, attached }: { level: RiskLevel; attached?: bo
 
 /** The AI rating on its own, in a rounded pill marked "AI". */
 export function AiPill({ rating }: { rating: AiRating }) {
+  if (rating === "none") {
+    return (
+      <span className={pill({ shape: "failed" })}>
+        <span className={aiMark({ state: "off" })}>AI</span>
+        <span className="flex items-center bg-bg pr-2 pl-1.5 text-fg-subtle">Not assessed</span>
+      </span>
+    );
+  }
   if (rating === "failed") {
     return (
       <span className={pill({ shape: "failed" })}>
@@ -106,6 +114,13 @@ export function AiPill({ rating }: { rating: AiRating }) {
  * a separate AI pill when it disagrees or is still running.
  */
 export function RatingBadge({ rule, ai }: { rule: RiskLevel; ai: AiRating }) {
+  if (ai === "none") {
+    return (
+      <span title="Rule rating">
+        <RiskBadge level={rule} />
+      </span>
+    );
+  }
   if (ai === rule || ai === "failed") {
     return (
       <span
@@ -137,12 +152,4 @@ export function RatingBadge({ rule, ai }: { rule: RiskLevel; ai: AiRating }) {
       </span>
     </span>
   );
-}
-
-const rank: Record<RiskLevel, number> = { High: 0, Medium: 1, Low: 2 };
-
-/** "higher" / "lower" when a finished AI rating differs from the rule rating, else null. */
-export function aiDisagreement(rule: RiskLevel, ai: AiRating): "higher" | "lower" | null {
-  if (ai === "running" || ai === "failed" || ai === rule) return null;
-  return rank[ai] < rank[rule] ? "higher" : "lower";
 }

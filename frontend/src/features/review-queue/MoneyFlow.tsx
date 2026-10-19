@@ -1,6 +1,16 @@
 import { cva } from "class-variance-authority";
 
-import type { HistoryTx } from "./detail-mock";
+/** One of the day's transactions, as the flow draws it. */
+export type FlowTx = {
+  id: string;
+  /** `YYYY-MM-DD HH:mm` */
+  dt: string;
+  dir: "Incoming" | "Outgoing" | "Remittance";
+  counterparty: string;
+  country: string;
+  /** CZK */
+  amount: number;
+};
 
 // `current` = the transaction the detail is about.
 const ribbonFill = cva("", { variants: { current: { true: "fill-yellow", false: "fill-flow" } } });
@@ -14,16 +24,18 @@ const amountLabel = cva("text-[11px]", {
   variants: { current: { true: "fill-fg font-semibold", false: "fill-fg-muted" } },
 });
 
-const W = 760;
-const X_LEFT = 210;
-const ACC_LEFT = 330;
-const ACC_RIGHT = 430;
-const X_RIGHT = 550;
+// ~280 px for labels left of the payers (a remittance's line adds "· direction unknown")
+// and ~240 px right of the payees.
+const W = 880;
+const X_LEFT = 290;
+const ACC_LEFT = 410;
+const ACC_RIGHT = 510;
+const X_RIGHT = 630;
 const GAP = 10;
 /** Height in px of the larger side's total; line width = amount. */
 const SCALE = 96;
 
-const sum = (a: HistoryTx[]) => a.reduce((x, t) => x + t.amount, 0);
+const sum = (a: FlowTx[]) => a.reduce((x, t) => x + t.amount, 0);
 
 type Point = [x: number, y: number];
 
@@ -43,16 +55,16 @@ export function MoneyFlow({
   currentId,
   clientId,
 }: {
-  day: HistoryTx[];
+  day: FlowTx[];
   currentId: string;
   clientId: string;
 }) {
   const ins = day.filter((t) => t.dir !== "Outgoing");
   const outs = day.filter((t) => t.dir === "Outgoing");
   const k = SCALE / Math.max(sum(ins), sum(outs), 1);
-  const thick = (t: HistoryTx) => Math.max(3, t.amount * k);
-  const slot = (t: HistoryTx) => Math.max(thick(t), 30);
-  const colHeight = (a: HistoryTx[]) =>
+  const thick = (t: FlowTx) => Math.max(3, t.amount * k);
+  const slot = (t: FlowTx) => Math.max(thick(t), 30);
+  const colHeight = (a: FlowTx[]) =>
     a.length ? a.reduce((x, t) => x + slot(t), 0) + GAP * (a.length - 1) : 30;
   const inTotal = ins.reduce((x, t) => x + thick(t), 0);
   const outTotal = outs.reduce((x, t) => x + thick(t), 0);
@@ -60,7 +72,7 @@ export function MoneyFlow({
   const H = Math.max(colHeight(ins), colHeight(outs), accHeight) + 16;
   const accTop = (H - accHeight) / 2;
 
-  const side = (arr: HistoryTx[], left: boolean) => {
+  const side = (arr: FlowTx[], left: boolean) => {
     let y = (H - colHeight(arr)) / 2;
     let b = accTop + (accHeight - (left ? inTotal : outTotal)) / 2;
     const textX = left ? X_LEFT - 10 : X_RIGHT + 10;
@@ -104,7 +116,7 @@ export function MoneyFlow({
             {t.counterparty} · {t.country}
           </text>
           <text x={textX} y={mid + 12} textAnchor={anchor} className={amountLabel({ current })}>
-            {t.amount.toLocaleString("en-US")} CZK · {t.dt.slice(11)}
+            {Math.round(t.amount).toLocaleString("en-US")} CZK · {t.dt.slice(11)}
             {t.dir === "Remittance" ? " · direction unknown" : ""}
           </text>
         </g>

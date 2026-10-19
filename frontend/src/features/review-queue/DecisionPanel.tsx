@@ -55,15 +55,13 @@ export function DecisionPanel({ decision, onDecide, onUndo }: DecisionPanelProps
             </span>
             <span className="text-[13px] text-pretty">{decision.reason}</span>
           </div>
-          {!decision.seed && (
-            <button
-              type="button"
-              onClick={onUndo}
-              className="cursor-pointer self-start border-0 bg-transparent p-0 text-xs text-fg-muted underline hover:text-purple"
-            >
-              Undo decision
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onUndo}
+            className="cursor-pointer self-start border-0 bg-transparent p-0 text-xs text-fg-muted underline hover:text-purple"
+          >
+            Undo decision
+          </button>
         </>
       ) : (
         <>

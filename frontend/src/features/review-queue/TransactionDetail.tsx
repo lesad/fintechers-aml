@@ -1,32 +1,23 @@
 import { cva } from "class-variance-authority";
 
-import {
-  AiPill,
-  aiDisagreement,
-  Card,
-  type Column,
-  RiskBadge,
-  riskText,
-  StatusLabel,
-  Table,
-} from "@/components";
+import { AiPill, Card, type Column, RiskBadge, riskText, StatusLabel, Table } from "@/components";
 import { cn } from "@/utils";
 
+import { czk, type HistoryTransaction, type TransactionDetail as Detail } from "./api";
 import { ClientCard } from "./ClientCard";
 import { DecisionPanel } from "./DecisionPanel";
-import { clientHistory, CLIENTS, type HistoryTx, PAST_FLAGS, TX_DETAILS } from "./detail-mock";
 import { DetailStrip } from "./DetailStrip";
-import { MoneyFlow } from "./MoneyFlow";
-import { formatAmount, type QueueItem } from "./queue";
+import { type FlowTx, MoneyFlow } from "./MoneyFlow";
+import { formatAmount, formatTs } from "./queue";
+import { rulesSummary, strongestFacts } from "./rules";
+import { useDetail } from "./use-detail";
 
 import type { Decision } from "./decisions";
 
 type TransactionDetailProps = {
-  item: QueueItem;
-  /** The whole queue (decisions applied), to mark the client's other flagged transactions. */
-  queue: QueueItem[];
+  id: string;
   decisions: Record<string, Decision>;
-  onDecide: (action: Decision["action"], reason: string) => void;
+  onDecide: (action: Decision["action"], reason: string, rating: Detail["rating"]) => void;
   onUndo: () => void;
   onOpen: (id: string, background: boolean) => void;
 };
@@ -35,46 +26,81 @@ const historyRow = cva("", {
   variants: { current: { true: "bg-sel font-semibold hover:bg-sel" } },
 });
 
-export function TransactionDetail({
-  item,
-  queue,
+const toFlow = (h: HistoryTransaction): FlowTx => ({
+  id: h.id,
+  dt: formatTs(h.ts),
+  dir: h.direction === "in" ? "Incoming" : h.direction === "out" ? "Outgoing" : "Remittance",
+  counterparty: h.counterpartyAccount ?? "—",
+  country: h.counterpartyCountry ?? "—",
+  amount: czk(h.amountHalere),
+});
+
+const flaggedRow = (h: HistoryTransaction) => h.alertTypes.length > 0;
+
+const directionText = { in: "Incoming", out: "Outgoing", unknown: "Unknown" } as const;
+
+/** Loads one transaction from the engine and shows it; the decision stays in the browser. */
+export function TransactionDetail({ id, ...rest }: TransactionDetailProps) {
+  const detail = useDetail(id);
+  if (detail.status === "ready") return <DetailView detail={detail.data} {...rest} />;
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center gap-2 text-fg-subtle">
+      {detail.status === "loading" && (
+        <>
+          <span
+            aria-hidden="true"
+            className="size-5 animate-spin rounded-full border-2 border-border border-t-purple"
+          />
+          <span role="status">Loading {id}…</span>
+        </>
+      )}
+      {detail.status === "not-found" && <span>Transaction {id} was not found.</span>}
+      {detail.status === "error" && (
+        <>
+          <span className="text-high">
+            Could not load {id}: {detail.message}
+          </span>
+          <button
+            type="button"
+            onClick={detail.retry}
+            className="cursor-pointer border-0 bg-transparent p-0 text-xs text-fg-muted underline hover:text-purple"
+          >
+            Retry
+          </button>
+        </>
+      )}
+    </main>
+  );
+}
+
+function DetailView({
+  detail,
   decisions,
   onDecide,
   onUndo,
   onOpen,
-}: TransactionDetailProps) {
-  const tx = TX_DETAILS[item.id];
-  const client = CLIENTS[item.client];
-  if (!tx || !client) {
-    return (
-      <main className="flex flex-1 items-center justify-center text-fg-subtle">
-        No detail data for {item.id}.
-      </main>
-    );
-  }
+}: Omit<TransactionDetailProps, "id"> & { detail: Detail }) {
+  const { transaction: tx, client, rating, alerts } = detail;
+  const decision = decisions[tx.id];
+  const hits = alerts.flatMap((a) => a.hits);
+  const facts = strongestFacts(hits, client);
+  const ruleKeys = [...new Set(hits.map((h) => h.rule))].toSorted();
+  const flaggedAt = alerts[0] ? new Date(alerts[0].createdAt) : null;
+  const status = rating ? (decision?.action ?? "New") : null;
 
-  const queued = new Map(queue.map((q) => [q.id, q]));
-  const history = clientHistory(item.client);
-  const day = item.date.slice(0, 10);
-  const dayTx = history
-    .filter((h) => h.dt.startsWith(day))
+  const day = tx.ts.slice(0, 10);
+  const dayTx = detail.history
+    .filter((h) => h.ts.startsWith(day))
+    .map(toFlow)
     .toSorted((a, b) => (a.dt > b.dt ? 1 : -1));
-  const disagree = aiDisagreement(item.rule, item.ai);
-  const flagOf = (h: HistoryTx) => {
-    const q = queued.get(h.id);
-    const note = decisions[h.id]?.reason ?? (h.id === item.id ? "this transaction" : "");
-    if (q) return { rule: q.rule, status: q.status, note };
-    const past = PAST_FLAGS[h.id];
-    return past ? { rule: past.rule, status: "Closed" as const, note: past.note } : null;
-  };
 
-  const historyColumns: Column<HistoryTx>[] = [
+  const historyColumns: Column<HistoryTransaction>[] = [
     {
       key: "dt",
       header: "Date and time",
       width: 136,
       className: "tabular-nums text-fg-muted",
-      cell: (h) => h.dt,
+      cell: (h) => formatTs(h.ts),
     },
     {
       key: "id",
@@ -83,12 +109,7 @@ export function TransactionDetail({
       className: "font-mono text-xs",
       cell: (h) => h.id,
     },
-    {
-      key: "dir",
-      header: "Direction",
-      width: 92,
-      cell: (h) => (h.dir === "Remittance" ? "Unknown" : h.dir),
-    },
+    { key: "dir", header: "Direction", width: 92, cell: (h) => directionText[h.direction] },
     {
       key: "cp",
       header: "Counterparty",
@@ -96,8 +117,8 @@ export function TransactionDetail({
       className: "text-ellipsis",
       cell: (h) => (
         <>
-          <span className="font-mono text-xs">{h.counterparty}</span>{" "}
-          <span className="text-fg-subtle">· {h.country}</span>
+          <span className="font-mono text-xs">{h.counterpartyAccount ?? "—"}</span>{" "}
+          <span className="text-fg-subtle">· {h.counterpartyCountry ?? "—"}</span>
         </>
       ),
     },
@@ -107,28 +128,31 @@ export function TransactionDetail({
       width: 140,
       align: "right",
       className: "tabular-nums",
-      cell: (h) => formatAmount(h.amount),
+      cell: (h) => formatAmount(czk(h.amountHalere)),
     },
     {
-      key: "rule",
-      header: "Rule rating",
-      width: 110,
-      cell: (h) => {
-        const f = flagOf(h);
-        return f ? <RiskBadge level={f.rule} /> : <span className="text-fg-subtle">—</span>;
-      },
+      key: "alerts",
+      header: "Alerts",
+      width: 90,
+      cell: (h) =>
+        flaggedRow(h) ? (
+          <span className="font-semibold">{h.alertTypes.join(", ")}</span>
+        ) : (
+          <span className="text-fg-subtle">—</span>
+        ),
     },
     {
       key: "resolution",
       header: "Resolution",
       className: "text-ellipsis",
       cell: (h) => {
-        const f = flagOf(h);
-        if (!f) return <span className="text-fg-subtle">Not flagged</span>;
+        if (!flaggedRow(h)) return <span className="text-fg-subtle">Not flagged</span>;
+        const d = decisions[h.id];
+        const note = d?.reason ?? (h.id === tx.id ? "this transaction" : "");
         return (
-          <span title={f.note}>
-            <StatusLabel status={f.status} />
-            {f.note && <span className="font-normal text-fg-subtle"> · {f.note}</span>}
+          <span title={note}>
+            <StatusLabel status={d?.action ?? "New"} />
+            {note && <span className="font-normal text-fg-subtle"> · {note}</span>}
           </span>
         );
       },
@@ -137,52 +161,58 @@ export function TransactionDetail({
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
-      <DetailStrip item={item} tx={tx} client={client} />
+      <DetailStrip detail={detail} status={status} flagged={flaggedAt} />
 
       <div className="min-h-0 flex-1 overflow-auto bg-bg-sub">
         <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-3 px-4 pt-3 pb-4">
           <div className="flex min-w-0 flex-col gap-3">
             <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-3">
               <Card title="Rule rating">
-                <div className="flex items-center gap-2.5">
-                  <RiskBadge level={item.rule} />
-                  <span className="text-sm font-semibold text-pretty">{item.ruleReason}</span>
-                </div>
-                <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-t border-border-soft pt-2.5">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-fg-subtle">Rule fired</span>
-                    <span>{tx.ruleName}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-fg-subtle">Threshold</span>
-                    <span className="text-fg-muted tabular-nums">{tx.limit}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-fg-subtle">Actual</span>
-                    <span className={cn("font-bold tabular-nums", riskText({ level: item.rule }))}>
-                      {tx.actual}
-                    </span>
-                  </div>
-                </div>
+                {rating ? (
+                  <>
+                    <div className="flex items-center gap-2.5">
+                      <RiskBadge level={rating} />
+                      <span className="text-sm font-semibold text-pretty">
+                        {rulesSummary(ruleKeys)}
+                      </span>
+                    </div>
+                    {facts && (
+                      <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-t border-border-soft pt-2.5">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[11px] text-fg-subtle">Rule fired</span>
+                          <span>
+                            {facts.rule} · alert {alerts.map((a) => a.alertType).join(", ")}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[11px] text-fg-subtle">Threshold</span>
+                          <span className="text-fg-muted tabular-nums">{facts.threshold}</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[11px] text-fg-subtle">Actual</span>
+                          <span
+                            className={cn("font-bold tabular-nums", riskText({ level: rating }))}
+                          >
+                            {facts.actual}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-[13px] text-fg-muted">
+                    The latest run raised no alert on this transaction.
+                  </span>
+                )}
               </Card>
 
               <Card tone="ai" title="AI rating" className="gap-2">
                 <div className="flex items-center gap-2">
-                  <AiPill rating={item.ai} />
-                  {disagree && (
-                    <span className="rounded-[3px] bg-fg px-[5px] text-[11px] leading-4 font-semibold text-bg">
-                      ≠ {disagree} than rule
-                    </span>
-                  )}
+                  <AiPill rating="none" />
                 </div>
-                {item.ai === "failed" ? (
-                  <p className="m-0 text-[13px] leading-normal text-fg-muted">
-                    The AI assessment could not be completed for this transaction. Review it based
-                    on the rule rating.
-                  </p>
-                ) : item.ai !== "running" ? (
-                  <p className="m-0 text-[13px] leading-normal text-pretty text-fg">{tx.aiText}</p>
-                ) : null}
+                <p className="m-0 text-[13px] leading-normal text-fg-muted">
+                  No model rates cases (ADR-0032). An AI summary for the reviewer will appear here.
+                </p>
               </Card>
             </div>
 
@@ -214,27 +244,29 @@ export function TransactionDetail({
               }
             >
               <div className="flex justify-center">
-                <MoneyFlow day={dayTx} currentId={item.id} clientId={item.client} />
+                <MoneyFlow day={dayTx} currentId={tx.id} clientId={client.id} />
               </div>
             </Card>
 
             <Card
               padded={false}
-              title="Client's recent transactions"
-              aside={<span className="text-[11px] text-fg-subtle">last {history.length}</span>}
+              title="Client's transactions"
+              aside={
+                <span className="text-[11px] text-fg-subtle">{detail.history.length} in July</span>
+              }
             >
               <Table
                 embedded
                 columns={historyColumns}
-                rows={history}
+                rows={detail.history}
                 rowKey={(h) => h.id}
                 minWidth={1000}
-                rowClassName={(h) => historyRow({ current: h.id === item.id })}
-                rowClickable={(h) => queued.has(h.id) && h.id !== item.id}
+                rowClassName={(h) => historyRow({ current: h.id === tx.id })}
+                rowClickable={(h) => flaggedRow(h) && h.id !== tx.id}
                 rowTitle={(h) =>
-                  h.id === item.id
+                  h.id === tx.id
                     ? "This transaction"
-                    : queued.has(h.id)
+                    : flaggedRow(h)
                       ? `Open ${h.id} in a new tab`
                       : ""
                 }
@@ -244,9 +276,14 @@ export function TransactionDetail({
           </div>
 
           <div className="sticky top-3 flex flex-col gap-3">
-            <ClientCard id={item.client} client={client} />
-
-            <DecisionPanel decision={decisions[item.id]} onDecide={onDecide} onUndo={onUndo} />
+            <ClientCard client={client} />
+            {rating && (
+              <DecisionPanel
+                decision={decision}
+                onDecide={(action, reason) => onDecide(action, reason, rating)}
+                onUndo={onUndo}
+              />
+            )}
           </div>
         </div>
       </div>

@@ -14,6 +14,10 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss(),
   ],
+  server: {
+    // The Kotlin engine (engine/, `./gradlew bootRun`) serves /api on 8080 by default.
+    proxy: { "/api": process.env.ENGINE_URL ?? "http://127.0.0.1:8080" },
+  },
   resolve: {
     // Vite reads the `paths` map from tsconfig.json, so `@/…` aliases are
     // declared in exactly one place for both the app build and Vitest.

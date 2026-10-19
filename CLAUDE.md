@@ -17,7 +17,7 @@ This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FI
 - TypeScript strict, `noUncheckedIndexedAccess` on
 - Tailwind v4 (CSS-first via `@theme`, through `@tailwindcss/vite`)
 - Own UI components on Tailwind (`src/components/`), no component library — no shadcn/ui (ADR-0028); design tokens from `docs/design/` live in `src/app/globals.css`; class variants through `cva` from class-variance-authority (ADR-0031)
-- Data will come from the Kotlin + Spring Boot rules engine (ADR-0024) over `fetch`, validated with zod; no client query lib, no axios. **Today the engine is CLI-only (import and run commands, no HTTP API) and the UI runs on mock data** in `src/features/review-queue/mock.ts`; the API contract is still open (`docs/challenge/architecture.md`).
+- Data comes from the Kotlin + Spring Boot rules engine (ADR-0024) over `fetch`, validated with zod (`src/features/review-queue/api.ts`); no client query lib, no axios. `pnpm dev` proxies `/api` to the engine on `127.0.0.1:8080` (`ENGINE_URL` overrides); run it with `./gradlew bootRun` in `engine/` (`engine/README.md`). The review queue and the transaction detail read `GET /api/transactions` (paged) and `GET /api/transactions/{id}`; decisions still live in the browser.
 - Vitest (one unit project, config in `vite.config.ts`)
 - Oxlint + Oxfmt (NOT ESLint/Prettier)
 - Fallow for dead code / duplication / health
@@ -67,7 +67,7 @@ The `rerender-memo`, `rerender-memo-with-default-value`, `rerender-dependencies`
 - New reusable component: a PascalCase file in `src/components/`, styled with Tailwind and the `@theme` tokens, exported from `src/components/index.ts`. Classes that depend on props or state are a `cva` definition with named variants, not inline ternaries; `cn()` only merges a caller's `className` (ADR-0031).
 - New feature: create `src/features/<name>/` (components + zod schema + its `fetch`-based data access + co-located tests) with an `index.ts` barrel; `src/app/App.tsx` imports the barrel and stays thin. Reusable, non-domain UI goes in `src/components/`.
 - New UI copy: inline English in the component. There is no message catalog (ADR-0025).
-- Data access: `fetch` against the Kotlin engine, validated with zod at the boundary — never trust a response shape. No client query lib, no axios (ADR-0005). Until the engine exposes an API, a feature keeps its mock data in its own `mock.ts`.
+- Data access: `fetch` against the Kotlin engine, validated with zod at the boundary — never trust a response shape. No client query lib, no axios (ADR-0005). Tests stub `fetch` with responses in the engine's shape.
 
 ## Documentation discipline
 

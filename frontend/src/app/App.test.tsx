@@ -1,57 +1,188 @@
-import { fireEvent, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "@/test/render";
 
 import { App } from "./App";
 
+const row = (id: string, rating: string, rules: string[], clientId = "K1") => ({
+  id,
+  clientId,
+  ts: "2026-07-17T15:58:00",
+  amountHalere: 18_450_000,
+  volume: 7352,
+  currency: "EUR",
+  direction: "out",
+  alertTypes: [rules[0]?.charAt(0) ?? "A"],
+  rules,
+  rating,
+  flaggedAt: new Date().toISOString(),
+});
+
+const detail = {
+  transaction: {
+    id: "TX1",
+    clientId: "K1",
+    ts: "2026-07-17T15:58:00",
+    amountHalere: 18_450_000,
+    volume: 7352,
+    currency: "EUR",
+    fxRate: 25.095,
+    direction: "out",
+    type: "outgoing payment",
+    payerAccount: "K1",
+    payerCountry: "CZ",
+    payeeAccount: "AAT00116",
+    payeeCountry: "AT",
+  },
+  client: {
+    id: "K1",
+    country: "CZ",
+    contractDate: "2019-03-14",
+    channel: "in person",
+    pep: true,
+    type: "legal entity",
+    risk: "high",
+    expectedMonthlyHalere: 40_000_000,
+    expectedCount: 55,
+    q2VolumeHalere: 162_000_000,
+    q2TxCount: 182,
+    q2MaxTxHalere: 6_140_000,
+    q2Days: 91,
+  },
+  rating: "High",
+  alerts: [
+    {
+      id: 7,
+      alertType: "B",
+      createdAt: new Date().toISOString(),
+      hits: [
+        {
+          rule: "B2",
+          version: 1,
+          grainKey: "TX1",
+          evidence: { "tx.amount": 18_450_000, "p.pep_min": 10_000_000 },
+        },
+      ],
+    },
+  ],
+  history: [
+    {
+      id: "TX1",
+      ts: "2026-07-17T15:58:00",
+      direction: "out",
+      counterpartyAccount: "AAT00116",
+      counterpartyCountry: "AT",
+      amountHalere: 18_450_000,
+      alertTypes: ["B"],
+    },
+  ],
+};
+
+const pages = [
+  [row("TX1", "High", ["B2"]), row("TX2", "Medium", ["A1"], "K2")],
+  [row("TX3", "Low", ["A1"], "K3")],
+];
+
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+
+let observers: IntersectionObserverCallback[] = [];
+
+beforeEach(() => {
+  observers = [];
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(cb: IntersectionObserverCallback) {
+        observers.push(cb);
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string) => {
+      const url = new URL(input, "http://test");
+      if (url.pathname === "/api/transactions") {
+        const page = Number(url.searchParams.get("page"));
+        return json({
+          items: pages[page] ?? [],
+          page,
+          size: 50,
+          total: 3,
+          countsByRating: { High: 1, Medium: 1, Low: 1 },
+        });
+      }
+      if (url.pathname === "/api/transactions/TX1") return json(detail);
+      return json({ message: "not found" }, 404);
+    }),
+  );
+});
+
+afterEach(() => vi.unstubAllGlobals());
+
 // Role queries skip hidden detail tabs, so this is always the visible table.
 const queueTable = () => screen.getByRole("table");
 
 describe("App", () => {
-  it("opens a queue row as a detail tab and returns to the queue when the tab closes", () => {
+  it("loads the queue from the engine and the next page when the list end comes into view", async () => {
     render(<App />);
-    expect(within(queueTable()).getAllByRole("row")).toHaveLength(13); // header + 12 mock rows
+    await waitFor(() => expect(within(queueTable()).getAllByRole("row")).toHaveLength(3));
+    expect(screen.getByText("2 of 3 loaded")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("TX000123456"));
-    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX000123456");
-    expect(screen.getByText("PEP outgoing payment")).toBeInTheDocument();
-    expect(screen.getByText("Client's recent transactions")).toBeInTheDocument();
+    act(() =>
+      observers.at(-1)?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      ),
+    );
+    await waitFor(() => expect(within(queueTable()).getAllByRole("row")).toHaveLength(4));
+    expect(screen.getByText("3 of 3 loaded")).toBeInTheDocument();
+  });
+
+  it("opens a row as a detail tab with the rule's threshold and actual value", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
+    expect(await screen.findByText("100,000 CZK")).toBeInTheDocument();
+    expect(screen.getAllByText("184,500 CZK").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Close tab" }));
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
-    expect(screen.queryByText("PEP outgoing payment")).not.toBeInTheDocument();
   });
 
-  it("needs a reason before closing a case, then shows the decision in the queue", () => {
+  it("needs a reason before closing a case, then shows it in the queue and the counts", async () => {
     render(<App />);
-    fireEvent.click(screen.getByText("TX000004888"));
+    fireEvent.click(await screen.findByText("TX1"));
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Close" }));
     const submit = screen.getByRole("button", { name: "Close transaction" });
     expect(submit).toBeDisabled();
-
     fireEvent.change(screen.getByPlaceholderText("Why the transaction is not suspicious"), {
-      target: { value: "Payroll run, confirmed with the client." },
+      target: { value: "Supplier payment, invoice on file." },
     });
     fireEvent.click(submit);
-    expect(screen.getByText("Payroll run, confirmed with the client.")).toBeInTheDocument();
+    expect(screen.getByText("Supplier payment, invoice on file.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /Review queue/ }));
-    const row = within(queueTable()).getByText("TX000004888").closest("tr");
-    expect(row).toHaveTextContent("Closed");
+    expect(within(queueTable()).getByText("TX1").closest("tr")).toHaveTextContent("Closed");
+    expect(screen.getByTitle("Open cases by rule rating")).toHaveTextContent("0 High");
   });
 
-  it("opens a transaction typed into the header and flags unknown ids", () => {
+  it("opens a transaction typed into the header and flags unknown ids", async () => {
     render(<App />);
     const jump = screen.getByRole("textbox", { name: "Open transaction by ID" });
 
     fireEvent.change(jump, { target: { value: "tx999" } });
     fireEvent.submit(jump);
-    expect(screen.getByText("Not found")).toBeInTheDocument();
+    expect(await screen.findByText("Not found")).toBeInTheDocument();
 
-    fireEvent.change(jump, { target: { value: "tx000004790" } });
+    fireEvent.change(jump, { target: { value: "tx1" } });
     fireEvent.submit(jump);
-    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX000004790");
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1"),
+    );
   });
 });

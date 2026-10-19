@@ -1,46 +1,63 @@
 import { describe, expect, it } from "vitest";
 
-import { MOCK_QUEUE } from "./mock";
-import { filterQueue, formatAge, NO_FILTER, openCountByRating } from "./queue";
+import { byStatus, formatAge, formatTs, toQueueItem } from "./queue";
 
-describe("filterQueue", () => {
-  it("sorts by rule rating, then oldest first", () => {
-    const rows = filterQueue(MOCK_QUEUE, NO_FILTER);
+import type { FlaggedTransaction } from "./api";
 
-    expect(rows.map((r) => r.rule)).toEqual([
-      ...Array(4).fill("High"),
-      ...Array(4).fill("Medium"),
-      ...Array(4).fill("Low"),
-    ]);
-    expect(rows[0]?.id).toBe("TX000004790");
-  });
+const flagged: FlaggedTransaction = {
+  id: "TX000123456",
+  clientId: "K003797",
+  ts: "2026-07-17T15:58:12",
+  amountHalere: 18_450_000,
+  volume: 7352,
+  currency: "EUR",
+  direction: "out",
+  alertTypes: ["B"],
+  rules: ["B2"],
+  rating: "High",
+  flaggedAt: "2026-10-19T18:25:35Z",
+};
 
-  it("filters by rating, open status and a case-insensitive id or client query", () => {
-    expect(filterQueue(MOCK_QUEUE, { ...NO_FILTER, rating: "Low" })).toHaveLength(4);
-    expect(
-      filterQueue(MOCK_QUEUE, { ...NO_FILTER, status: "open" }).every((r) => r.status !== "Closed"),
-    ).toBe(true);
-    expect(filterQueue(MOCK_QUEUE, { ...NO_FILTER, query: " k003797 " }).map((r) => r.id)).toEqual([
-      "TX000004812",
-      "TX000123456",
-      "TX000004822",
-    ]);
+describe("toQueueItem", () => {
+  it("turns an engine row into a queue row in CZK, unrated by AI, new", () => {
+    expect(toQueueItem(flagged)).toMatchObject({
+      id: "TX000123456",
+      client: "K003797",
+      rule: "High",
+      ruleReason: "PEP outgoing payment above the limit",
+      ai: "none",
+      amount: 184_500,
+      date: "2026-07-17 15:58",
+      status: "New",
+    });
   });
 });
 
-describe("openCountByRating", () => {
-  it("leaves closed cases out", () => {
-    expect(openCountByRating(MOCK_QUEUE)).toEqual({ High: 4, Medium: 4, Low: 3 });
+describe("byStatus", () => {
+  const items = [
+    { ...toQueueItem(flagged), id: "a" },
+    { ...toQueueItem(flagged), id: "b", status: "Closed" as const },
+    { ...toQueueItem(flagged), id: "c", status: "Escalated" as const },
+  ];
+
+  it("keeps open cases, or one status, or all", () => {
+    expect(byStatus(items, "open").map((r) => r.id)).toEqual(["a", "c"]);
+    expect(byStatus(items, "Closed").map((r) => r.id)).toEqual(["b"]);
+    expect(byStatus(items, "all")).toHaveLength(3);
   });
 });
 
-describe("formatAge", () => {
+describe("formatting", () => {
   const now = new Date("2026-10-19T14:30");
   it.each([
     ["2026-10-19T14:18", "12 min"],
     ["2026-10-19T09:27", "5h 3m"],
     ["2026-10-17T10:30", "2d 4h"],
-  ])("%s → %s", (flagged, age) => {
-    expect(formatAge(new Date(flagged), now)).toBe(age);
+  ])("age since %s is %s", (flaggedAt, age) => {
+    expect(formatAge(new Date(flaggedAt), now)).toBe(age);
+  });
+
+  it("shows a timestamp to the minute", () => {
+    expect(formatTs("2026-07-01T00:15:25")).toBe("2026-07-01 00:15");
   });
 });
