@@ -1,10 +1,10 @@
 import { cva } from "class-variance-authority";
 import { useState } from "react";
 
+import { ConditionLegend, conditionToken } from "@/components";
 import { cn } from "@/utils";
 
 import { type RuleVersion, saveRule } from "./api";
-import { ConditionLegend, token } from "./ConditionLegend";
 import { ExplanationPreview } from "./ExplanationPreview";
 import { ChangedBadge, field, Issues, SectionTitle, Segmented } from "./form-parts";
 import { conditionTokens, grainLabel } from "./format";
@@ -318,7 +318,7 @@ function ConditionEditor({
         {conditionTokens(draft.condition, variables).map((t) => (
           <span
             key={t.at}
-            className={token({
+            className={conditionToken({
               kind: t.kind,
               unknown: unknown.has(t.text) || (t.kind === "param" && !params.has(t.text.slice(2))),
             })}

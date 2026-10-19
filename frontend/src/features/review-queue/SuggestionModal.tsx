@@ -1,6 +1,6 @@
 import { cva } from "class-variance-authority";
 
-import { AiLabel, Card, Modal } from "@/components";
+import { AiLabel, Card, ConditionCode, ConditionLegend, Modal } from "@/components";
 import { type ParamValue, paramText } from "@/utils";
 
 import type { Impact, ImpactCounts, SuggestedRule, Suggestion } from "./api";
@@ -174,9 +174,11 @@ function RuleView({
       </dl>
 
       <Section title="Condition">
-        <code className="block rounded bg-bg-sub px-2.5 py-2 font-mono text-xs break-words whitespace-pre-wrap">
-          {rule.condition}
-        </code>
+        <ConditionCode
+          condition={rule.condition}
+          variables={new Set(rule.variables.map((v) => v.name))}
+        />
+        <ConditionLegend />
       </Section>
 
       {Object.keys(rule.params).length > 0 && (

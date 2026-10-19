@@ -1,9 +1,9 @@
 import { cva } from "class-variance-authority";
 
-import type { TokenKind } from "./format";
+import { conditionTokens, type TokenKind } from "@/utils";
 
 /** Colour of a condition token on the indigo code block; `unknown` adds a wavy underline. */
-export const token = cva("", {
+export const conditionToken = cva("", {
   variants: {
     kind: {
       param: "font-bold text-yellow",
@@ -35,6 +35,25 @@ export function ConditionLegend({ withUnknown = false }: { withUnknown?: boolean
         <span key={label} className="flex items-center gap-1.5">
           <span aria-hidden="true" className={swatch} />
           {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** A CEL condition on the indigo code block, each token coloured by [conditionToken]. */
+export function ConditionCode({
+  condition,
+  variables,
+}: {
+  condition: string;
+  variables: Set<string>;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-md bg-indigo px-3 py-2.5 font-mono text-[13px] leading-[1.55] whitespace-pre-wrap">
+      {conditionTokens(condition, variables).map((t) => (
+        <span key={t.at} className={conditionToken({ kind: t.kind })}>
+          {t.text}
         </span>
       ))}
     </div>

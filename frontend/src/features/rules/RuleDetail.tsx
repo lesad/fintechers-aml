@@ -1,15 +1,8 @@
 import { cva } from "class-variance-authority";
 
-import { ConditionLegend, token } from "./ConditionLegend";
-import {
-  conditionTokens,
-  grainLabel,
-  paramParts,
-  paramText,
-  scopeLabel,
-  shortDate,
-  windowShort,
-} from "./format";
+import { ConditionCode, ConditionLegend } from "@/components";
+
+import { grainLabel, paramParts, paramText, scopeLabel, shortDate, windowShort } from "./format";
 
 import type { RuleVersion } from "./api";
 import type { ReactNode } from "react";
@@ -191,13 +184,7 @@ function Condition({ version: v }: { version: RuleVersion }) {
           </code>
         </div>
       )}
-      <div className="overflow-x-auto rounded-md bg-indigo px-3 py-2.5 font-mono text-[13px] leading-[1.55] whitespace-pre-wrap">
-        {conditionTokens(v.condition, variables).map((t) => (
-          <span key={t.at} className={token({ kind: t.kind })}>
-            {t.text}
-          </span>
-        ))}
-      </div>
+      <ConditionCode condition={v.condition} variables={variables} />
       <ConditionLegend />
     </section>
   );
