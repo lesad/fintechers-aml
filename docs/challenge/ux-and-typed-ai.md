@@ -14,10 +14,12 @@ All pages read on 2026-10-19. "Vendor claim" means the figure comes from the ven
 
 ## 2. Typed AI on Bedrock
 
+Status (2026-10-19, later the same day): superseded for decisions. Jev answers the typed questions and Claude Sonnet 4.5 only writes text ([decision-architecture.md](decision-architecture.md)). The schema limits and the range-check rule below still apply to any Bedrock structured output, and a forced tool call on gpt-oss-120b or Sonnet 4.5 is the fallback decider if Jev access fails.
+
 - Two mechanisms: a JSON-schema output (`outputConfig.textFormat` in Converse) and `strict: true` on tool definitions. Schemas reject `minimum`/`maximum`, `minLength`/`maxLength` and recursion; `additionalProperties` must be `false`. Structured outputs cannot be combined with Anthropic citations [17][18]. So a 0 to 1 score and the cited transaction ids can be typed, but our code must range-check the score and verify each id exists.
 - **gpt-oss-120b** supports Frankfurt In-Region, Converse and structured outputs on `bedrock-runtime`. Client-side tool calling is listed only for `bedrock-mantle` [19]. This is the non-Claude model that fits. Its card says "EOL no sooner than 2026-08-05", yet the model is still Active; check it on day 1.
 - **Nova 2 Lite** (`eu.amazon.nova-2-lite-v1:0`) supports client-side tool calling but not structured outputs [20].
-- Fallback: **Claude Haiku 4.5** through `eu.*` supports both structured outputs and tool calling [21]. Unlike Haiku 5.5, which has neither (see bedrock-fit.md).
+- Fallback: **Claude Haiku 4.5** through `eu.*` supports both structured outputs and tool calling [21]. Unlike Haiku 5.5, which has neither (see [bedrock-fit.md](https://gitlab.com/morosystems/other/fintechers-hackathon-2026/-/blob/main/context/4-archive/i02-i06-payee-check/bedrock-fit.md)). Its `eu.` profile failed with ServiceUnavailableException on 2026-10-19 ([aws-account-setup.md](aws-account-setup.md)), so it is no fallback for us.
 - Reference pattern: OpenAI's cookbook on Bedrock (2026-07-23). The model proposes an assessment, application code checks the structured claims against deterministic calculations, and a human decides [22]. AWS's Quick and Snowflake triage post uses an eight-section brief with a risk score and a recommended disposition [23]. DEV326 (re:Invent 2025) has eight Strands agents with an audit agent [24].
 - UNVERIFIED: how to calibrate LLM confidence. No primary source found. Calibrate the tabular score, not the LLM.
 
@@ -37,7 +39,7 @@ All pages read on 2026-10-19. "Vendor claim" means the figure comes from the ven
 ## Recommendation (ours)
 
 - **Screens.**
-  1. Queue: score band, rule chips (R1 profile, R2 country/PEP, R3 flow-through), SLA and an "AI suggests FP" badge.
+  1. Queue: score band, rule chips (A profile, B country/PEP, C flow-through), SLA and an "AI suggests FP" badge.
   2. Case: evidence panel, flow graph and timeline.
   3. Approver inbox.
   4. Audit export.
@@ -48,7 +50,7 @@ All pages read on 2026-10-19. "Vendor claim" means the figure comes from the ven
   - The score with its top feature contributions.
   - The model id and prompt hash on every AI output.
   - An append-only event log.
-- **30-hour split.** Two FE developers build the queue and case screens. One builds graph and timeline. Martin builds the rules in Kotlin, the scorer and the gpt-oss call. Use recorded fixtures for the demo.
+- **30-hour split.** Two FE developers build the queue and case screens. One builds graph and timeline. Martin builds the rules in Kotlin, the scorer, the Jev calls and the Sonnet 4.5 summary call. Use recorded fixtures for the demo.
 
 ## Sources
 

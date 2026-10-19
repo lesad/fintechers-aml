@@ -6,6 +6,7 @@
 
 ### Added
 
+- `docs/challenge/`: `aml-legal-sources.md`, `mentor-questions.md`, `architecture.md` and `hackathon.md` (team, timeline, rules, judging, deliverables). The folder is now the single source of hackathon context; the context repo is frozen (ADR-0023).
 - `pnpm freeze` (`scripts/freeze.sh`): tag `origin/main` as `hackathon-submit` and lock `main` for the code freeze; `--undo` unlocks.
 - `pnpm ship` (`scripts/ship.sh`): push, open the PR, arm squash auto-merge and wait for CI, printing the failing log on red.
 - `.github/rulesets/main.json`: the `main` ruleset (PR required, 0 approvals, squash only, required CI checks). CI now cancels stale PR runs and times jobs out after 10 minutes.
@@ -17,11 +18,14 @@
 
 ### Changed
 
+- `docs/challenge/`: the decision notes record the no-deployment decision and the Kotlin-backend proposal; stale Vercel, Supabase and Playwright lines are gone; the lane overview is folded into the README; links to the context repo now point at GitLab.
 - Renamed the app to `fintechers-aml`, removed the guestbook example, added the "Built during the hackathon" README section.
 - Migrations and seed moved from `supabase/` to `db/migrations` and `db/seed.sql`. `pnpm db:reset` recreates the container, migrates and seeds; `pnpm db:migrate` exits cleanly while there are no migrations.
 - `src/proxy.ts` is next-intl only; there is no session refresh.
 
 ### Removed
+
+- `docs/challenge/lane-overview.md`: every section was duplicated elsewhere in the folder.
 
 - Supabase: `@supabase/ssr`, `@supabase/supabase-js`, `src/core/supabase`, the CLI stack, `pnpm db:types`, the Supabase env vars, MCP server and skills, and the RLS convention.
 - Playwright: e2e tests, `playwright.config.ts`, `pnpm test:e2e`, the CI e2e job, the MCP server and skill, `allowedDevOrigins`, and `loc()` with the `@/test` barrel.

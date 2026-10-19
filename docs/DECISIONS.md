@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0023 — `docs/challenge/` is the single source of hackathon context; the context repo is frozen
+
+**Accepted.** The team's research repo (`fintechers-hackathon-2026` on GitLab) is frozen on 2026-10-19 with a README pointer here. Everything the build and the pitch need lives in `docs/challenge/` and is edited there, not copied: the challenge text, the data profile, the rule B lists, the legal sources, the escalation design, the decision and architecture notes, the mentor questions and `hackathon.md` (team, timeline, rules, judging, deliverables). The selection history, the dropped fraud lead, pre-decision research on Bedrock models and hosting, the other tracks, notes on the jurors and the news-feed skill stay in the frozen repo: none of it serves an AML build step, and some of it names real people or clients. The notes now also record the team's 2026-10-19 decision to run everything locally for the build and the demo, with a Kotlin backend proposed to own the rules, the Jev calls and the database (`architecture.md`, UNDECIDED). _Why:_ one repo survives the event, the judges read it, and an agent needs one place to look. Supersedes in part the Vercel hosting in ADR-0020 and the RDS target in ADR-0021; the local Postgres container in ADR-0021 stands.
+
 ### ADR-0022 — Short-lived PRs, gated by CI only, merged by auto-merge
 
 **Accepted.** All work reaches `main` through a PR that GitHub squash-merges on its own once the `check`, `integration` and `build` jobs pass. The `main` ruleset (`.github/rulesets/main.json`) requires a PR with 0 approvals, squash only, and blocks force-push and deletion; the repo admin can bypass. Branches need not be up to date with `main` before merging. `pnpm ship` (`scripts/ship.sh`) pushes, opens the PR, arms auto-merge and waits on the checks, printing the failing log on red. CI cancels stale PR runs and caps each job at 10 minutes. _Why:_ the team and its agents work from the CLI only and need to move fast before the freeze; CI is the quality gate, and the PRs give the judges a readable history. A merge queue would catch two green PRs that break together, but it needs an organisation-owned repo; CI on `main` catches that case after the fact.
@@ -10,11 +14,13 @@
 
 **Accepted.** The deployed database is Postgres on AWS RDS in `eu-central-1`, reached through `POSTGRES_URL` (plus `POSTGRES_URL_NON_POOLING` for DDL when the app connects through a proxy). Local dev runs `postgres:17-alpine` from `compose.yaml`; CI runs the same image as a service container. Drizzle and `postgres-js` are unchanged; migrations live in `db/migrations`, the seed in `db/seed.sql`. Supabase is removed: the client, the auth refresh in `src/proxy.ts`, the CLI stack, the MCP server, the skills and the RLS convention. The hackathon build has no auth layer. Playwright e2e and all of Storybook are removed too, which cuts setup and CI time before the code freeze; unit and integration tests remain. _Why:_ the team settled on AWS for the database, and fewer moving parts before the freeze. Supersedes the open database sentence in ADR-0020 and the e2e parts of ADR-0017.
 
+_Superseded in part by ADR-0023: with no deployment there is no RDS instance; the local container and the migration layout stand._
+
 ### ADR-0020 — Hackathon AML build: Vercel app, AWS Bedrock through a role, Jev for typed decisions
 
 **Accepted.** The app is the FINREG AML triage entry for The FinTechers Hackathon 2026. It runs on Vercel; model calls go to AWS Bedrock in Frankfurt through an IAM role (the team account blocks access keys); typed decisions come from TypeSafe's Jev, with Laya as a later migration behind the same request shape. Rules A, B and C and all arithmetic are deterministic code; the model only answers typed questions, and code validates its output. The organisers' data stays out of git (`data/`, pulled by `scripts/pull-data.sh`). _Why:_ the team is frontend-heavy, Jev has a TypeScript SDK, the hackathon provides Bedrock credits, and FINREG grades explainable, auditable decisions. Detail: `docs/challenge/decision-architecture.md`. The database (Supabase from the template or Postgres on AWS) is still open.
 
-_Superseded in part by ADR-0021: the database is Postgres on AWS (RDS)._
+_Superseded in part by ADR-0021: the database is Postgres on AWS (RDS). Superseded in part by ADR-0023: nothing is deployed, so the Vercel hosting and the IAM role for running code no longer apply._
 
 ### ADR-0019 — Lint policy: `type` over `interface`, PascalCase component files, and the test-relaxation block covers every test suffix
 

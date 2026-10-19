@@ -4,10 +4,10 @@
 
 This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FINREG PARTNERS "AML transaction monitoring: triage and red-flag escalation". Code freeze: Tuesday 20 October, 13:30. Only commits after the `hackathon-start` tag are judged.
 
-- Challenge, data, decision design and AWS limits: `docs/challenge/README.md`. Read it before building a feature.
+- Challenge, data, decision design and AWS limits: `docs/challenge/README.md`. Read it before building a feature. Team, timeline, rules and judging: `docs/challenge/hackathon.md`. Questions for the mentors and their answers: `docs/challenge/mentor-questions.md`. This folder is the single source; the team's context repo is frozen (ADR-0023).
 - Data: `pnpm data:pull` (uses `AWS_PROFILE`, by convention `hackathon`, or `--profile NAME`) fills `data/raw/` (git-ignored). Never commit the organisers' data.
 - Reference data we own: `reference/high-risk-countries-2026-07.json` (rule B).
-- AWS: Frankfurt (`eu-central-1`) only, SSO sign-in, no IAM users or access keys; running code uses an IAM role. Models: `openai.gpt-oss-120b-1:0` (unthrottled), Claude 4.5 only through `eu.` profiles.
+- AWS: Frankfurt (`eu-central-1`) only, SSO sign-in, no IAM users or access keys. Everything runs locally on the `AWS_PROFILE` SSO credentials; nothing is deployed. Models: `openai.gpt-oss-120b-1:0` (unthrottled), Claude 4.5 only through `eu.` profiles.
 - Deterministic rules and all arithmetic stay in code; the model makes typed decisions only, and code validates every model output.
 
 ## Stack

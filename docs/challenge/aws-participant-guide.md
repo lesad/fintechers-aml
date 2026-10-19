@@ -4,7 +4,7 @@ Extracted on 2026-10-19 from the Notion page "AWS Participant Guide: your AWS ac
 
 ## What it changes for us
 
-- **No IAM users or access keys.** Blocked at account level. Running code uses an IAM role (allowed). Temporary keys from the access portal expire with the 12-hour session. So Vercel can't hold long-lived Bedrock keys: either federate Vercel to an IAM role through OIDC (not yet checked against the guardrails), or put the Bedrock-calling backend on AWS (Lambda with a role) and let Vercel call it.
+- **No IAM users or access keys.** Blocked at account level. Running code uses an IAM role (allowed). Temporary keys from the access portal expire with the 12-hour session. We run everything locally (decided 2026-10-19), so code takes the 12-hour SSO credentials from `AWS_PROFILE`; anything long-running on AWS would need an IAM role instead.
 - **Budget:** USD 800 per team, shared. Alerts go to the organisers; nothing cuts off.
 - **Models:** model access is already enabled. `openai.gpt-oss-120b-1:0` needs no prefix and has effectively unlimited throughput (100M tokens/min). Claude runs only through `eu.` profiles: Haiku 4.5, Sonnet 4.5, Opus 4.5, at 50 requests/min shared (25 on Opus). Claude 5 is not available.
 - **No GPU instances.** CPU only: t3, t4g, m6i.large and .xlarge, m7g.large and .xlarge, c6i.large, c7g.large. Laya runs on CPU, so a later migration stays possible.
