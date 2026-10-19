@@ -12,7 +12,7 @@ Our proposal from the data run (geo results, R1). Not a brief rule. It answers t
 - Mitigator: counterparties in countries with an equivalent AML regime support closure (EBA 9.9(a) [G2], in [aml-legal-sources.md](../challenge/aml-legal-sources.md)). That is why Jev should clear an AT or DE corridor for a Czech company and keep a JP or TR corridor for a private individual.
 - Threshold basis: a stated tail probability per client and country, the documented reason ČNB benchmark 2/2023 asks for.
 
-Two uses, pending [mentor question 5](../challenge/mentor-questions.md): its own `alert_type` `UNUSUAL_CORRIDOR`, or a priority factor on A, B and C alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
+Two uses. [Mentor question 5](../challenge/mentor-questions.md) is decided (team, 2026-10-19): our own `alert_type` values are allowed, preferably scoped by the client's AML risk score, so the choice is ours: its own `alert_type` `UNUSUAL_CORRIDOR`, or a priority factor on A, B and C alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
 
 ## 1. Detect (code)
 
@@ -170,7 +170,7 @@ Client with `n` = 72 July transactions, data-run weights.
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): further red flags as alerts or factors (5). For the team: the remittance split above, and one far-country list shared with [rule F](F-tail-payment-context.md).
+For the team: the remittance split above, and one far-country list shared with [rule F](F-tail-payment-context.md).
 
 ## Change log
 

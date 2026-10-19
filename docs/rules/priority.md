@@ -45,7 +45,7 @@ Status default (data run), not fitted.
 
 **Rule A amount factor from the single-payment tail (T1).** `z_max` is the client's largest `z = ln(amount / (exp_vol / exp_cnt))`, raw amount against the declared ticket, as in [rule F](F-tail-payment-context.md). Points: `max(0, min(15, round(5 × (z_max - 2.77))))`. 2.77 is `ln 16`, the cut rule A's single-transaction branch already applies, so the branch's own hits start at 0; z 4 gives 6, z 5 gives 11, and the cap of 15 is reached near z 5.8. This orders the 1,003 branch hits by rarity rather than by FX, and is an alternative to the raw peer P95 points above.
 
-**Novel rules D to G as factors.** Until mentor question 5 is answered, each also feeds this scorecard:
+**Novel rules D to G as factors.** Each one we keep as a factor rather than its own alert (mentor question 5, our call) feeds this scorecard:
 
 | Rule                                        | Factor              | Proposed points (default (data run))                                                             |
 | ------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
@@ -92,4 +92,4 @@ Every alert stores each factor's points and the floor that applied, for example:
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): how priority is graded (4), and whether the further red flags in [candidates.md](candidates.md) count as factors or as alerts (5).
+Decided by the team on 2026-10-19 ([mentor-questions.md](../challenge/mentor-questions.md)): priority grading is ours, with thresholds configurable in the app (4); further red flags may be their own alerts (5). For the team: which of [candidates.md](candidates.md) ship as alerts and which stay factors.

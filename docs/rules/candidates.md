@@ -2,7 +2,7 @@
 
 Rule C says "include any further red flags you identify". This is the backlog: each candidate with its formula, its basis, what our data says, and what we propose to do with it.
 
-Until FINREG answers mentor question 5, the default is no new `alert_type`: a further flag raises priority (the "conduct discrepancies" and "multiple flags" factors in [priority.md](priority.md)) and is named in `reason`.
+Mentor question 5 is decided by the team (2026-10-19): the CSV columns are fixed, but the `alert_type` values are ours, preferably scoped by the client's AML risk score (low, medium, high). Which candidates ship as their own type is the next call. Until it is made, a further flag raises priority (the "conduct discrepancies" and "multiple flags" factors in [priority.md](priority.md)) and is named in `reason`.
 
 ## What the guidance asks for
 

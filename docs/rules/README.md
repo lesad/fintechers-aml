@@ -68,12 +68,12 @@ A rule is done when every parameter is `brief`, `law` or `confirmed`, it has han
 
 | Rule     | Detect      | Jev              | Policy  | Tests | Open questions |
 | -------- | ----------- | ---------------- | ------- | ----- | -------------- |
-| A        | dry run     | draft            | draft   | none  | 5              |
-| B        | dry run     | none (by design) | draft   | none  | 3              |
+| A        | dry run     | draft            | draft   | none  | 2              |
+| B        | dry run     | none (by design) | draft   | none  | 2              |
 | C        | approximate | draft            | draft   | none  | 3              |
-| D        | proposal    | draft            | draft   | none  | 2              |
-| E        | proposal    | draft            | draft   | none  | 2              |
-| F        | proposal    | draft            | draft   | none  | 3              |
-| G        | proposal    | draft            | draft   | none  | 3              |
-| Priority | n/a         | input only       | draft   | none  | 2              |
-| Routing  | n/a         | none             | default | none  | 3              |
+| D        | proposal    | draft            | draft   | none  | 1              |
+| E        | proposal    | draft            | draft   | none  | 1              |
+| F        | proposal    | draft            | draft   | none  | 2              |
+| G        | proposal    | draft            | draft   | none  | 2              |
+| Priority | n/a         | input only       | draft   | none  | 1              |
+| Routing  | n/a         | none             | default | none  | 0              |

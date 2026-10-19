@@ -74,7 +74,9 @@ Row B in [escalation.md](escalation.md). A PEP relationship that is to continue 
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): which high-risk list (3), the escalation matrix for PEPs (1), and whether the UI should group a client's per-transaction alerts (the data has 112 PEP alerts on 22 clients).
+The escalation for PEPs is decided by the team on 2026-10-19 (mentor question 1): the approver is AML staff or higher, and a board member or the AML delegate for a PEP.
+
+Still open in [mentor-questions.md](../challenge/mentor-questions.md): which high-risk list (3). For the team: whether the UI groups a client's per-transaction alerts (the data has 112 PEP alerts on 22 clients).
 
 ## Change log
 

@@ -122,7 +122,9 @@ Row C in [escalation.md](escalation.md).
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): floating window or calendar days and the meaning of "another account", whether "above CZK 100,000" is the sum or each payment, how remittances count, and the extra red flags (5, see [candidates.md](candidates.md)).
+Decided by the team on 2026-10-19 ([mentor-questions.md](../challenge/mentor-questions.md)): "another account" is any account that is not the payer's, as the brief says; further red flags may get their own `alert_type` values (5, see [candidates.md](candidates.md)).
+
+Still open: the floating window (our default), whether "above CZK 100,000" is the sum or each payment, and how remittances count.
 
 ## Change log
 

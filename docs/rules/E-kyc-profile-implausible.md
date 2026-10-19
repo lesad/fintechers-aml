@@ -12,7 +12,7 @@ Our proposal from the data run (kyc results, candidate 1). Not a brief rule. It 
 - Threshold basis: a documented percentile of the client's own type, the approach ČNB benchmark 2/2023 asks for (segment-specific limits backed by an internal analysis).
 - Peer groups may set a threshold, but a normal-looking peer group is no reason to dismiss one client's red flag (AMLA draft paras 54 and 55 [2]).
 
-Two uses, pending [mentor question 5](../challenge/mentor-questions.md): its own `alert_type` `KYC_PROFILE_IMPLAUSIBLE`, or a priority factor on A, B and C alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
+Two uses. [Mentor question 5](../challenge/mentor-questions.md) is decided (team, 2026-10-19): our own `alert_type` values are allowed, preferably scoped by the client's AML risk score, so the choice is ours: its own `alert_type` `KYC_PROFILE_IMPLAUSIBLE`, or a priority factor on A, B and C alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
 
 ## 1. Detect (code)
 
@@ -168,7 +168,7 @@ By sub-rule (code fills the bands):
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): further red flags as alerts or factors (5). New: does a KYC refresh count as an alert outcome for FINREG, or only as a decision log note?
+Open: does a KYC refresh count as an alert outcome for FINREG, or only as a decision log note?
 
 ## Change log
 

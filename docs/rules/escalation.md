@@ -1,6 +1,6 @@
 # Escalation: who decides, who approves
 
-**Status:** default, waiting for FINREG's matrix (mentor question 1). Routing is a lookup in code. Jev comes in only if the matrix FINREG gives has a fuzzy clause such as "if material".
+**Status:** decided by the team on 2026-10-19 (mentor question 1): at least two people per alert, configurable per role; the approver is AML staff or higher, and a board member or the AML delegate for a PEP. The matrix below is our default. Routing is a lookup in code. Jev comes in only if the matrix FINREG gives has a fuzzy clause such as "if material".
 
 ## Roles
 
@@ -14,7 +14,7 @@ Configurable, because AMLR (from 10 July 2027) maps them one to one: the board A
 | `contact_person`     | kontaktní osoba                     | Files the OPO with FAÚ                       | Act §22             |
 | `board_aml_member`   | pověřený člen statutárního orgánu   | Consents to continuing a PEP relationship    | Act §22a, §9a(3)(d) |
 
-The data links no client to a staff member, so `executive_person` and `approver` are placeholder people per role (`l2_analyst_01`, `compliance_officer_01`) until FINREG gives a staff list.
+The data links no client to a staff member, so `executive_person` and `approver` are placeholder people per role (`l2_analyst_01`, `compliance_officer_01`). `approver` is a person (an entity) on every row, FP rows included (team, 2026-10-19).
 
 ## Matrix
 
@@ -30,7 +30,7 @@ Source: [czech-aml-escalation.md](../challenge/czech-aml-escalation.md) section 
 
 ### Proposed rows for the novel rules D to G
 
-Status: default (data run). They apply only if FINREG accepts further red flags as alerts (mentor question 5); otherwise D to G are priority factors and the A, B or C row routes the alert.
+Status: default (data run). Further red flags may be their own alerts (mentor question 5, team, 2026-10-19). These rows apply to each of D to G we ship as an alert; one we keep as a priority factor is routed by the A, B or C row.
 
 | Alert                           | Executive (`executive_role`) | Approver (4 eyes)                                                                                   | FAÚ trigger                                                            |
 | ------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
@@ -47,7 +47,7 @@ A row is invalid, and the run fails, when any of these holds:
 - The `contact_person` concludes or settles trades or works in internal audit (Act §22(5)).
 - The approver works in the front office or internal audit.
 
-The rule that an analyst must not review their own client is not in any Czech or EU source we found. It is our default, and an open question for ČNB.
+The rule that an analyst must not review their own client is not in any Czech or EU source we found. It is our policy under the four-eyes principle (team, 2026-10-19), not a question for ČNB.
 
 ## SLA
 
@@ -55,4 +55,4 @@ The bank sets the deadline (Decree §17a). ČNB expects days for daily scenarios
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): the matrix and conflict rules (1), whether `approver` is a role or a person and whether FP rows need one, and the own-client rule (ČNB).
+None. The matrix and conflict rules (1), `approver` as a person on every row, and the own-client rule are decided by the team ([mentor-questions.md](../challenge/mentor-questions.md), 2026-10-19).

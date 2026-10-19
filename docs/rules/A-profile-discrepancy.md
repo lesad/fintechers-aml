@@ -14,16 +14,16 @@ Client volume is the sum of all of a client's transactions regardless of directi
 
 For each client and each July day, compute the day's volume in CZK. The client gets one alert if any day or any transaction trips a branch.
 
-| Parameter                   | Value                                        | Unit                  | Source                                                                                        | Status            |
-| --------------------------- | -------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------- | ----------------- |
-| `a_day_vs_expected_monthly` | 0.25                                         | ratio, strictly above | brief                                                                                         | brief             |
-| `a_day_vs_q2_avg_day`       | 3                                            | ratio, strictly above | brief                                                                                         | brief             |
-| `a_tx_vs_q2_max`            | 2                                            | ratio, strictly above | brief                                                                                         | brief             |
-| `expected_volume_period`    | month                                        |                       | data: Q2 real over expected has median 3.36 ([data-profile.md](../challenge/data-profile.md)) | confirmed by data |
-| `q2_days`                   | 91                                           | calendar days         | our choice                                                                                    | default (ask)     |
-| `q2_baseline_prorated`      | yes                                          | days since contract   | ČNB p. 6, EBA 9.6(a)(v)                                                                       | default (ask)     |
-| `fx_rate`                   | ČNB fixing on or before the transaction date |                       | Act §54(3)                                                                                    | law               |
-| `inactive_in_q2`            | Q2 count is 0                                | expected branch only  | brief                                                                                         | brief             |
+| Parameter                   | Value                                        | Unit                  | Source                                                                                        | Status                       |
+| --------------------------- | -------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------- | ---------------------------- |
+| `a_day_vs_expected_monthly` | 0.25                                         | ratio, strictly above | brief                                                                                         | brief                        |
+| `a_day_vs_q2_avg_day`       | 3                                            | ratio, strictly above | brief                                                                                         | brief                        |
+| `a_tx_vs_q2_max`            | 2                                            | ratio, strictly above | brief                                                                                         | brief                        |
+| `expected_volume_period`    | month                                        |                       | data: Q2 real over expected has median 3.36 ([data-profile.md](../challenge/data-profile.md)) | confirmed by data            |
+| `q2_days`                   | 91                                           | calendar days         | our choice                                                                                    | confirmed (team, 2026-10-19) |
+| `q2_baseline_prorated`      | yes                                          | days since contract   | ČNB p. 6, EBA 9.6(a)(v)                                                                       | default (ask)                |
+| `fx_rate`                   | ČNB fixing on or before the transaction date |                       | Act §54(3)                                                                                    | law                          |
+| `inactive_in_q2`            | Q2 count is 0                                | expected branch only  | brief                                                                                         | brief                        |
 
 Prorating: a client contracted on 1 June 2026 has 30 days in Q2, so its Q2 average day is the Q2 volume divided by 30, not 91.
 
@@ -178,7 +178,9 @@ Row A in [escalation.md](escalation.md).
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): currency conversion (2), how triage is graded (4), Q2 day count, prorating clients contracted in Q2, and what goes in `transaction_id` for a per-client alert (default: the largest transaction on the worst day).
+Decided by the team on 2026-10-19 ([mentor-questions.md](../challenge/mentor-questions.md)): always convert to CZK, as the brief advises (2); grading and thresholds are ours and configurable in the app (4); the Q2 day count is 91 calendar days; `transaction_id` is the transaction itself for the single-transaction branch, and the largest transaction on the worst day for the day branches.
+
+Still open: prorating clients contracted in Q2 (default: yes), and the FP sample rate (ČNB).
 
 ## Change log
 

@@ -256,7 +256,7 @@ If any check fails, write our own translator for the subset: literals, field acc
 
 All are parameters or mappings, so an answer is a data change:
 
-- Prorating the Q2 baseline by days since the contract (adopted; confirm). Calendar days, not business days.
+- Prorating the Q2 baseline by days since the contract (adopted; confirm). Calendar days, not business days, is decided (team, 2026-10-19).
 - Where does C's 6-hour window start? We count from the latest incoming payment in the 24-hour window.
 - Which high-risk list does FINREG mean? (`reference_list`)
 - Is remittance direction "unclear"? We map it to `unknown`.

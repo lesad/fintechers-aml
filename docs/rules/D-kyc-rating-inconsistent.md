@@ -13,7 +13,7 @@ Our proposal from the data run (kyc results, candidate 2). Not a brief rule. It 
 - Stacked branch: non-face-to-face onboarding (Act Annex 2 (2c) [CZ1]; EBA 9.10(a) [G2]), a new client with no track record (Act §21a(2) [CZ1]; EBA 9.6(a)(v) [G2]), a high-risk third country (Decree §9(3)(a) [CZ2]) and a profile out of line with peers (EBA 9.6(b)(iii) [G2]) each raise risk.
 - A rating change raises or lowers CDD intensity, which needs meaningful human intervention when automated (AMLR Art. 76(5)(b), in [aml-pattern-research.md](../challenge/aml-pattern-research.md) section 2). Jev suggests; a person decides.
 
-Two uses, pending [mentor question 5](../challenge/mentor-questions.md): its own `alert_type` `KYC_RATING_INCONSISTENT`, or a priority factor on A, B and C alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
+Two uses. [Mentor question 5](../challenge/mentor-questions.md) is decided (team, 2026-10-19): our own `alert_type` values are allowed, preferably scoped by the client's AML risk score, so the choice is ours: its own `alert_type` `KYC_RATING_INCONSISTENT`, or a priority factor on A, B and C alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
 
 ## 1. Detect (code)
 
@@ -163,7 +163,7 @@ For the PEP branch: "Rule D: PEP rated {current_rating}; Czech rules require a h
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): further red flags as alerts or factors (5). New: does FINREG want rating errors in the alert file at all, or only in the decision log?
+Open: does FINREG want rating errors in the alert file at all, or only in the decision log?
 
 ## Change log
 

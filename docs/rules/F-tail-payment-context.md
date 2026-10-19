@@ -11,7 +11,7 @@ Our proposal from the data run (tails results, T2, with T1 folded in). Not a bri
 - Typology: an unusually large single transaction, and transfers to or from a jurisdiction with no evident link to the client. AMLR Art. 34(2) and AMLD Art. 18(2) (examine unusually large transactions); EBA 9.4(f) [G2] (unusually high value); ČNB RS2019-03 (an unusually large transaction, or one without an apparent economic purpose, is a higher-risk factor); AMLR Art. 69(2) (origin and destination of funds); SAML-D "single large transaction" typology [16]. Sources in [aml-pattern-research.md](../challenge/aml-pattern-research.md) sections 1, 2 and 5, and [aml-legal-sources.md](../challenge/aml-legal-sources.md).
 - Threshold basis: a client-relative cut with a stated tail probability ("a 1-in-741 payment for this client"), which is the documented reason ČNB benchmark 2/2023 asks for.
 
-Two uses, pending [mentor question 5](../challenge/mentor-questions.md): its own `alert_type` `TAIL_PAYMENT_COUNTRY`, or a priority factor on A and B alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
+Two uses. [Mentor question 5](../challenge/mentor-questions.md) is decided (team, 2026-10-19): our own `alert_type` values are allowed, preferably scoped by the client's AML risk score, so the choice is ours: its own `alert_type` `TAIL_PAYMENT_COUNTRY`, or a priority factor on A and B alerts of the same client (section 6). The current default in [candidates.md](candidates.md) is no new alert type.
 
 ## 1. Detect (code)
 
@@ -158,7 +158,7 @@ Declared ticket 3,000 in every case (`e^3` gives 60,257; `e^4` gives 163,794).
 
 ## Open questions
 
-In [mentor-questions.md](../challenge/mentor-questions.md): currency conversion (2) and further red flags as alerts or factors (5). New: may the per-client baseline be read per currency, as the generator drew it?
+Currency conversion (2) and further red flags as alerts (5) are decided (team, 2026-10-19, [mentor-questions.md](../challenge/mentor-questions.md)). Open: may the per-client baseline be read per currency, as the generator drew it?
 
 ## Change log
 
