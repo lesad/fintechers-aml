@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router";
 
 import { type RiskLevel, riskDot, Tab, Tabs } from "@/components";
+import { ImportPage } from "@/features/data-import";
 import {
   fetchDetail,
   NO_FILTER,
@@ -27,7 +28,7 @@ import { useAppRoutes } from "./use-app-routes";
 const NO_COUNTS: Record<RiskLevel, number> = { High: 0, Medium: 0, Low: 0 };
 
 export function App() {
-  const { tabs, rulesOpen, toggleRules } = useAppRoutes();
+  const { tabs, page, togglePage } = useAppRoutes();
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const [users, setUsers] = useState<User[]>([]);
@@ -83,8 +84,8 @@ export function App() {
           tabs.openTab(id);
           return true;
         }}
-        rulesOpen={rulesOpen}
-        onToggleRules={toggleRules}
+        page={page}
+        onTogglePage={togglePage}
         onHome={() => tabs.select(null)}
       />
 
@@ -92,11 +93,12 @@ export function App() {
         <Route path="/" element={null} />
         <Route path="/transactions/:id" element={null} />
         <Route path="/rules" element={<RulesPage author={user?.name ?? ""} />} />
+        <Route path="/import" element={<ImportPage onDataChanged={queue.reload} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       {/* NOTE: the review area stays mounted behind the rules page, so open tabs and half-written reasons survive. */}
-      <div hidden={rulesOpen} className="flex min-h-0 flex-1 flex-col">
+      <div hidden={page !== null} className="flex min-h-0 flex-1 flex-col">
         <Tabs>
           <Tab
             active={tabs.active === null}

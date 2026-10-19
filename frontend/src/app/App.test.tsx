@@ -122,6 +122,7 @@ const routes: Record<string, (url: URL) => unknown> = {
   "/api/transactions/TX1": () => ({ ...detail, status: detailStatus, assignee, log }),
   "/api/rules": () => [],
   "/api/users": () => users,
+  "/api/imports": () => [],
 };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -443,6 +444,19 @@ describe("App", () => {
 
     render(<App />, { route: "/transactions/TX1" });
     expect(await screen.findByRole("tab", { selected: true })).toHaveTextContent("TX1");
+  });
+
+  it("the upload button opens the data import page and again returns to the overview", async () => {
+    render(<App />);
+    const button = screen.getByRole("button", { name: "Data import" });
+    fireEvent.click(button);
+    expect(await screen.findByRole("heading", { name: "Data import" })).toBeInTheDocument();
+    expect(button).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+
+    fireEvent.click(button);
+    expect(screen.queryByRole("heading", { name: "Data import" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
   });
 
   it("opens the rules page straight from /rules and sends an unknown path back to the overview", async () => {

@@ -2,6 +2,8 @@ import { cva } from "class-variance-authority";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 
+import { cn } from "@/utils";
+
 import { UserMenu } from "./UserMenu";
 
 import type { RiskLevel } from "@/components";
@@ -15,8 +17,9 @@ type HeaderProps = {
   user: User | null;
   users: User[];
   onUser: (user: User) => void;
-  rulesOpen: boolean;
-  onToggleRules: () => void;
+  /** The page open instead of the review overview, if any; its button shows as active. */
+  page: "rules" | "import" | null;
+  onTogglePage: (page: "rules" | "import") => void;
   /** The logo: back to the review queue tab. */
   onHome: () => void;
 };
@@ -32,8 +35,18 @@ const dot = cva("size-[7px] rounded-[2px]", {
   },
 });
 
-const cog =
-  "mr-1 flex size-7 items-center justify-center rounded-md border border-transparent text-indigo-20 outline-none hover:border-indigo-80 hover:bg-header-input hover:text-yellow focus-visible:ring-2 focus-visible:ring-yellow";
+const pageButton = cva(
+  "flex size-7 items-center justify-center rounded-md border outline-none focus-visible:ring-2 focus-visible:ring-yellow",
+  {
+    variants: {
+      active: {
+        true: "border-yellow bg-yellow/12 text-yellow",
+        false:
+          "border-transparent text-indigo-20 hover:border-indigo-80 hover:bg-header-input hover:text-yellow",
+      },
+    },
+  },
+);
 
 const hint = cva("pointer-events-none absolute right-2 text-[11px]", {
   variants: { miss: { true: "text-header-miss", false: "text-indigo-60" } },
@@ -45,8 +58,8 @@ export function Header({
   user,
   users,
   onUser,
-  rulesOpen,
-  onToggleRules,
+  page,
+  onTogglePage,
   onHome,
 }: HeaderProps) {
   const input = useRef<HTMLInputElement>(null);
@@ -134,11 +147,34 @@ export function Header({
       <div className="flex flex-1 items-center justify-end gap-2 whitespace-nowrap">
         <button
           type="button"
+          aria-label="Data import"
+          title="Data import"
+          aria-pressed={page === "import"}
+          onClick={() => onTogglePage("import")}
+          className={pageButton({ active: page === "import" })}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </button>
+        <button
+          type="button"
           aria-label="Rules"
           title="Rules"
-          aria-pressed={rulesOpen}
-          onClick={onToggleRules}
-          className={cog}
+          aria-pressed={page === "rules"}
+          onClick={() => onTogglePage("rules")}
+          className={cn(pageButton({ active: page === "rules" }), "mr-1")}
         >
           <svg
             aria-hidden="true"
