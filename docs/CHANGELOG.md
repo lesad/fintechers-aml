@@ -14,6 +14,8 @@
 
 ### Added
 
+- The overview holds only the signed-in user's cases, counts included: the engine scopes `GET /api/transactions` by the role behind `X-User-Id` (reviewer New/False Positive, manager Escalated/Reported) and filters on the case status. After a decision the queue reloads, so an escalated case leaves the reviewer's list; its open detail stays, without decision options. An escalated case offers decisions to the manager only.
+- The open transaction is in the URL (`/transactions/:id`, ADR-0041): opening a detail or clicking a tab adds a history entry, so the browser's Back returns to the list and Forward to the detail; a reload or a link opens the transaction. Closing a tab or a Ctrl/⌘ click leaves the history alone. The cog leaves the rules page for the tab it was opened from.
 - The AML spotter logo in the header links to the default view: the review queue tab at `/`, from the rules page or a transaction tab; open tabs stay.
 - User switch: one click on the avatar lists every user under "Signed in as" (the signed-in one checked); one more click switches. The select in the panel is gone.
 - Transaction detail: the client's transactions read oldest first, two before and two after the open one; "Load earlier" sits under the column header and "Load later" under the rows, ten more per click (`fetchHistory` takes the page size).

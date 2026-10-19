@@ -24,7 +24,8 @@ const historyRow = cva("", {
 
 const flagged = (h: HistoryTransaction) => h.alertTypes.length > 0;
 
-const directionText = { in: "Incoming", out: "Outgoing", unknown: "Unknown" } as const;
+// The engine keeps `unknown` for remittances, the only transactions with no stated direction.
+const directionText = { in: "Incoming", out: "Outgoing", unknown: "Remittance" } as const;
 
 /** One side's "show more" row: a button while more exist, a note while loading, an error with a retry. */
 function moreRow(

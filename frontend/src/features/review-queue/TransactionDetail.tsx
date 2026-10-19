@@ -23,7 +23,7 @@ type TransactionDetailProps = {
   decisions: Record<string, Decision>;
   role: Role;
   /** Saves the status on the engine, then records the decision. */
-  onDecide: (d: Pick<Decision, "action" | "reason" | "rating">) => Promise<void>;
+  onDecide: (d: Pick<Decision, "action" | "reason">) => Promise<void>;
   onOpen: (id: string, background: boolean) => void;
 };
 
@@ -81,7 +81,7 @@ function DetailView({
   const markFalsePositive = async (reason: string) => {
     const result =
       alertId === undefined ? null : await fetchSuggestion(alertId, reason).catch(() => undefined);
-    await onDecide({ action: "False Positive", reason, rating });
+    await onDecide({ action: "False Positive", reason });
     if (result?.kind === "rule_version") setSuggestion(result);
     else if (result === undefined)
       setToast("Marked as false positive. The rule suggestion failed.");
@@ -171,7 +171,7 @@ function DetailView({
                 onDecide={(action, reason) =>
                   action === "False Positive"
                     ? markFalsePositive(reason)
-                    : onDecide({ action, reason, rating })
+                    : onDecide({ action, reason })
                 }
               />
             )}

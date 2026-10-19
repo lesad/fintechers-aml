@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
+import { useNavigate } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "@/test/render";
@@ -343,6 +344,33 @@ describe("App", () => {
     expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
   });
 
+  it("puts the open transaction in the URL, so Back returns to the list and a reload reopens it", async () => {
+    const Back = () => {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => void navigate(-1)}>
+          Browser back
+        </button>
+      );
+    };
+    const { unmount } = render(
+      <>
+        <App />
+        <Back />
+      </>,
+    );
+    fireEvent.click(await screen.findByText("TX1"));
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }));
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
+    expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
+    unmount();
+
+    render(<App />, { route: "/transactions/TX1" });
+    expect(await screen.findByRole("tab", { selected: true })).toHaveTextContent("TX1");
+  });
+
   it("opens the rules page straight from /rules and sends an unknown path back to the overview", async () => {
     const { unmount } = render(<App />, { route: "/rules" });
     expect(screen.getByRole("button", { name: "Rules" })).toHaveAttribute("aria-pressed", "true");
@@ -377,7 +405,7 @@ describe("App", () => {
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
   });
 
-  it("needs a reason before closing a case, then shows it in the queue and the counts", async () => {
+  it("needs a reason before closing a case, then reloads the queue from the engine", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
 
@@ -387,10 +415,15 @@ describe("App", () => {
     fireEvent.change(screen.getByPlaceholderText("Why the transaction is not suspicious"), {
       target: { value: "Supplier payment, invoice on file." },
     });
+    const queueLoads = () =>
+      vi.mocked(fetch).mock.calls.filter(([u]) => String(u).startsWith("/api/transactions?"))
+        .length;
+    const before = queueLoads();
     fireEvent.click(submit);
     expect(
       await screen.findByText("Supplier payment, invoice on file.", { selector: "span" }),
     ).toBeInTheDocument();
+    expect(queueLoads()).toBeGreaterThan(before);
     expect(screen.getByRole("status")).toHaveTextContent("Marked as false positive.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(
@@ -402,8 +435,8 @@ describe("App", () => {
     );
 
     fireEvent.click(screen.getByRole("tab", { name: /Review queue/ }));
+    expect(await within(queueTable()).findByText("TX1")).toBeInTheDocument();
     expect(within(queueTable()).getByText("TX1").closest("tr")).toHaveTextContent("False Positive");
-    expect(screen.getByTitle("Open cases by rule rating")).toHaveTextContent("0 High");
   });
 
   it("pins an escalation on the engine before recording it, and keeps the case open if that fails", async () => {
@@ -433,17 +466,18 @@ describe("App", () => {
     expect(put()[1]?.[1]).toMatchObject({ body: JSON.stringify({ status: "ESCALATED" }) });
   });
 
-  it("offers false positive or report on an escalated case, and only a manager reports", async () => {
+  it("leaves an escalated case to the manager: no decision for a reviewer, false positive or report for a manager", async () => {
     detailStatus = "ESCALATED";
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
-    const report = await screen.findByRole("button", { name: "Report" });
-    expect(screen.queryByRole("button", { name: "Escalate" })).not.toBeInTheDocument();
-    expect(report).toBeDisabled();
+    expect(await screen.findByText(/A manager decides now/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Report" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "False positive" })).not.toBeInTheDocument();
 
     await switchUser("M. Svobodová");
-    expect(report).toBeEnabled();
-    fireEvent.click(report);
+    expect(screen.getByRole("button", { name: "False positive" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Escalate" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Report" }));
     fireEvent.change(screen.getByPlaceholderText("Why the transaction is reported as suspicious"), {
       target: { value: "Pattern matches layering." },
     });

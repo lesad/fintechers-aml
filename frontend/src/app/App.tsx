@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, Route, Routes, useMatch, useNavigate } from "react-router";
+import { Navigate, Route, Routes } from "react-router";
 
 import { type RiskLevel, riskDot, Tab, Tabs } from "@/components";
 import {
@@ -18,21 +18,18 @@ import {
   useQueue,
 } from "@/features/review-queue";
 import { RulesPage } from "@/features/rules";
-import { useTabs } from "@/hooks";
 import { fetchUsers, saveUser, savedUser, type User } from "@/user";
 import { cn } from "@/utils";
 
 import { Header } from "./Header";
+import { useAppRoutes } from "./use-app-routes";
 
 const NO_COUNTS: Record<RiskLevel, number> = { High: 0, Medium: 0, Low: 0 };
 
 export function App() {
-  const tabs = useTabs();
+  const { tabs, rulesOpen, toggleRules } = useAppRoutes();
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
-  // Routes: `/` is the review overview, `/rules` the rules page; anything else goes back to `/`.
-  const navigate = useNavigate();
-  const rulesOpen = useMatch("/rules") !== null;
   const [users, setUsers] = useState<User[]>([]);
   const [user, setUser] = useState<User | null>(savedUser);
   const role: Role = user?.role === "MANAGER" ? "Manager" : "Reviewer";
@@ -60,13 +57,14 @@ export function App() {
   const queue = useQueue(filter.query, filter.rating, statusParam(role, filter.status));
   const items = review.apply(queue.items);
   const rating = new Map(items.map((r) => [r.id, r.rule]));
-  const openByRating = review.openCounts(queue.countsByRating ?? NO_COUNTS);
+  // The engine counts only the signed-in user's cases (X-User-Id).
+  const openByRating = queue.countsByRating ?? NO_COUNTS;
   const openCases = openByRating.High + openByRating.Medium + openByRating.Low;
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       <Header
-        openByRating={queue.countsByRating ? openByRating : null}
+        openByRating={queue.countsByRating}
         user={user}
         users={users}
         onUser={(u) => {
@@ -82,16 +80,16 @@ export function App() {
             if (err instanceof NotFoundError) return false;
           }
           tabs.openTab(id);
-          void navigate("/");
           return true;
         }}
         rulesOpen={rulesOpen}
-        onToggleRules={() => void navigate(rulesOpen ? "/" : "/rules")}
+        onToggleRules={toggleRules}
         onHome={() => tabs.select(null)}
       />
 
       <Routes>
         <Route path="/" element={null} />
+        <Route path="/transactions/:id" element={null} />
         <Route path="/rules" element={<RulesPage author={user?.name ?? ""} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -156,6 +154,8 @@ export function App() {
                 // The status goes to the engine's alerts; the reason is not stored yet.
                 await setStatus(id, STATUS_CODE[d.action]);
                 review.decide(id, { ...d, by: user?.name ?? "" });
+                // The case may have left this user's queue (escalated); the engine's list says.
+                queue.reload();
               }}
               onOpen={tabs.openTab}
             />

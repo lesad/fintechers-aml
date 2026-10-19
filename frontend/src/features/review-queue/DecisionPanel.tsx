@@ -57,8 +57,8 @@ type DecisionPanelProps = {
 };
 
 /**
- * New cases: false positive or escalate. Escalated cases: false positive or report, and only a manager
- * reports. Every choice needs a reason; once decided, shows who decided what and why.
+ * New cases: false positive or escalate. Escalated cases belong to the manager (false positive or report);
+ * a reviewer only sees that they wait. Every choice needs a reason; once decided, shows who decided what and why.
  */
 export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanelProps) {
   const choices: Choice[] =
@@ -79,7 +79,6 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setSaving(false));
   };
-  const managerOnly = (kind: Choice) => kind === "report" && role !== "Manager";
 
   const errorLine = error && (
     <span role="alert" className="text-xs text-high">
@@ -98,6 +97,17 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
           </span>
           <span className="text-[13px] text-pretty">{decision.reason}</span>
         </div>
+      </Card>
+    );
+  }
+
+  if (saved === "Escalated" && role !== "Manager") {
+    return (
+      <Card raised className="overflow-hidden pb-3.5">
+        <span className="pt-0.5 text-sm font-bold text-fg">Decision</span>
+        <span className="text-[13px] text-fg-muted">
+          <b className="text-fg">Escalated</b>. A manager decides now: false positive or report.
+        </span>
       </Card>
     );
   }
@@ -122,8 +132,6 @@ export function DecisionPanel({ decision, saved, role, onDecide }: DecisionPanel
             key={kind}
             type="button"
             aria-pressed={choice === kind}
-            disabled={managerOnly(kind)}
-            title={managerOnly(kind) ? "Only a manager can report a transaction" : undefined}
             onClick={() => setChoice(kind)}
             className={choiceButton({ kind, picked: choice === kind })}
           >

@@ -84,5 +84,7 @@ export function useQueue(query: string, rating: RiskLevel | "all", status: strin
       if (!state.loading && !done && !state.error) load(state.nextPage, false);
     },
     retry: () => load(state.nextPage, state.items.length === 0),
+    /** Starts the list over from page 0, e.g. after a decision moved a case out of it. */
+    reload: () => load(0, true),
   };
 }

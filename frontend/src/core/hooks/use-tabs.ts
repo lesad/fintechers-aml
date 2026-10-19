@@ -1,32 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+/** Moves to a tab (`null` = home); `replace` swaps the current history entry instead of adding one. */
+type Go = (id: string | null, options: { replace: boolean }) => void;
 
 /**
- * Open/active state for a strip of closable tabs after one fixed home tab.
- * `active === null` means the home tab is shown.
+ * Open tabs for a strip of closable tabs after one fixed home tab. Which one is active lives outside
+ * (the URL): the caller passes `active` (`null` = home) and `go` to change it, so Back and Forward move
+ * between tabs. A tab that becomes active without being open (a reload, Back to a closed one) is opened.
  */
-export function useTabs() {
-  const [state, setState] = useState<{ open: string[]; active: string | null }>({
-    open: [],
-    active: null,
-  });
+export function useTabs(active: string | null, go: Go) {
+  const [open, setOpen] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (active) setOpen((o) => (o.includes(active) ? o : [...o, active]));
+  }, [active]);
 
   return {
-    open: state.open,
-    active: state.active,
-    /** Adds the tab if missing; `background` keeps the current tab active. */
-    openTab: (id: string, background = false) =>
-      setState((s) => ({
-        open: s.open.includes(id) ? s.open : [...s.open, id],
-        active: background ? s.active : id,
-      })),
-    /** Closing the active tab activates its right neighbour, else its left one, else home. */
-    closeTab: (id: string) =>
-      setState((s) => {
-        const i = s.open.indexOf(id);
-        const open = s.open.filter((t) => t !== id);
-        const active = s.active === id ? (open[i] ?? open[i - 1] ?? null) : s.active;
-        return { open, active };
-      }),
-    select: (id: string | null) => setState((s) => ({ ...s, active: id })),
+    open,
+    active,
+    /** Adds the tab if missing and goes there; `background` only adds it. */
+    openTab: (id: string, background = false) => {
+      setOpen((o) => (o.includes(id) ? o : [...o, id]));
+      if (!background) go(id, { replace: false });
+    },
+    /** Closing the active tab moves to its right neighbour, else its left one, else home. */
+    closeTab: (id: string) => {
+      const i = open.indexOf(id);
+      const rest = open.filter((t) => t !== id);
+      setOpen(rest);
+      if (active === id) go(rest[i] ?? rest[i - 1] ?? null, { replace: true });
+    },
+    select: (id: string | null) => go(id, { replace: false }),
   };
 }

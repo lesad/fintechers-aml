@@ -59,7 +59,6 @@ const closed: Decision = {
   reason: "r",
   at: "",
   by: "",
-  rating: "Low",
 };
 
 describe("caseState", () => {

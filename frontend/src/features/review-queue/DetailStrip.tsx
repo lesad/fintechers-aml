@@ -22,7 +22,7 @@ const stripBlock = cva("flex min-w-0 flex-col gap-1 px-6", {
 const directionLabel = {
   in: "Incoming",
   out: "Outgoing",
-  unknown: "Remittance · direction unknown",
+  unknown: "Remittance",
 } as const;
 
 /** `legal entity` → `Legal entity` */
