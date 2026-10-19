@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service
 
 class InvalidRuleException(message: String) : RuntimeException(message)
 
+data class ExplainReport(val filled: Int, val failed: Int)
+
 /** Saves rule versions as drafts and gives each one its explanation. */
 @Service
 class RuleService(
@@ -29,6 +31,12 @@ class RuleService(
         val id = rules.insertDraft(rule)
         explain(rules.find(id)!!.rule)
         return rules.find(id)!!
+    }
+
+    /** Writes the explanation of every version that has none; never overwrites one. */
+    fun explainMissing(): ExplainReport {
+        val filled = rules.missingExplanations().count(::explain)
+        return ExplainReport(filled = filled, failed = rules.missingExplanations().size)
     }
 
     private fun explain(rule: RuleDefinition): Boolean {

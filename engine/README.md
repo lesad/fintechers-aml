@@ -40,6 +40,7 @@ Run from `engine/`:
 ./gradlew bootRun --args=import   # load data/raw/ into Postgres
 ./gradlew bootRun --args=run      # run the rules into hits, alerts and data/out/alerts-<run>.csv
 ./gradlew bootRun --args=triage   # re-triage the latest run; add a run id to pick one
+./gradlew bootRun --args=explain  # write the missing rule explanations with Bedrock (needs AWS_PROFILE after aws sso login)
 ./gradlew test                    # tests use a throwaway Postgres container, never the dev database
 ./gradlew build                   # compile, test, package (what CI runs)
 ```

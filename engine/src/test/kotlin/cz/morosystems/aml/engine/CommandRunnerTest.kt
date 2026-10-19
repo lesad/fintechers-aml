@@ -3,6 +3,8 @@ package cz.morosystems.aml.engine
 import cz.morosystems.aml.engine.importer.DataImporter
 import cz.morosystems.aml.engine.importer.ImportReport
 import cz.morosystems.aml.engine.run.RunReport
+import cz.morosystems.aml.engine.rules.ExplainReport
+import cz.morosystems.aml.engine.rules.RuleService
 import cz.morosystems.aml.engine.run.RunService
 import cz.morosystems.aml.engine.triage.TriageRepository
 import cz.morosystems.aml.engine.triage.TriageService
@@ -22,13 +24,14 @@ class CommandRunnerTest {
     private val runs = mock(RunService::class.java)
     private val triage = mock(TriageService::class.java)
     private val triageRuns = mock(TriageRepository::class.java)
+    private val rules = mock(RuleService::class.java)
 
     private fun run(vararg args: String): String {
         val captured = ByteArrayOutputStream()
         val original = System.out
         System.setOut(PrintStream(captured, true))
         try {
-            EngineApplication().commandRunner(importer, runs, triage, triageRuns).run(DefaultApplicationArguments(*args))
+            EngineApplication().commandRunner(importer, runs, triage, triageRuns, rules).run(DefaultApplicationArguments(*args))
         } finally {
             System.setOut(original)
         }
@@ -58,9 +61,17 @@ class CommandRunnerTest {
     }
 
     @Test
+    fun explainCommandFillsMissingExplanationsAndPrintsCounts() {
+        `when`(rules.explainMissing()).thenReturn(ExplainReport(filled = 6, failed = 1))
+        val out = run("explain")
+        verify(rules).explainMissing()
+        assertThat(out).contains("explanations: 6 filled, 1 failed")
+    }
+
+    @Test
     fun unknownCommandPrintsUsage() {
         val out = run("nonsense")
-        verifyNoInteractions(importer, runs, triage, triageRuns)
-        assertThat(out).contains("Usage")
+        verifyNoInteractions(importer, runs, triage, triageRuns, rules)
+        assertThat(out).contains("Usage").contains("explain")
     }
 }
