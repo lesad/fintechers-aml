@@ -61,9 +61,10 @@ export function TriageBreakdown({
         {scoring.map((r) => (
           <div
             key={r.code}
-            className="grid h-[30px] grid-cols-[minmax(0,1fr)_120px_44px] items-center gap-3 border-b border-border-soft text-[13px]"
+            className="grid min-h-[30px] grid-cols-[minmax(0,1fr)_120px_44px] items-center gap-3 border-b border-border-soft py-1 text-[13px]"
           >
-            <span className="truncate" title={r.description}>
+            {/* A reason reads as a sentence; two lines rather than a cut-off one. */}
+            <span className="line-clamp-2" title={r.description}>
               {r.description}
             </span>
             <span className="relative h-1.5">

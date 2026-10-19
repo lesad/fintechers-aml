@@ -144,19 +144,19 @@ object Triage {
         }
         reasons += Reason("RELATIONSHIP_LENGTH", days?.let { "client for $it days" } ?: "contract date unknown", tenure)
 
+        // One alert says the client broke one kind of rule; this says they broke another kind too, in the same run.
         val others = input.otherAlertTypesOnClient - input.alertType
         val multi = (f.perExtraAlertType * others.size).coerceAtMost(f.extraAlertTypeMax)
         reasons += Reason(
-            "MULTIPLE_FLAGS",
-            if (others.isEmpty()) "no other alert type on this client"
-            else "the client is also flagged for ${prose(others.sorted().map { named(it, config) })} in this run",
+            "MULTIPLE_RULE_BREACHES",
+            when (others.size) {
+                0 -> "the client breaks no other kind of rule in this run"
+                1 -> "the client also breaks another kind of rule in this run"
+                else -> "the client also breaks ${others.size} other kinds of rule in this run"
+            },
             multi,
         )
     }
-
-    /** An alert type as a reviewer reads it: the name the database carries for it, with the code it is filed under. */
-    private fun named(alertType: String, config: TriageConfig): String =
-        config.alertTypeNames[alertType]?.let { "$it ($alertType)" } ?: "alert type $alertType"
 
     /** A rule as a reviewer reads it. Unnamed in the table — an unrecognised key especially — leaves the bare key. */
     private fun namedRule(ruleKey: String, config: TriageConfig): String =

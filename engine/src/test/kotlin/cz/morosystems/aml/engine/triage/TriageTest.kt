@@ -47,7 +47,7 @@ class TriageTest {
             "CLIENT_UNBASELINED",
             "HIT_INTENSITY",
             "RELATIONSHIP_LENGTH",
-            "MULTIPLE_FLAGS",
+            "MULTIPLE_RULE_BREACHES",
         )
         assertThat(reasons.keys).contains(*silent.toTypedArray())
         assertThat(silent.map { reasons.getValue(it).points }).containsOnly(0)
@@ -146,10 +146,11 @@ class TriageTest {
     }
 
     @Test
-    fun otherAlertTypesAreNamedNotLeftAsBareCodes() {
-        val named = reasonOf(Triage.decide(input(otherAlertTypesOnClient = setOf("C", "B")), CONFIG), "MULTIPLE_FLAGS")
-        // 'B' has no name in this config: it falls back to the code rather than dropping out of the sentence.
-        assertThat(named.description).isEqualTo("the client is also flagged for alert type B and flow-through (C) in this run")
+    fun otherAlertTypesAreCountedNotNamed() {
+        val one = reasonOf(Triage.decide(input(otherAlertTypesOnClient = setOf("C")), CONFIG), "MULTIPLE_RULE_BREACHES")
+        assertThat(one.description).isEqualTo("the client also breaks another kind of rule in this run")
+        val two = reasonOf(Triage.decide(input(otherAlertTypesOnClient = setOf("C", "B")), CONFIG), "MULTIPLE_RULE_BREACHES")
+        assertThat(two.description).isEqualTo("the client also breaks 2 other kinds of rule in this run")
     }
 
     @Test
