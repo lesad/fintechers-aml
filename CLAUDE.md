@@ -101,6 +101,7 @@ Install generic ones: `pnpm dlx skills add <owner/repo> --skill <name> --agent c
 - `wshobson/agents/tailwind-design-system` — Tailwind design system
 - `vercel-labs/agent-skills/vercel-react-best-practices` — Vercel React patterns
 - `shadcn/ui/shadcn` — shadcn/ui component library
+- `typesafe-ai/skills/typesafe-ai` — TypeSafe System One typed judgments
 
 Install project ones: `pnpm dlx skills add <owner/repo> --skill <name> --agent claude-code -y`
 
