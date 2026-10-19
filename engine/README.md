@@ -1,6 +1,6 @@
 # Monitoring rules engine
 
-Kotlin + Spring Boot service that imports the organisers' data and runs the monitoring rules. Driven by CLI commands, no REST. Design: [`docs/engine/rules-engine-design.md`](../docs/engine/rules-engine-design.md).
+Kotlin + Spring Boot service that imports the organisers' data, runs the monitoring rules and serves alerts with their audit trail over HTTP. A command (`import`, `run`) runs and exits; without one the engine serves the API. Design: [`docs/engine/rules-engine-design.md`](../docs/engine/rules-engine-design.md).
 
 ## Prerequisites
 
@@ -44,6 +44,17 @@ Run from `engine/`:
 ```
 
 `./gradlew bootRun --args=run` runs every active rule over July 2026 (~30 s on the full data), stores hits and alerts, and writes `data/out/alerts-<run>.csv`. On the July data: A 5,493 alerts, B 112 (22 PEP clients), C 1,077 (remittances count as outflow, per `docs/rules/C-flow-through.md`; 720 without them).
+
+## HTTP API
+
+```sh
+./gradlew bootRun                                     # serves on http://localhost:8080; set ENGINE_PORT to change it
+```
+
+- `GET /api/alerts`: alerts of the latest finished run, with the hit count. `?runId=` picks another run.
+- `GET /api/alerts/{id}`: one alert and its audit trail, oldest entry first. 404 for an unknown id.
+
+The audit trail (`audit_entry`) is the record of every step on an alert: who (`actor`), when (`at`), what (`step`), the outcome (`result`), what the step looked at (`inputs`, JSON) and a short `reason`. A run writes one `alert_raised` entry per alert, with the alert's hits and their evidence as `inputs`. Later steps (triage, analyst decisions, the generated summary) append their own entries through `AuditLog.append`; nothing updates or deletes an entry. An entry's `id` is what a summary sentence cites.
 
 Schema changes are Liquibase SQL files in `src/main/resources/db/migrations/`, listed in `db/changelog-master.xml`.
 

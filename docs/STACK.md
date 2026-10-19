@@ -15,6 +15,6 @@
 
 Runtime: Node ≥24, pnpm 10.30.2. UI utils (docs rarely needed — resolve on demand): clsx 2.1.1, tailwind-merge 3.5.0 (behind `cn()`). Build plumbing: @tailwindcss/vite 4.2.4, @rolldown/plugin-babel 0.2.4 + babel-plugin-react-compiler 1.0.0 (how the compiler is wired — see ADR-0025).
 
-Rules engine (`engine/`, ADR-0024): JDK 25 (Gradle toolchain), Kotlin 2.4.21, Gradle 9.8.1, Spring Boot 4.1.1 (JDBC, Liquibase, Jackson 3), PostgreSQL 17, `dev.cel:cel` 0.14.0 (CEL for rules), `com.spandigital:cel2sql4j` 0.2.7 (CEL filters to SQL), Testcontainers for tests. Versions live in `engine/build.gradle.kts`.
+Rules engine (`engine/`, ADR-0024): JDK 25 (Gradle toolchain), Kotlin 2.4.21, Gradle 9.8.1, Spring Boot 4.1.1 (Web MVC, JDBC, Liquibase, Jackson 3), PostgreSQL 17, `dev.cel:cel` 0.14.0 (CEL for rules), `com.spandigital:cel2sql4j` 0.2.7 (CEL filters to SQL), Testcontainers for tests. Versions live in `engine/build.gradle.kts`.
 
 Next.js, next-intl, Drizzle and `postgres` were removed in ADR-0025; the database now lives behind the Kotlin engine (ADR-0024).

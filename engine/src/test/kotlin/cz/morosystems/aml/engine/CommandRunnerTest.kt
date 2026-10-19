@@ -47,6 +47,13 @@ class CommandRunnerTest {
     }
 
     @Test
+    fun noCommandLeavesTheServerRunning() {
+        val out = run()
+        verifyNoInteractions(importer, runs)
+        assertThat(out).isEmpty()
+    }
+
+    @Test
     fun unknownCommandPrintsUsage() {
         val out = run("nonsense")
         verifyNoInteractions(importer, runs)

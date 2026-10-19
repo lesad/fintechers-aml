@@ -9,4 +9,5 @@
     <include file="db/migrations/0003-runs.sql" />
     <include file="db/migrations/0004-seed-rules.sql" />
     <include file="db/migrations/0005-c1-remittances-as-outflow.sql" />
+    <include file="db/migrations/0006-audit.sql" />
 </databaseChangeLog>
