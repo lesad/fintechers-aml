@@ -6,6 +6,8 @@
 
 ### Added
 
+- `pnpm ship` (`scripts/ship.sh`): push, open the PR, arm squash auto-merge and wait for CI, printing the failing log on red.
+- `.github/rulesets/main.json`: the `main` ruleset (PR required, 0 approvals, squash only, required CI checks). CI now cancels stale PR runs and times jobs out after 10 minutes.
 - `docs/challenge/`: the FINREG AML challenge context copied from the team's context repo (challenge text, data profile, decision design, rule B lists, Czech escalation, UX research, AWS guide and demo guidance).
 - `scripts/pull-data.sh` and `pnpm data:pull`: sync the organisers' datasets from S3 and the ČNB FX fixings into the git-ignored `data/raw/`.
 - `reference/high-risk-countries-2026-07.json`: EU and FATF high-risk countries for July 2026 (rule B).
