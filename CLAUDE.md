@@ -79,7 +79,7 @@ Keep `docs/` current _as you work_, not deferred. Before finishing a change, syn
 - Change is **generic** (would help any app on the template) → this only applies in a **consuming fork**, where you'd log it in `docs/UPSTREAM.md`. This repo _is_ the template, so its own `UPSTREAM.md` stays empty.
 - Dependency bump → update `docs/STACK.md`.
 
-Read `docs/README.md` first (the memory map). A `Stop` hook nudges when source under `src/`/`scripts/` changed but no `docs/` file did — if none applies, say so briefly.
+Read `docs/README.md` first (the memory map).
 
 ## Skills
 
