@@ -12,7 +12,8 @@ Before the event, this repo held only a generic Next.js app template (`agentic-n
 2. Set up the team AWS account once with `aws configure sso` (answers in `docs/challenge/aws-participant-guide.md`) and name the profile `hackathon`, with `region = eu-central-1`. Switch to it in your shell: `export AWS_PROFILE=hackathon` (fish: `set -gx AWS_PROFILE hackathon`).
 3. Sign in: `aws sso login --profile hackathon` (sessions last 12 hours).
 4. `pnpm data:pull` fetches the ČNB AML data, the MostlyRight file and the ČNB FX fixings into `data/raw/` (git-ignored).
-5. Read `docs/challenge/README.md` for the challenge, the data findings and the decision design.
+5. Load the data into the engine's local Postgres (needs Docker): `docker compose -f engine/compose.yaml up -d --wait`, then `cd engine && ./gradlew bootRun --args=import`. Details and the expected output: [`engine/README.md`](engine/README.md).
+6. Read `docs/challenge/README.md` for the challenge, the data findings and the decision design.
 
 ## Template notes
 

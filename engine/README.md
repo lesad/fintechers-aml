@@ -1,21 +1,47 @@
 # Monitoring rules engine
 
-Kotlin + Spring Boot service that imports the organisers' data and runs the monitoring rules. Driven by CLI commands, no REST.
+Kotlin + Spring Boot service that imports the organisers' data and runs the monitoring rules. Driven by CLI commands, no REST. Design: [`docs/engine/rules-engine-design.md`](../docs/engine/rules-engine-design.md).
 
 ## Prerequisites
 
-- JDK 25 is fetched by the Gradle toolchain; Docker is needed for the tests (Testcontainers).
-- `docker compose -f engine/compose.yaml up -d --wait` from the repo root starts the local Postgres on port 5440 (`ENGINE_DB_PORT` changes it; override the connection with `ENGINE_DB_URL`, `ENGINE_DB_USER`, `ENGINE_DB_PASSWORD`).
-- `pnpm data:pull` fills `data/raw/`.
+- **Docker**, for the local Postgres and for the tests (Testcontainers).
+- **Any JDK 17+** to start Gradle. The build itself runs on JDK 25, which the Gradle toolchain downloads on first use.
+- **The data** in `data/raw/`: sign in with `aws sso login --profile hackathon`, then `pnpm data:pull` from the repo root (setup in the root [README](../README.md#getting-started-for-the-hackathon)). If your team profile has another name, run `bash scripts/pull-data.sh --profile <name>`.
+
+## Run it locally
+
+From the repo root:
+
+```sh
+docker compose -f engine/compose.yaml up -d --wait   # Postgres 17 on 127.0.0.1:5440
+cd engine
+./gradlew bootRun --args=import                       # ~15 s; migrates the schema, then loads data/raw/
+```
+
+The import prints a report. On the July 2026 data it reads:
+
+```
+ImportReport(clients=5493, transactions=397853, fxRates=6030, listCodes=31, clientsWithoutQ2=1, negativeVolumes=0, emptyRequiredFields=0)
+```
+
+It replaces the data on every run, so running it again is safe. It fails, and leaves the previous data in place, on a currency without a ČNB fixing, a transaction for an unknown client, or a duplicate ID.
+
+Look at the result with `docker exec -it fintechers-aml-db-1 psql -U postgres` (tables `client`, `transaction`, `fx_rate`, `reference_list`; amounts are in haléře, CZK × 100).
+
+Port 5440 avoids other projects' Postgres on 5432. To change it, set `ENGINE_DB_PORT` for compose and `ENGINE_DB_URL` (e.g. `jdbc:postgresql://127.0.0.1:5441/postgres`) for the engine; `ENGINE_DB_USER` and `ENGINE_DB_PASSWORD` default to `postgres`.
+
+Stop the database with `docker compose -f engine/compose.yaml stop`; add `down -v` instead to delete its data.
 
 ## Commands
 
 Run from `engine/`:
 
 ```sh
-./gradlew bootRun --args=import   # load the raw data into Postgres
-./gradlew bootRun --args=run      # run the rules; output goes to data/out/
+./gradlew bootRun --args=import   # load data/raw/ into Postgres
 ./gradlew test                    # tests use a throwaway Postgres container, never the dev database
+./gradlew build                   # compile, test, package (what CI runs)
 ```
+
+`./gradlew bootRun --args=run` (run the rules, output to `data/out/`) arrives with the rule runner; until then it prints the usage line.
 
 Schema changes are Liquibase SQL files in `src/main/resources/db/migrations/`, listed in `db/changelog-master.xml`.
