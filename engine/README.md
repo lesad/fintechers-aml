@@ -5,7 +5,7 @@ Kotlin + Spring Boot service that imports the organisers' data and runs the moni
 ## Prerequisites
 
 - JDK 25 is fetched by the Gradle toolchain; Docker is needed for the tests (Testcontainers).
-- `pnpm db:start` from the repo root starts the local Postgres (override with `ENGINE_DB_URL`, `ENGINE_DB_USER`, `ENGINE_DB_PASSWORD`).
+- `docker compose -f engine/compose.yaml up -d --wait` from the repo root starts the local Postgres (override with `ENGINE_DB_URL`, `ENGINE_DB_USER`, `ENGINE_DB_PASSWORD`).
 - `pnpm data:pull` fills `data/raw/`.
 
 ## Commands
