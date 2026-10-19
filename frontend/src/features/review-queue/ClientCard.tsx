@@ -5,6 +5,7 @@ import { Card, RiskBadge, type RiskLevel } from "@/components";
 import { czk, type DetailClient } from "./api";
 
 const money = (halere: number) => Math.round(czk(halere)).toLocaleString("en-US");
+const count = (n: number) => n.toLocaleString("en-US");
 
 const pep = cva("", { variants: { pep: { true: "font-bold" } } });
 
@@ -16,11 +17,7 @@ const riskLevel = (risk: string | null): RiskLevel | null =>
 
 /** Who the client is and how Q2 compared with what they declared at onboarding. */
 export function ClientCard({ client }: { client: DetailClient }) {
-  const expectedQ2 = client.expectedMonthlyHalere * 3;
   const hasQ2 = client.q2TxCount > 0;
-  const scale = Math.max(expectedQ2, client.q2VolumeHalere, 1);
-  const deltaPct =
-    hasQ2 && expectedQ2 ? Math.round((client.q2VolumeHalere / expectedQ2 - 1) * 100) : 0;
   const risk = riskLevel(client.risk);
 
   return (
@@ -43,49 +40,74 @@ export function ClientCard({ client }: { client: DetailClient }) {
         <span className="self-center text-fg-subtle">AML risk score</span>
         <span>{risk ? <RiskBadge level={risk} /> : "—"}</span>
       </div>
-      <div className="flex flex-col gap-1.5 border-t border-border-soft pt-2.5">
-        <div className="flex items-baseline justify-between">
-          <span className="text-xs text-fg-subtle">Volume, Q2 2026</span>
-          {hasQ2 && (
-            <span className="text-xs font-bold tabular-nums">
-              {deltaPct >= 0 ? "+" : ""}
-              {deltaPct} % vs expected
-            </span>
-          )}
-        </div>
-        {hasQ2 ? (
-          <>
-            <div className="grid grid-cols-[64px_minmax(0,1fr)_92px] items-center gap-2 text-xs">
-              <span className="text-fg-muted">Expected</span>
-              <span className="h-2 overflow-hidden rounded-[2px] bg-border-soft">
-                <span
-                  className="block h-full bg-fg-subtle"
-                  style={{ width: `${(expectedQ2 / scale) * 100}%` }}
-                />
-              </span>
-              <span className="text-right text-fg-muted tabular-nums">{money(expectedQ2)}</span>
-              <span className="text-fg-muted">Real</span>
-              <span className="h-2 overflow-hidden rounded-[2px] bg-border-soft">
-                <span
-                  className="block h-full bg-fg"
-                  style={{ width: `${(client.q2VolumeHalere / scale) * 100}%` }}
-                />
-              </span>
-              <span className="text-right font-semibold tabular-nums">
-                {money(client.q2VolumeHalere)}
-              </span>
-            </div>
-            <span className="text-[11px] text-fg-subtle">
-              Expected {money(client.expectedMonthlyHalere)} CZK / month × 3 · {client.q2TxCount}{" "}
-              transactions in Q2
-            </span>
-          </>
-        ) : (
-          <span className="text-xs text-fg-muted">
-            No Q2 history. Expected {money(client.expectedMonthlyHalere)} CZK / month.
+      <Comparison
+        title="Volume, Q2 2026"
+        expected={client.expectedMonthlyHalere * 3}
+        real={hasQ2 ? client.q2VolumeHalere : null}
+        format={money}
+      />
+      <Comparison
+        title="Transactions, Q2 2026"
+        expected={client.expectedCount * 3}
+        real={hasQ2 ? client.q2TxCount : null}
+        format={count}
+      />
+    </Card>
+  );
+}
+
+type ComparisonProps = {
+  title: string;
+  /** What the client declared for the quarter. */
+  expected: number;
+  /** null when the client has no Q2 history. */
+  real: number | null;
+  format: (n: number) => string;
+};
+
+function Comparison({ title, expected, real, format }: ComparisonProps) {
+  const scale = Math.max(expected, real ?? 0, 1);
+  const deltaPct = real !== null && expected ? Math.round((real / expected - 1) * 100) : null;
+  return (
+    <div
+      role="group"
+      aria-label={title}
+      className="flex flex-col gap-1.5 border-t border-border-soft pt-2.5"
+    >
+      <div className="flex items-baseline justify-between">
+        <span className="text-xs text-fg-subtle">{title}</span>
+        {deltaPct !== null && (
+          <span className="text-xs font-bold tabular-nums">
+            {deltaPct >= 0 ? "+" : ""}
+            {deltaPct} % vs expected
           </span>
         )}
       </div>
-    </Card>
+      <div className="grid grid-cols-[64px_minmax(0,1fr)_92px] items-center gap-2 text-xs">
+        <span className="text-fg-muted">Expected</span>
+        <Bar share={expected / scale} tone="expected" />
+        <span className="text-right text-fg-muted tabular-nums">{format(expected)}</span>
+        {real !== null && (
+          <>
+            <span className="text-fg-muted">Real</span>
+            <Bar share={real / scale} tone="real" />
+            <span className="text-right font-semibold tabular-nums">{format(real)}</span>
+          </>
+        )}
+      </div>
+      {real === null && <span className="text-xs text-fg-muted">No Q2 history.</span>}
+    </div>
+  );
+}
+
+const bar = cva("block h-full", {
+  variants: { tone: { expected: "bg-fg-subtle", real: "bg-fg" } },
+});
+
+function Bar({ share, tone }: { share: number; tone: "expected" | "real" }) {
+  return (
+    <span className="h-2 overflow-hidden rounded-[2px] bg-border-soft">
+      <span className={bar({ tone })} style={{ width: `${share * 100}%` }} />
+    </span>
   );
 }
