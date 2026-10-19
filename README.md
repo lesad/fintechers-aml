@@ -101,12 +101,11 @@ Installs (globally) curated skills via `npx skills add`. The Fallow MCP server s
 
 ## CI
 
-`.github/workflows/ci.yml` runs four jobs on PRs and pushes to `main`:
+`.github/workflows/ci.yml` runs three jobs on PRs and pushes to `main`:
 
 1. `check` — typecheck / lint / format / unit
-2. `integration`: Vitest integration against a Postgres service container
-3. `build` — Next.js production build
-4. `fallow` — dead code / dupes / health; advisory (`continue-on-error`, `fail-on-issues: false`), posts a sticky PR comment. Uses a signed `fallow` binary (pinned ≥2.77.0).
+2. `build` — Next.js production build
+3. `fallow` — dead code / dupes / health; advisory (`continue-on-error`, `fail-on-issues: false`), posts a sticky PR comment. Uses a signed `fallow` binary (pinned ≥2.77.0).
 
 ## Deployment
 
