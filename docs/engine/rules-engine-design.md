@@ -11,7 +11,7 @@ FINREG's challenge asks for alerts from three red-flag rules (A, B, C) over July
 The engine is built so that rules can later be **written by people and proposed by an LLM**, and every rule change is checked before it goes live:
 
 1. someone (or the model) proposes a rule in the rule language,
-2. code type-checks it and proves it does not loosen a regulatory rule,
+2. code type-checks it and, with a formal proof, shows what the change newly catches and no longer catches,
 3. a backtest on July shows how many more or fewer alerts it raises (a later slice),
 4. a second person approves it,
 5. every step is logged.
@@ -22,9 +22,9 @@ That loop is the differentiator for the pitch. This slice builds steps 2 and 4 a
 
 - Load the ČNB data (clients, transactions, FX) into Postgres with every amount in CZK.
 - A rule model in Postgres: detection rules written in **CEL**, aggregate variables, layered parameters, segments.
-- Seed the challenge rules as six regulatory rules (A1, A2, A3, B1, B2, C1) grouped into alert types A, B, C.
+- Seed the challenge rules as six company rules (A1, A2, A3, B1, B2, C1) grouped into alert types A, B, C.
 - Run the active rule set over July and produce exactly the alert set the challenge defines, with evidence per alert.
-- Check a rule at save time: CEL type-check, satisfiability, and the **regulatory floor proof** with the cel-java verifier (Z3).
+- Check a rule at save time: CEL type-check, satisfiability, and the **change summary proof** with the cel-java verifier (Z3).
 - Approve a rule version (checks passed). Four-eyes enforcement (approver ≠ author, roles) is a later request.
 
 ## Non-goals (this slice)
@@ -40,7 +40,7 @@ That loop is the differentiator for the pitch. This slice builds steps 2 and 4 a
 ## Anti-goals
 
 - A rule language only we can read. Rules are standard CEL plus a small, documented aggregate notation.
-- Any path where a regulatory rule can be switched off or loosened, by any layer or by the model.
+- Any rule change that reaches production without the checks and an approval, whether a person or the model wrote it.
 - Decisions made in SQL text assembled from user input. User-supplied values only ever reach SQL as bound parameters.
 - Calendar-day approximations of time windows (rule C must be exact across midnight).
 
@@ -58,7 +58,7 @@ That loop is the differentiator for the pitch. This slice builds steps 2 and 4 a
 
 - **Rule language:** CEL for conditions and filters, stored as text in Postgres. No JSON rule trees.
 - **Split rules:** detection rules are small and single-purpose; several rules feed one alert type (A1–A3 → A, B1–B2 → B, C1 → C). The challenge's "one alert per client" for A and C, "per transaction" for B, is an alert-grouping property.
-- **Layers:** regulatory (cannot be switched off or loosened), company, client segment, client. Any layer below regulatory may add completely new rules. A segment or client layer may also suppress or replace a company rule for its scope, provided the change is approved by a manager (and, once backtesting exists, backtested).
+- **Layers:** company, client segment, client. There is no regulatory layer: in practice every monitoring rule is the institution's own decision (ADR-0027), and the FINREG rules are company rules. Every layer may add completely new rules. A segment or client layer may also suppress or replace a company rule for its scope, provided the change is approved by a manager (and, once backtesting exists, backtested).
 - **Database:** Postgres, not DuckDB.
 - **SQL only computes variables; Kotlin decides.** SQL selects rows and computes aggregates; the CEL runtime in Kotlin evaluates every rule condition.
 - **CEL → SQL for filters:** try cel2sql4j first behind our own interface; if the spike fails, write our own translator for the subset we use.
@@ -101,11 +101,11 @@ Data:
 
 Rules:
 
-- `rule` — immutable rule versions. Columns: `key` (e.g. `C1`), `version`, `alert_type` (`A`/`B`/`C`/further), `layer` (`regulatory`/`company`/`segment`/`client`), `scope_segment_id`, `scope_client_id`, `grain` (`transaction`/`client_day`/`client_anchor`), `anchor` (CEL, only for `client_anchor`), `condition` (CEL), `replaces_key` (nullable), `status` (`draft`/`approved`/`active`/`retired`), `author`, `approver`, timestamps. At most one `active` version per `(key, scope)`.
+- `rule` — immutable rule versions. Columns: `key` (e.g. `C1`), `version`, `alert_type` (`A`/`B`/`C`/further), `layer` (`company`/`segment`/`client`), `scope_segment_id`, `scope_client_id`, `grain` (`transaction`/`client_day`/`client_anchor`), `anchor` (CEL, only for `client_anchor`), `condition` (CEL), `replaces_key` (nullable), `status` (`draft`/`approved`/`active`/`retired`), `author`, `approver`, timestamps. At most one `active` version per `(key, scope)`.
 - `rule_variable` — rule version, `name`, `agg` (`sum`/`max`/`min`/`count`/`set`), `field`, `filter` (CEL), window spec (see below).
-- `rule_param` — rule `key`, `name`, `layer`, scope, integer `value`. The regulatory row is the default.
+- `rule_param` — rule `key`, `name`, `layer`, scope, integer `value`. The company row is the default.
 - `segment` — id, name, `predicate` (CEL over `client`). Membership is computed, not stored.
-- `rule_check` — rule version, check kind (`typecheck`/`satisfiable`/`not_always_true`/`floor`), status (`verified`/`violated`/`inconclusive`/`error`), message incl. counterexample, timestamp.
+- `rule_check` — rule version, check kind (`typecheck`/`satisfiable`/`not_always_true`/`change_summary`/`segment_overlap`), status (`verified`/`violated`/`inconclusive`/`error`), message incl. counterexample, timestamp.
 
 Runs and results:
 
@@ -136,7 +136,7 @@ A rule is a CEL `condition` evaluated once per **grain row**, plus named **varia
 
 **Integers only.** Write ratios as multiplications: `outflow * 100 >= p.forward_pct * inflow`, not `outflow >= 0.8 * inflow`.
 
-## Seed rules (regulatory, version 1)
+## Seed rules (company, version 1)
 
 | key | type | grain                                        | condition                                                                                                                                            | params                              |
 | --- | ---- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -164,13 +164,12 @@ Expected on this data: B1 fires zero times (no country in the data is on the Jul
 
 For each client, the effective rule set is:
 
-1. every active regulatory rule,
-2. plus active company rules,
-3. plus active rules scoped to any segment whose predicate matches the client,
-4. plus active rules scoped to the client,
-5. minus any rule whose `key` is named in `replaces_key` by an active rule in a more specific scope that covers this client.
+1. every active company rule,
+2. plus active rules scoped to any segment whose predicate matches the client,
+3. plus active rules scoped to the client,
+4. minus any rule whose `key` is named in `replaces_key` by an active rule in a more specific scope that covers this client.
 
-Parameters resolve most-specific first: client, segment, company, regulatory default. If a client matches two segments that set the same parameter, that is a configuration error: the run fails and names the client and segments. (The segment-overlap check below prevents it at save time.)
+Parameters resolve most-specific first: client, segment, company default. If a client matches two segments that set the same parameter, that is a configuration error: the run fails and names the client and segments. (The segment-overlap check below prevents it at save time.)
 
 ## Checks at save and approval
 
@@ -179,23 +178,17 @@ Run on every new rule version and every parameter override; results go to `rule_
 1. **Type-check** — compile `condition`, `anchor`, every `filter` and segment predicate against the vocabulary. Errors carry positions (they are the retry signal for the future LLM loop).
 2. **Satisfiable** — `isSatisfiable(condition)`: reject a rule that can never fire. Skipped for a suppression (condition `false` on purpose).
 3. **Not always true** — reject a condition that is always true (it would alert on every row).
-4. **Regulatory floor** — for a rule that replaces a regulatory rule, or a parameter override on a regulatory rule: prove that `regulatory ⇒ new` holds for every input (with parameters substituted as constants). `VERIFIED` → allowed. `VIOLATED` → rejected, counterexample stored. `INCONCLUSIVE` → rejected for regulatory rules.
-   - A replacement must keep the regulatory rule's variable definitions identical (same names, aggregates, filters, windows); it may add variables. Otherwise the proof cannot relate them and the change is rejected.
-5. **Change summary** (company and lower layers, informative): for a replacement or suppression of a company rule, store counterexamples in both directions ("now also catches…", "no longer catches…") for the approver.
-6. **Segment overlap** — on segment save, `isSatisfiable(a && b)` against every other segment; overlap is stored as a warning with an example client.
+4. **Change summary** (informative): for a new version, a replacement, a suppression or a parameter override, prove which inputs the old and the new rule disagree on (parameters substituted as constants) and store counterexamples in both directions ("now also catches…", "no longer catches…") for the approver.
+5. **Segment overlap** — on segment save, `isSatisfiable(a && b)` against every other segment; overlap is stored as a warning with an example client.
 
 Domain assumptions given to the verifier as `assume` constraints: amounts, counts and every `sum`/`max`/`count` variable ≥ 0; `day_max ≤ day_volume` where both exist; `q2_tx_count ≥ 0`. Without them the solver returns impossible counterexamples.
-
-## Changing a regulatory rule itself
-
-The regulatory layer is the floor, so the floor check does not apply to it. A new regulatory version (for example after FINREG answers an open question, which may loosen a rule) goes through a separate command, `regulatory-change <rule-version>`: type-check, satisfiability, the change summary in both directions (informative), then approval. Only regulatory rules use this path; no lower layer can reach it.
 
 ## Approval
 
 Command `approve <rule-version> --by <name>` sets `active` (retiring the previous active version for that key and scope) only if:
 
-- every check passed (floor `verified` where it applies),
-- for company-rule suppressions and replacements: the approver is recorded as the manager (no role model yet; recorded as given).
+- every check passed (the change summary is informative and never blocks),
+- the approver is recorded as the manager (no role model yet; recorded as given).
 
 Four-eyes enforcement (approver ≠ author, approver roles) is deliberately left for a later request.
 
@@ -249,13 +242,13 @@ If any check fails, write our own translator for the subset: literals, field acc
 
 ## Z3 / verifier risk
 
-`dev.cel:verifier` loads Z3 through `tools.aqua:z3-turnkey` (bundled native binaries). Not yet confirmed on Apple Silicon macOS. Spike first: prove `inflow > 100 ⇒ inflow > 50` from Kotlin. If it fails to load, the floor check returns `inconclusive`, which blocks changes to regulatory rules but not the rest of the engine.
+`dev.cel:verifier` loads Z3 through `tools.aqua:z3-turnkey` (bundled native binaries). Not yet confirmed on Apple Silicon macOS. Spike first: prove `inflow > 100 ⇒ inflow > 50` from Kotlin. If it fails to load, the change summary is stored as `inconclusive` and the rest of the engine is unaffected.
 
 ## Testing
 
 - Unit fixtures per rule, hand-made, 5–10 rows each, with known hits. Never real data. Start from the detection test cases in `docs/rules/A-profile-discrepancy.md`, `B-high-risk-pep.md` and `C-flow-through.md` (thresholds, prorated baseline, 6 h 1 min too late, across midnight, back to the payer).
 - Edge cases each get a named test: C1 window across midnight; C1 outflow back to a payer's account is excluded; C1 with a remittance (no payer) in the window; A2/A3 skipped for a client with no Q2 activity; B2 with direction `unknown`; one A alert for a client that trips A1 on several days; FX on a weekend uses the last fixing; JPY/HUF quantity 100.
-- Checks: floor proof verified for a stricter replacement, violated with the expected counterexample for a looser one; satisfiability rejects `x > 5 && x < 3`.
+- Checks: the change summary for a looser C1 replacement (`min_inflow` 200,000) reports "no longer catches inflow 150,000 / outflow 120,000"; satisfiability rejects `x > 5 && x < 3`.
 - Full run on the real July data locally: counts per rule and alert type printed; whole run under ~2 minutes (target, not a contract).
 - CI: a GitHub Actions job `engine` runs `./gradlew build` for `engine/` on every PR (Temurin JDK 25 via `actions/setup-java`, Gradle cache, the Gradle wrapper committed and validated, a Postgres 17 service container like the `integration` job, dependency versions pinned). Once green it joins `check`, `integration` and `build` as a required check in `.github/rulesets/main.json`, so `main` only merges with a passing engine build. The Next.js jobs drop their DB steps when the app loses DB access. Data-dependent runs (the real July data) stay local.
 
