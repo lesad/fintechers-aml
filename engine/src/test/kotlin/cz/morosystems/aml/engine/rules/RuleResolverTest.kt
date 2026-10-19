@@ -19,14 +19,14 @@ class RuleResolverTest {
 
     @Test
     fun companyRuleAppliesToEveryClient() {
-        val resolved = resolver.resolve(listOf(velocity), emptyList(), emptyList(), clients)
+        val resolved = resolver.resolve(listOf(velocity), emptyList(), clients)
         assertThat(resolved.clientsByRule[velocity]).containsExactlyInAnyOrder("K1", "K2", "K3")
     }
 
     @Test
     fun clientRuleReplacesTheCompanyRuleForThatClientOnly() {
         val payroll = rule("V1-K1", Layer.CLIENT, scopeClientId = "K1", replacesKey = "V1")
-        val resolved = resolver.resolve(listOf(velocity, payroll), emptyList(), emptyList(), clients)
+        val resolved = resolver.resolve(listOf(velocity, payroll), emptyList(), clients)
         assertThat(resolved.clientsByRule[velocity]).containsExactlyInAnyOrder("K2", "K3")
         assertThat(resolved.clientsByRule[payroll]).containsExactly("K1")
     }
@@ -34,58 +34,51 @@ class RuleResolverTest {
     @Test
     fun segmentRuleAppliesToMembersOnly() {
         val bigOnly = rule("S1", Layer.SEGMENT, scopeSegmentId = 1)
-        val resolved = resolver.resolve(listOf(bigOnly), emptyList(), listOf(big), clients)
+        val resolved = resolver.resolve(listOf(bigOnly), listOf(big), clients)
         assertThat(resolved.clientsByRule[bigOnly]).containsExactlyInAnyOrder("K1", "K2")
     }
 
     @Test
     fun segmentReplacementLeavesNonMembersOnTheCompanyRule() {
         val stricter = rule("V1-BIG", Layer.SEGMENT, scopeSegmentId = 1, replacesKey = "V1")
-        val resolved = resolver.resolve(listOf(velocity, stricter), emptyList(), listOf(big), clients)
+        val resolved = resolver.resolve(listOf(velocity, stricter), listOf(big), clients)
         assertThat(resolved.clientsByRule[velocity]).containsExactly("K3")
         assertThat(resolved.clientsByRule[stricter]).containsExactlyInAnyOrder("K1", "K2")
     }
 
     @Test
-    fun mostSpecificParameterWins() {
-        val params = listOf(
-            ParamRow("V1", "limit", Layer.COMPANY, null, null, 10),
-            ParamRow("V1", "limit", Layer.SEGMENT, 1, null, 7),
-            ParamRow("V1", "limit", Layer.CLIENT, null, "K1", 5),
-        )
-        val resolved = resolver.resolve(listOf(velocity), params, listOf(big), clients)
-        assertThat(resolved.params("V1", "K1")).isEqualTo(mapOf("limit" to 5L))
-        assertThat(resolved.params("V1", "K2")).isEqualTo(mapOf("limit" to 7L))
-        assertThat(resolved.params("V1", "K3")).isEqualTo(mapOf("limit" to 10L))
+    fun segmentReplacementBringsItsOwnParameters() {
+        val company = rule("V1", Layer.COMPANY, params = mapOf("limit" to 10L))
+        val stricter = rule("S1", Layer.SEGMENT, scopeSegmentId = 2, replacesKey = "V1", params = mapOf("limit" to 7L))
+        val resolved = resolver.resolve(listOf(company, stricter), listOf(huge), clients)
+        assertThat(resolved.clientsByRule[stricter]).containsExactly("K1")
+        assertThat(resolved.clientsByRule[company]).containsExactlyInAnyOrder("K2", "K3")
+        assertThat(stricter.params).isEqualTo(mapOf("limit" to 7L))
     }
 
     @Test
-    fun twoSegmentsSettingTheSameParameterForOneClientFail() {
-        val params = listOf(
-            ParamRow("V1", "limit", Layer.SEGMENT, 1, null, 7),
-            ParamRow("V1", "limit", Layer.SEGMENT, 2, null, 6),
-        )
-        assertThatThrownBy { resolver.resolve(listOf(velocity), params, listOf(big, huge), clients) }
+    fun twoSegmentRulesReplacingTheSameKeyForOneClientFail() {
+        val first = rule("S1", Layer.SEGMENT, scopeSegmentId = 1, replacesKey = "V1")
+        val second = rule("S2", Layer.SEGMENT, scopeSegmentId = 2, replacesKey = "V1")
+        assertThatThrownBy { resolver.resolve(listOf(velocity, first, second), listOf(big, huge), clients) }
             .isInstanceOf(ConfigurationException::class.java)
-            .hasMessageContaining("K1").hasMessageContaining("big").hasMessageContaining("huge")
-    }
-
-    @Test
-    fun aParameterWithoutADefaultForSomeClientFailsNamingRuleAndParameter() {
-        val params = listOf(ParamRow("V1", "limit", Layer.CLIENT, null, "K1", 5))
-        assertThatThrownBy { resolver.resolve(listOf(velocity), params, emptyList(), clients) }
-            .isInstanceOf(ConfigurationException::class.java)
-            .hasMessageContaining("V1").hasMessageContaining("limit").hasMessageContaining("K2")
+            .hasMessageContaining("K1").hasMessageContaining("S1").hasMessageContaining("S2").hasMessageContaining("V1")
     }
 
     @Test
     fun replacingAnUnknownRuleFails() {
         val orphan = rule("X-K1", Layer.CLIENT, scopeClientId = "K1", replacesKey = "NOPE")
-        assertThatThrownBy { resolver.resolve(listOf(velocity, orphan), emptyList(), emptyList(), clients) }
+        assertThatThrownBy { resolver.resolve(listOf(velocity, orphan), emptyList(), clients) }
             .isInstanceOf(ConfigurationException::class.java)
             .hasMessageContaining("NOPE")
     }
 
-    private fun rule(key: String, layer: Layer, scopeSegmentId: Long? = null, scopeClientId: String? = null, replacesKey: String? = null) =
-        RuleDefinition(key.hashCode().toLong(), key, 1, "A", layer, scopeSegmentId, scopeClientId, Grain.TRANSACTION, null, "true", replacesKey, emptyList())
+    private fun rule(
+        key: String,
+        layer: Layer,
+        scopeSegmentId: Long? = null,
+        scopeClientId: String? = null,
+        replacesKey: String? = null,
+        params: Map<String, Long> = emptyMap(),
+    ) = RuleDefinition(key.hashCode().toLong(), key, 1, "A", layer, scopeSegmentId, scopeClientId, Grain.TRANSACTION, null, "true", replacesKey, emptyList(), params)
 }

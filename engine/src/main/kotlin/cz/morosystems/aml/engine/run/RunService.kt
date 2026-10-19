@@ -43,12 +43,9 @@ class RunService(
     @Transactional
     fun run(period: Period = Period.JULY_2026): RunReport {
         val active = rules.activeRules()
-        val params = rules.params()
-        val compiled = active.associateWith { rule ->
-            compiler.compile(rule, params.filter { it.ruleKey == rule.key }.map { it.name }.toSet())
-        }
+        val compiled = active.associateWith { rule -> compiler.compile(rule, rule.params.keys) }
         val clientRows = clients.findAll()
-        val resolved = resolver.resolve(active, params, rules.segments(), clientRows)
+        val resolved = resolver.resolve(active, rules.segments(), clientRows)
         val clientsById = clientRows.associateBy { it["id"] as String }
         val lists = mapOf("high_risk" to clients.highRiskList())
 
@@ -59,7 +56,7 @@ class RunService(
 
         val hits = active.flatMap { rule ->
             val applicable = resolved.clientsByRule[rule].orEmpty()
-            if (applicable.isEmpty()) emptyList() else evaluate(rule, compiled.getValue(rule), period, applicable, clientsById, lists, resolved::params)
+            if (applicable.isEmpty()) emptyList() else evaluate(rule, compiled.getValue(rule), period, applicable, clientsById, lists)
         }
         val withIds = assignIds(hits)
         insertHits(runId, withIds)
@@ -89,17 +86,15 @@ class RunService(
         applicable: Set<String>,
         clientsById: Map<String, Map<String, Any?>>,
         lists: Map<String, List<String>>,
-        paramsFor: (String, String) -> Map<String, Long>,
     ): List<Hit> {
         val query = queries.build(rule, period, applicable.takeIf { it.size < clientsById.size })
-        val paramCache = mutableMapOf<String, Map<String, Long>>()
+        val params = rule.params
         val hits = mutableListOf<Hit>()
         streaming.sql(query.sql).params(query.params).query { rs: ResultSet ->
             val clientId = rs.getString("client_id")
             if (clientId in applicable) {
                 val tx = if (rule.grain == Grain.CLIENT_DAY) null else Vocabulary.tx.keys.associateWith { rs.getObject(it) }
                 val variables = rule.variables.associate { it.name to column(rs, it.name, it.agg) }
-                val params = paramCache.getOrPut(clientId) { paramsFor(rule.key, clientId) }
                 val activation = Activations.of(tx, clientsById.getValue(clientId), params, lists, variables)
                 val fired = try {
                     program.evaluate(activation)

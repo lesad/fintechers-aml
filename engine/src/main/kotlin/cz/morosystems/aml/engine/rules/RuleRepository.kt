@@ -19,6 +19,11 @@ class RuleRepository(private val jdbc: JdbcClient) {
             """,
         ).query { rs, _ -> rs.getLong("rule_id") to variable(rs) }.list().groupBy({ it.first }, { it.second })
 
+        val params = jdbc.sql(
+            "select p.rule_id, p.name, p.value from rule_param p join rule r on r.id = p.rule_id where r.status = 'active'",
+        ).query { rs, _ -> Triple(rs.getLong("rule_id"), rs.getString("name"), rs.getLong("value")) }.list()
+            .groupBy({ it.first }, { it.second to it.third }).mapValues { it.value.toMap() }
+
         return jdbc.sql(
             """
             select id, key, version, alert_type, layer, scope_segment_id, scope_client_id,
@@ -40,22 +45,10 @@ class RuleRepository(private val jdbc: JdbcClient) {
                 condition = rs.getString("condition"),
                 replacesKey = rs.getString("replaces_key"),
                 variables = variables[id].orEmpty(),
+                params = params[id].orEmpty(),
             )
         }.list()
     }
-
-    fun params(): List<ParamRow> =
-        jdbc.sql("select rule_key, name, layer, scope_segment_id, scope_client_id, value from rule_param")
-            .query { rs, _ ->
-                ParamRow(
-                    ruleKey = rs.getString("rule_key"),
-                    name = rs.getString("name"),
-                    layer = Layer.valueOf(rs.getString("layer").uppercase()),
-                    scopeSegmentId = rs.getObject("scope_segment_id") as Long?,
-                    scopeClientId = rs.getString("scope_client_id"),
-                    value = rs.getLong("value"),
-                )
-            }.list()
 
     fun segments(): List<Segment> =
         jdbc.sql("select id, name, predicate from segment order by id")

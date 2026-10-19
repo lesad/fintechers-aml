@@ -37,15 +37,7 @@ data class RuleDefinition(
     val condition: String,
     val replacesKey: String?,
     val variables: List<VariableDefinition>,
-)
-
-data class ParamRow(
-    val ruleKey: String,
-    val name: String,
-    val layer: Layer,
-    val scopeSegmentId: Long?,
-    val scopeClientId: String?,
-    val value: Long,
+    val params: Map<String, Long> = emptyMap(),
 )
 
 data class Segment(val id: Long, val name: String, val predicate: String)

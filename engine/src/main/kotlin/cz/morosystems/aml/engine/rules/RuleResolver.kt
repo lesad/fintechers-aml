@@ -6,26 +6,13 @@ import org.springframework.stereotype.Component
 
 class ConfigurationException(message: String) : RuntimeException(message)
 
-class ResolvedRuleSet(
-    val clientsByRule: Map<RuleDefinition, Set<String>>,
-    private val params: List<ParamRow>,
-    private val segmentsByClient: Map<String, Set<Long>>,
-) {
-    /** The rule's parameters as this client sees them: client over segment over company. */
-    fun params(ruleKey: String, clientId: String): Map<String, Long> {
-        val segments = segmentsByClient[clientId].orEmpty()
-        return params.filter { it.ruleKey == ruleKey && it.appliesTo(clientId, segments) }
-            .sortedBy { it.layer.ordinal }
-            .associate { it.name to it.value }
-    }
-}
+class ResolvedRuleSet(val clientsByRule: Map<RuleDefinition, Set<String>>)
 
-/** Decides which active rules run for which client, and with which parameters (design: "Layer resolution"). */
+/** Decides which active rules run for which client (design: "Layer resolution"); parameters come with each rule version (ADR-0034). */
 @Component
 class RuleResolver(private val compiler: RuleCompiler) {
     fun resolve(
         rules: List<RuleDefinition>,
-        params: List<ParamRow>,
         segments: List<Segment>,
         clients: List<Map<String, Any?>>,
     ): ResolvedRuleSet {
@@ -38,7 +25,7 @@ class RuleResolver(private val compiler: RuleCompiler) {
             val activation = Activations.of(null, client, emptyMap(), emptyMap(), emptyMap())
             client.id() to predicates.filterValues { it.evaluate(activation) }.keys
         }
-        checkSegmentParamConflicts(params, segments, segmentsByClient)
+        checkOverlappingReplacements(rules, segmentsByClient)
 
         val clientsByRule = rules.associateWith { rule ->
             segmentsByClient.filter { (clientId, segmentIds) ->
@@ -48,29 +35,18 @@ class RuleResolver(private val compiler: RuleCompiler) {
                     }
             }.keys
         }
-        val resolved = ResolvedRuleSet(clientsByRule, params, segmentsByClient)
-        clientsByRule.forEach { (rule, clientIds) ->
-            val names = params.filter { it.ruleKey == rule.key }.map { it.name }.toSet()
-            clientIds.forEach { clientId ->
-                val missing = names - resolved.params(rule.key, clientId).keys
-                if (missing.isNotEmpty()) {
-                    throw ConfigurationException("rule ${rule.key}: client $clientId has no value for ${missing.sorted().joinToString()} (add a company default)")
-                }
-            }
-        }
-        return resolved
+        return ResolvedRuleSet(clientsByRule)
     }
 
-    private fun checkSegmentParamConflicts(params: List<ParamRow>, segments: List<Segment>, segmentsByClient: Map<String, Set<Long>>) {
-        val segmentParams = params.filter { it.layer == Layer.SEGMENT }
-        val names = segments.associate { it.id to it.name }
+    private fun checkOverlappingReplacements(rules: List<RuleDefinition>, segmentsByClient: Map<String, Set<Long>>) {
+        val replacing = rules.filter { it.replacesKey != null }
         segmentsByClient.forEach { (clientId, segmentIds) ->
-            segmentParams.filter { it.scopeSegmentId in segmentIds }
-                .groupBy { it.ruleKey to it.name }
-                .filterValues { rows -> rows.map { it.scopeSegmentId }.distinct().size > 1 }
-                .forEach { (key, rows) ->
-                    val conflicting = rows.mapNotNull { names[it.scopeSegmentId] }.sorted().joinToString(", ")
-                    throw ConfigurationException("client $clientId: segments $conflicting all set ${key.first}.${key.second}")
+            replacing.filter { it.appliesTo(clientId, segmentIds) }
+                .groupBy { it.layer to it.replacesKey }
+                .filterValues { it.size > 1 }
+                .forEach { (key, overlapping) ->
+                    val names = overlapping.map { it.key }.sorted().joinToString(", ")
+                    throw ConfigurationException("client $clientId: rules $names both replace ${key.second}")
                 }
         }
     }
@@ -79,12 +55,6 @@ class RuleResolver(private val compiler: RuleCompiler) {
 }
 
 private fun RuleDefinition.appliesTo(clientId: String, segmentIds: Set<Long>) = when (layer) {
-    Layer.COMPANY -> true
-    Layer.SEGMENT -> scopeSegmentId in segmentIds
-    Layer.CLIENT -> scopeClientId == clientId
-}
-
-private fun ParamRow.appliesTo(clientId: String, segmentIds: Set<Long>) = when (layer) {
     Layer.COMPANY -> true
     Layer.SEGMENT -> scopeSegmentId in segmentIds
     Layer.CLIENT -> scopeClientId == clientId

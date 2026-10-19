@@ -36,9 +36,8 @@ class RuleRepositoryTest {
     }
 
     @Test
-    fun loadsCompanyParams() {
-        val c1 = repository.params().filter { it.ruleKey == "C1" }.associate { it.name to it.value }
-        assertThat(c1).isEqualTo(mapOf("min_inflow" to 10_000_000L, "forward_pct" to 80L))
-        assertThat(repository.params().all { it.layer == Layer.COMPANY }).isTrue()
+    fun loadsParamsPerVersion() {
+        val c1 = repository.activeRules().single { it.key == "C1" }
+        assertThat(c1.params).isEqualTo(mapOf("min_inflow" to 10_000_000L, "forward_pct" to 80L))
     }
 }

@@ -37,6 +37,7 @@
 
 ### Changed
 
+- `engine/`: parameter values belong to the rule version (ADR-0034). Migration `0010` moves `rule_param` onto `rule_id` and copies each value onto every version of its key; per-parameter segment and client overrides are gone (a different threshold is a replacing rule version). A run fails when two same-layer rules replace one key for one client. July run unchanged: A1 70,008, A2 92,336, A3 74,286, B2 112, C1 1,612 hits.
 - `docs/rules/` is organised by alert type and follows the engine: each of A, B and C cites its seed rules, states its interpretation decisions, evidence contract, guardrails and a code-only triage policy. The Jev questions are gone (ADR-0032); D to G and the PR #9 scenarios are candidate rules in `candidates.md`; `jev-questions.md` and the D to G specs are removed.
 - Agent context and docs aligned with the decisions on record: `CLAUDE.md`, the READMEs, `docs/QUICKSTART.md`, `docs/ENVIRONMENT.md` and `docs/challenge/` now say that nothing is deployed, that the engine is CLI-only and the UI runs on mock data, and that the SPA/engine split is settled (`architecture.md` is no longer UNDECIDED). CI's `engine` job is listed. `.github/rulesets/main.json` matches the live ruleset (ADR-0026), so `pnpm freeze --undo` no longer brings back the PR requirement. ADR-0010, ADR-0011, ADR-0012 and ADR-0018 carry their supersession notes.
 - The frontend moved into `frontend/` (ADR-0029): run `pnpm` commands there. CI, the pre-commit hook and the data, freeze and skills scripts follow.

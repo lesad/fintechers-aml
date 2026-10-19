@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0034 — Parameter values belong to the immutable rule version
+
+**Accepted.** A rule version fixes its condition, variables and parameter values together: `rule_param` is keyed by `rule_id`, and changing a threshold means saving a new version. A segment or client that needs a different threshold gets its own rule version at that layer that replaces the company rule (`replaces_key`), the way suppression already works; per-parameter overrides are gone. A run fails, naming the client and the rules, when two rules at the same layer replace the same key for one client. _Why:_ a stored explanation, a hit's evidence or an audit entry must describe exactly what ran, and a rule whose thresholds could change under it cannot promise that. Supersedes the parameter-override half of ADR-0027 and the parameter layering in `docs/engine/rules-engine-design.md`.
+
 ### ADR-0033 — Triage is a deterministic pure function over an alert; config is versioned data
 
 **Accepted.** Implements ADR-0032's "triage is code" for the engine. Every alert gets a disposition — `AUTO_CLOSE`, `REVIEW_LOW`, `REVIEW_MEDIUM`, `REVIEW_HIGH`, `ESCALATE` — from `Triage.decide(input, config)` in `engine/.../triage/`, a pure function with no clock, no connection, no model and no randomness. Six steps in a fixed order: base score per rule key, risk factors, score-to-band, the auto-close gate, the missing-data floor, then the hard floors. A floor is applied with `maxOf` over the enum ordinal, so it can only ever make an outcome stricter. Everything time-shaped arrives on the input (`asOf` is the run period's end, never `now()`); money stays `Long` haléře and `CanonicalJson` throws if a float reaches the input hash.
@@ -39,6 +43,8 @@ _Superseded in part by ADR-0031: `class-variance-authority` is back, for compone
 ### ADR-0027 — No regulatory rule layer; every monitoring rule is the institution's own
 
 **Accepted.** The rules engine has three layers: company, client segment and client. The regulatory layer from ADR-0024 is dropped, and with it the "regulatory floor" proof. FINREG's rules A, B and C are seeded as company rules. Every rule can be added, changed, suppressed or replaced at its layer, through the checks and an approval. The cel-java verifier stays, as an informative change summary (what a change newly catches and no longer catches) rather than a gate. _Why:_ the team found that in practice monitoring scenarios and thresholds are each institution's own risk-based decision, so a hard-coded regulatory layer would model something that does not exist. Design: `docs/engine/rules-engine-design.md`.
+
+_Superseded in part by ADR-0034: thresholds change through a new or replacing rule version, not a parameter override._
 
 ### ADR-0026 — Direct pushes to `main`; PRs are optional and `pnpm ship` is removed
 
