@@ -39,6 +39,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
+  engine:
+    name: engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew build
+        working-directory: engine
+
   fallow:
     name: fallow (dead code / dupes / health)
     runs-on: ubuntu-latest

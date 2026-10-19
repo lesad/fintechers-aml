@@ -35,3 +35,8 @@ docs/superpowers/
 
 # Organisers' datasets, never committed
 /data/
+
+# Engine (Kotlin) build output
+engine/build/
+engine/.gradle/
+engine/.kotlin/

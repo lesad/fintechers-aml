@@ -1,0 +1,9 @@
+spring:
+  main:
+    web-application-type: none
+  datasource:
+    url: ${ENGINE_DB_URL:jdbc:postgresql://127.0.0.1:5432/postgres}
+    username: ${ENGINE_DB_USER:postgres}
+    password: ${ENGINE_DB_PASSWORD:postgres}
+  liquibase:
+    change-log: classpath:/db/changelog-master.xml
