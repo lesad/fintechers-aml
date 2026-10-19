@@ -26,6 +26,7 @@
 - Supabase: `@supabase/ssr`, `@supabase/supabase-js`, `src/core/supabase`, the CLI stack, `pnpm db:types`, the Supabase env vars, MCP server and skills, and the RLS convention.
 - Playwright: e2e tests, `playwright.config.ts`, `pnpm test:e2e`, the CI e2e job, the MCP server and skill, `allowedDevOrigins`, and `loc()` with the `@/test` barrel.
 - Storybook: `.storybook/`, the button story, `src/docs/`, the authored `storybook` skill, the Storybook MCP entry and every Storybook package and script, including the vitest project (`pnpm test:storybook`, `pnpm test:all`).
+- The docs-drift `Stop` hook (`.claude/hooks/docs-drift-reminder.sh`). It blocked every turn once a source file changed, which slowed iteration more than it kept `docs/` current.
 
 ## [0.2.0] — 2026-08-13
 

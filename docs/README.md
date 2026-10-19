@@ -38,4 +38,4 @@ A fresh agent (new session / cold start) does:
 4. Verify: `pnpm check` (typecheck + lint + format:check + unit) before claiming done.
 5. Record: `dex complete <id> --result "…"`; append to `CHANGELOG.md`; add an ADR to `DECISIONS.md` if a real decision was made; if the change is generic (not app-specific), log it in `UPSTREAM.md`.
 
-The **Documentation discipline** section in `CLAUDE.md` states when each doc must be updated; a `Stop` hook nudges when source changed but `docs/` didn't.
+The **Documentation discipline** section in `CLAUDE.md` states when each doc must be updated.
