@@ -8,7 +8,6 @@
       "Bash(oxlint *)",
       "Bash(oxfmt *)",
       "Bash(fallow *)",
-      "Bash(storybook *)",
       "Bash(gh *)",
       "Bash(git status)",
       "Bash(git diff*)",

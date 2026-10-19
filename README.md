@@ -45,7 +45,7 @@ pnpm dev                            # http://localhost:3000
 | i18n          | next-intl (single `en` locale; add more on demand)      |
 | Lint / format | Oxlint + Oxfmt (no ESLint/Prettier)                     |
 | Dead code     | Fallow                                                  |
-| Tests         | Vitest (unit + integration) + Storybook 10              |
+| Tests         | Vitest (unit + integration)                             |
 | Commit gate   | Claude PreToolUse hook (`.claude/hooks/`, no husky)     |
 
 ## Why these picks
@@ -66,7 +66,6 @@ pnpm dev                            # http://localhost:3000
 | `pnpm check:fast`                        | typecheck + lint + format-check (no tests)     |
 | `pnpm test`                              | Vitest unit                                    |
 | `pnpm test:integration`                  | Vitest integration (hits local Postgres)       |
-| `pnpm storybook`                         | Storybook dev                                  |
 | `pnpm db:start` / `db:stop` / `db:reset` | Local Postgres container control               |
 | `pnpm db:gen`                            | Drizzle: schema → SQL migration                |
 | `pnpm db:migrate`                        | Apply migrations (CI/prod)                     |
@@ -79,7 +78,6 @@ pnpm dev                            # http://localhost:3000
 | ----------- | ------------------------ | ------------------------------------------------------------ |
 | Unit        | Vitest + happy-dom       | `*.test.ts(x)` co-located                                    |
 | Integration | Vitest + node + Postgres | `*.spec.ts(x)` co-located, sequential; resets touched tables |
-| Story       | Storybook 10             | `*.stories.tsx` co-located                                   |
 
 ## Database workflow
 
@@ -99,7 +97,7 @@ pnpm setup:agentic
 
 Installs (globally) curated skills via `npx skills add`. The Fallow MCP server ships with the `fallow` npm package — no separate install.
 
-`.mcp.json` ships with **shadcn, Storybook, Fallow, Vercel**. Context7 is assumed globally installed.
+`.mcp.json` ships with **shadcn, Fallow, Vercel**. Context7 is assumed globally installed.
 
 ## CI
 

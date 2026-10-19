@@ -32,8 +32,6 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "data:pull": "bash scripts/pull-data.sh",
-    "storybook": "storybook dev -p 6006",
-    "storybook:build": "storybook build",
     "setup:agentic": "tsx scripts/setup-skills.ts"
   },
   "dependencies": {
@@ -56,12 +54,6 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "5.1.2",
-    "@storybook/addon-a11y": "10.3.6",
-    "@storybook/addon-docs": "10.3.6",
-    "@storybook/addon-mcp": "0.6.0",
-    "@storybook/addon-onboarding": "10.3.6",
-    "@storybook/nextjs-vite": "10.3.6",
     "@swc/plugin-react-remove-properties": "12.6.0",
     "@tailwindcss/postcss": "4.2.4",
     "@testing-library/dom": "10.4.1",
@@ -79,7 +71,6 @@
     "happy-dom": "20.9.0",
     "oxfmt": "0.47.0",
     "oxlint": "1.62.0",
-    "storybook": "10.3.6",
     "tailwindcss": "4.2.4",
     "tsx": "4.21.0",
     "typescript": "6.0.3",

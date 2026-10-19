@@ -34,7 +34,7 @@ The app ships the `en` locale only; add locales to `messages/` + the `next-intl`
 
 ## 6. Agentic setup
 
-`pnpm setup:agentic` installs the curated skills and symlinks the authored ones. `.mcp.json` ships shadcn / Storybook / Fallow / Vercel. See `CLAUDE.md` → Skills / MCPs.
+`pnpm setup:agentic` installs the curated skills. `.mcp.json` ships shadcn / Fallow / Vercel. See `CLAUDE.md` → Skills / MCPs.
 
 ## 7. Deploy
 

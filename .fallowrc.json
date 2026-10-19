@@ -17,13 +17,9 @@
   "ignorePatterns": [
     "**/*.generated.ts",
     "src/components/ui/**",
-    "src/docs/**",
-    "scripts/eject/pristine/**",
     "db/migrations/**",
     ".next/**",
-    "messages/**",
-    ".storybook/**",
-    "storybook-static/**"
+    "messages/**"
   ],
   "ignoreExports": [
     {
@@ -61,11 +57,6 @@
     "react-dom",
     "@swc/plugin-react-remove-properties",
     "shadcn",
-    "@chromatic-com/storybook",
-    "@storybook/addon-a11y",
-    "@storybook/addon-docs",
-    "@storybook/addon-mcp",
-    "@storybook/addon-onboarding",
     "tw-animate-css"
   ],
   "duplicates": {

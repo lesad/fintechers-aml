@@ -1,6 +1,4 @@
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, rmSync, symlinkSync } from "node:fs";
-import { join, relative } from "node:path";
 
 // Format: "owner/repo/skill-name" (3 parts) or "owner/repo" (2 parts = whole repo)
 // Generic skills — apply to all projects, install user-scoped (-g)
@@ -35,21 +33,6 @@ function run(cmd: string) {
   execSync(cmd, { stdio: "inherit" });
 }
 
-// Committed authored skills live in .agents/skills/ (source of truth); .claude/skills/
-// is gitignored and gets symlinks so Claude Code loads them alongside installed skills.
-function linkAuthoredSkills() {
-  const src = ".agents/skills";
-  const dest = ".claude/skills";
-  if (!existsSync(src)) return;
-  mkdirSync(dest, { recursive: true });
-  for (const name of readdirSync(src)) {
-    const link = join(dest, name);
-    rmSync(link, { recursive: true, force: true });
-    symlinkSync(relative(dest, join(src, name)), link, "dir");
-    console.log(`→ linked authored skill: ${name}`);
-  }
-}
-
 console.log("Installing user-scoped skills (generic, ~/.claude/skills/)...");
 for (const skill of USER_SKILLS) {
   try {
@@ -67,9 +50,6 @@ for (const skill of PROJECT_SKILLS) {
     console.error(`! failed to install ${skill}:`, err);
   }
 }
-
-console.log("\nLinking committed authored skills (.agents/skills/ → .claude/skills/)...");
-linkAuthoredSkills();
 
 console.log("\nFallow MCP ships with the npm `fallow` package — no extra install needed.");
 console.log("\n✓ done. Restart Claude Code to pick up new MCPs.");

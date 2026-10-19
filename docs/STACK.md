@@ -14,6 +14,5 @@
 | zod                         | 4.4.3                     | `/websites/zod_dev_v4`                                            |
 | react-hook-form / resolvers | 7.75.0 / 5.2.2            | `/react-hook-form/react-hook-form` · `/react-hook-form/resolvers` |
 | Vitest                      | 4.1.5                     | `/vitest-dev/vitest` (tag `v4.1.6`)                               |
-| Storybook                   | 10.3.6                    | `/storybookjs/storybook` (tag `v10.2.9`)                          |
 
 Runtime: Node ≥24, pnpm 10.30.2. UI utils (docs rarely needed — resolve on demand): @base-ui/react 1.4.1, class-variance-authority 0.7.1, clsx 2.1.1, tailwind-merge 3.5.0, lucide-react 1.14.0.
