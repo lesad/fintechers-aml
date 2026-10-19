@@ -20,6 +20,7 @@ Track 5, FINREG PARTNERS "AML transaction monitoring: triage and red-flag escala
 | [aws-participant-guide.md](aws-participant-guide.md) | Team AWS account: SSO sign-in, models and limits, budget, blocked services                       |
 | [aws-demo-guidance.md](aws-demo-guidance.md)         | AWS's flow and five demo criteria, mapped to our design                                          |
 | [lane-overview.md](lane-overview.md)                 | The lane README from the context repo, with the day-1 team brief                                 |
+| [aml-triage-playbook.html](aml-triage-playbook.html) | The AML Triage Playbook page: brief, build plan, triage logic, demo, research; open in a browser |
 
 ## Data
 
