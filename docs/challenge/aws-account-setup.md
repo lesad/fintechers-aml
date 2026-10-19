@@ -47,12 +47,12 @@ Read-only calls plus a few tiny model calls, from Adrian's laptop with the `hack
 | Cost Explorer (us-east-1, CLI only)                                                                                  | Works; spend so far about USD 0.001                                                                                                                                                                |
 | Listing Bedrock in us-east-1                                                                                         | Not blocked for list calls; the guide's region block applies to creating resources                                                                                                                 |
 
-Not tested on purpose: creating anything. Whether an IAM role or a Vercel OIDC provider can be created shows only when we create one.
+Not tested on purpose: creating anything. Whether an IAM role can be created shows only when we create one.
 
 ## For app code
 
 - Region in code: `eu-central-1`. Other regions are blocked for resources.
-- Locally the AWS SDK finds credentials through `AWS_PROFILE`. On Vercel there is no profile and no access keys (blocked): credentials come from an IAM role, through Vercel OIDC federation or a Lambda that Vercel calls.
+- Locally the AWS SDK finds credentials through `AWS_PROFILE`. We run everything locally (no deployment, decided 2026-10-19), so no IAM role or OIDC federation is needed. The SSO session lasts 12 hours.
 - Rate limits: gpt-oss-120b effectively unlimited; Claude models 50 requests/min shared by the team (25 on Opus).
 
 ## Claude for generated text (2026-10-19)

@@ -164,7 +164,7 @@ Code, mandatory CSV, demo max. 5 minutes a description of decision logic support
 
 Verbatim page text for the ČNB radar, transaction monitoring copilot and AI Act self-audit is in section 1. No dataset field list exists for the copilot beyond 'the same ČNB synthetic dataset' (fields as in the FINREG data paragraph and the AWS guide row above). The AI Act self-audit names no dataset. The ČNB radar policy set is team-sourced.
 
-ČNB radar brief (markdown attachment) downloaded to finreg/CNB_radar_brief_EN.md; headings: 1. Context and main objective, 2. Phase 1: Monitoring the regulatory pipeline, 3. Phase 2: Internal policy mapping and gap analysis. Not reproduced here (out of scope for FINREG).
+ČNB radar brief (markdown attachment) was downloaded during the capture and not kept; headings: 1. Context and main objective, 2. Phase 1: Monitoring the regulatory pipeline, 3. Phase 2: Internal policy mapping and gap analysis. Not reproduced here (out of scope for FINREG).
 
 ## 4. UNREAD / not available
 
