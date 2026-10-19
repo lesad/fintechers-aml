@@ -51,18 +51,6 @@ class RunServiceTest {
     }
 
     @Test
-    fun logsOneAlertRaisedEntryPerAlertWithItsEvidence() {
-        val runId = runs.run().runId
-        val entries = jdbc.sql(
-            "select a.alert_type, e.actor, e.step, e.result, e.reason, e.inputs::text from audit_entry e join alert a on a.id = e.alert_id where a.run_id = ?",
-        ).param(runId).query { rs, _ -> (1..6).map { rs.getString(it) } }.list()
-        assertThat(entries).hasSize(2)
-        val c = entries.single { it[0] == "C" }
-        assertThat(c.subList(1, 5)).containsExactly("engine", "alert_raised", "C", "Rules C1 fired for client K2.")
-        assertThat(c[5]).contains("\"rule\": \"C1\"", "\"inflow\": 11000000")
-    }
-
-    @Test
     fun storesVariablesAndParametersAsEvidence() {
         val runId = runs.run().runId
         val evidence = jdbc.sql(

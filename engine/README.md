@@ -1,6 +1,6 @@
 # Monitoring rules engine
 
-Kotlin + Spring Boot service that imports the organisers' data, runs the monitoring rules and serves alerts with their audit trail over HTTP. A command (`import`, `run`) runs and exits; without one the engine serves the API. Design: [`docs/engine/rules-engine-design.md`](../docs/engine/rules-engine-design.md).
+Kotlin + Spring Boot service that imports the organisers' data, runs the monitoring rules and serves alerts over HTTP. A command (`import`, `run`) runs and exits; without one the engine serves the API. Design: [`docs/engine/rules-engine-design.md`](../docs/engine/rules-engine-design.md).
 
 ## Prerequisites
 
@@ -52,9 +52,7 @@ Run from `engine/`:
 ```
 
 - `GET /api/alerts`: alerts of the latest finished run, with the hit count. `?runId=` picks another run.
-- `GET /api/alerts/{id}`: one alert and its audit trail, oldest entry first. 404 for an unknown id.
-
-The audit trail (`audit_entry`) is the record of every step on an alert: who (`actor`), when (`at`), what (`step`), the outcome (`result`), what the step looked at (`inputs`, JSON) and a short `reason`. A run writes one `alert_raised` entry per alert, with the alert's hits and their evidence as `inputs`. Later steps (triage, analyst decisions, the generated summary) append their own entries through `AuditLog.append`; nothing updates or deletes an entry. An entry's `id` is what a summary sentence cites.
+- `GET /api/alerts/{id}`: one alert. 404 for an unknown id.
 
 Schema changes are Liquibase SQL files in `src/main/resources/db/migrations/`, listed in `db/changelog-master.xml`.
 

@@ -1,8 +1,6 @@
 package cz.morosystems.aml.engine.run
 
 import cz.morosystems.aml.engine.EngineProperties
-import cz.morosystems.aml.engine.audit.AuditLog
-import cz.morosystems.aml.engine.audit.NewAuditEntry
 import cz.morosystems.aml.engine.cel.Activations
 import cz.morosystems.aml.engine.cel.CompiledRule
 import cz.morosystems.aml.engine.cel.RuleCompiler
@@ -34,7 +32,6 @@ class RunService(
     private val resolver: RuleResolver,
     private val queries: GrainQueryBuilder,
     private val picker: TransactionPicker,
-    private val audit: AuditLog,
     private val props: EngineProperties,
 ) {
     // NOTE: Postgres only streams a result set with a fetch size inside a transaction, hence a dedicated template.
@@ -67,7 +64,6 @@ class RunService(
 
         val alerts = AlertGrouper.group(withIds, clients.alertUnits()).map { it.copy(transactionId = picker.pick(it)) }
         val stored = alerts.map { insertAlert(runId, it) to it }
-        audit.appendAll(stored.map { (id, alert) -> raised(id, alert) })
         val csv = props.outDir.resolve("alerts-$runId.csv")
         CsvExporter.write(csv, stored)
 
@@ -143,15 +139,6 @@ class RunService(
         }
         return id
     }
-
-    private fun raised(alertId: Long, alert: AlertDraft) = NewAuditEntry(
-        alertId = alertId,
-        actor = "engine",
-        step = "alert_raised",
-        result = alert.alertType,
-        inputs = alert.hits.map { mapOf("hitId" to it.id, "rule" to it.ruleKey, "grainKey" to it.grainKey, "evidence" to it.evidence) },
-        reason = "Rules ${alert.hits.map { it.ruleKey }.distinct().joinToString(", ")} fired for client ${alert.clientId}.",
-    )
 
     private companion object {
         const val BATCH = 2_000

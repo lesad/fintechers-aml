@@ -1,8 +1,6 @@
 package cz.morosystems.aml.engine.alert
 
 import cz.morosystems.aml.engine.PostgresTest
-import cz.morosystems.aml.engine.audit.AuditLog
-import cz.morosystems.aml.engine.audit.NewAuditEntry
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -21,9 +19,6 @@ class AlertControllerTest {
     @Autowired
     lateinit var jdbc: JdbcClient
 
-    @Autowired
-    lateinit var audit: AuditLog
-
     private var oldRun = 0L
     private var alertId = 0L
 
@@ -34,8 +29,6 @@ class AlertControllerTest {
         alert(oldRun, "A", "K9")
         val latest = run()
         alertId = alert(latest, "B", "K1")
-        audit.append(NewAuditEntry(alertId, "engine", "alert_raised", "B", listOf(mapOf("rule" to "B2", "evidence" to mapOf("tx.amount" to 150_000))), "Rules B2 fired for client K1."))
-        audit.append(NewAuditEntry(alertId, "lite-triage", "triage", "escalate", null, "PEP outflow above threshold."))
     }
 
     @Test
@@ -51,11 +44,10 @@ class AlertControllerTest {
     }
 
     @Test
-    fun returnsTheAlertWithItsAuditTrailInOrder() {
+    fun returnsOneAlert() {
         val result = assertThat(mvc.get().uri("/api/alerts/$alertId")).hasStatusOk().bodyJson()
-        result.extractingPath("$.alert.transactionId").isEqualTo("T1")
-        result.extractingPath("$.audit[*].step").asArray().containsExactly("alert_raised", "triage")
-        result.extractingPath("$.audit[0].inputs[0].evidence['tx.amount']").isEqualTo(150_000)
+        result.extractingPath("$.clientId").isEqualTo("K1")
+        result.extractingPath("$.transactionId").isEqualTo("T1")
     }
 
     @Test
