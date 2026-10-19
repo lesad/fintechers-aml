@@ -48,7 +48,17 @@ class RuleResolver(private val compiler: RuleCompiler) {
                     }
             }.keys
         }
-        return ResolvedRuleSet(clientsByRule, params, segmentsByClient)
+        val resolved = ResolvedRuleSet(clientsByRule, params, segmentsByClient)
+        clientsByRule.forEach { (rule, clientIds) ->
+            val names = params.filter { it.ruleKey == rule.key }.map { it.name }.toSet()
+            clientIds.forEach { clientId ->
+                val missing = names - resolved.params(rule.key, clientId).keys
+                if (missing.isNotEmpty()) {
+                    throw ConfigurationException("rule ${rule.key}: client $clientId has no value for ${missing.sorted().joinToString()} (add a company default)")
+                }
+            }
+        }
+        return resolved
     }
 
     private fun checkSegmentParamConflicts(params: List<ParamRow>, segments: List<Segment>, segmentsByClient: Map<String, Set<Long>>) {

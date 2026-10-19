@@ -71,6 +71,14 @@ class RuleResolverTest {
     }
 
     @Test
+    fun aParameterWithoutADefaultForSomeClientFailsNamingRuleAndParameter() {
+        val params = listOf(ParamRow("V1", "limit", Layer.CLIENT, null, "K1", 5))
+        assertThatThrownBy { resolver.resolve(listOf(velocity), params, emptyList(), clients) }
+            .isInstanceOf(ConfigurationException::class.java)
+            .hasMessageContaining("V1").hasMessageContaining("limit").hasMessageContaining("K2")
+    }
+
+    @Test
     fun replacingAnUnknownRuleFails() {
         val orphan = rule("X-K1", Layer.CLIENT, scopeClientId = "K1", replacesKey = "NOPE")
         assertThatThrownBy { resolver.resolve(listOf(velocity, orphan), emptyList(), emptyList(), clients) }

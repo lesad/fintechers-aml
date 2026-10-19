@@ -98,6 +98,15 @@ class GrainQueryBuilderTest {
     }
 
     @Test
+    fun filtersTreatAMissingAccountAsEmptyLikeConditionsDo() {
+        tx("T1", "K1", "2026-07-14 10:00", 1_000, "in", payer = "ACZ1")
+        tx("T2", "K1", "2026-07-14 11:00", 2_000, "unknown", payee = "ACZ5")
+        val notFromAcz1 = a1.copy(variables = listOf(VariableDefinition(1, "other_volume", Agg.SUM, "amount", """tx.payer_account != "ACZ1"""", Window.Day)))
+
+        assertThat(run(notFromAcz1).single()["other_volume"]).isEqualTo(czk(2_000))
+    }
+
+    @Test
     fun restrictsTransactionGrainToGivenClients() {
         tx("T1", "K1", "2026-07-14 10:00", 1_000, "in", payer = "ACZ1")
         tx("T2", "K2", "2026-07-14 10:00", 1_000, "in", payer = "ACZ1")

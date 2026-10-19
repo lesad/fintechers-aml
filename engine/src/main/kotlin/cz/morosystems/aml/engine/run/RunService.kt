@@ -98,7 +98,12 @@ class RunService(
                 val variables = rule.variables.associate { it.name to column(rs, it.name, it.agg) }
                 val params = paramCache.getOrPut(clientId) { paramsFor(rule.key, clientId) }
                 val activation = Activations.of(tx, clientsById.getValue(clientId), params, lists, variables)
-                if (program.evaluate(activation)) {
+                val fired = try {
+                    program.evaluate(activation)
+                } catch (e: Exception) {
+                    throw IllegalStateException("rule ${rule.key}, client $clientId, ${rule.grain.name.lowercase()} ${rs.getString("grain_key")}: ${e.message}", e)
+                }
+                if (fired) {
                     val evidence = variables + params.mapKeys { "p.${it.key}" } + (tx?.let { mapOf("tx.amount" to it["amount"]) } ?: emptyMap())
                     hits += Hit(0, rule.id, rule.key, rule.alertType, clientId, rs.getString("grain_key"), rule.grain, evidence)
                 }

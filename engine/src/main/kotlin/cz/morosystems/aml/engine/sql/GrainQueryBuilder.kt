@@ -34,14 +34,14 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
 
         val base = when (rule.grain) {
             Grain.TRANSACTION ->
-                "with g as (select * from transaction tx where tx.ts >= ? and tx.ts < ?$clientFilter) select g.*, g.id as grain_key"
+                "with g as (select * from $TX_SOURCE tx where tx.ts >= ? and tx.ts < ?$clientFilter) select g.*, g.id as grain_key"
             Grain.CLIENT_ANCHOR -> {
                 val anchor = filters.compile(requireNotNull(rule.anchor) { "rule ${rule.key}: anchor grain needs an anchor" }, emptyMap())
                 params.addAll(anchor.params)
-                "with g as (select * from transaction tx where tx.ts >= ? and tx.ts < ?$clientFilter and (${anchor.sql})) select g.*, g.id as grain_key"
+                "with g as (select * from $TX_SOURCE tx where tx.ts >= ? and tx.ts < ?$clientFilter and (${anchor.sql})) select g.*, g.id as grain_key"
             }
             Grain.CLIENT_DAY ->
-                "with g as (select tx.client_id, tx.ts::date as day from transaction tx where tx.ts >= ? and tx.ts < ?$clientFilter group by 1, 2) " +
+                "with g as (select tx.client_id, tx.ts::date as day from $TX_SOURCE tx where tx.ts >= ? and tx.ts < ?$clientFilter group by 1, 2) " +
                     "select g.client_id, g.day, to_char(g.day, 'YYYY-MM-DD') as grain_key"
         }
 
@@ -61,7 +61,7 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
             }
             params.addAll(filter.params)
             laterals.append(
-                " cross join lateral (select ${aggregate(variable)} as ${variable.name} from transaction tx " +
+                " cross join lateral (select ${aggregate(variable)} as ${variable.name} from $TX_SOURCE tx " +
                     "where tx.client_id = g.client_id and $window and (${filter.sql})) v${variable.position}",
             )
             earlier[variable.name] = variable.agg
@@ -78,7 +78,7 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
             Agg.MAX -> "coalesce(max($field), 0)"
             Agg.MIN -> "coalesce(min($field), 0)"
             Agg.COUNT -> "count(*)"
-            Agg.SET -> "coalesce(array_agg(distinct $field) filter (where $field is not null), '{}')"
+            Agg.SET -> "coalesce(array_agg(distinct $field) filter (where nullif($field::text, '') is not null), '{}')"
         }
     }
 
@@ -91,6 +91,10 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
     }
 
     private companion object {
+        // NOTE: CEL conditions see a missing account or country as "" (Activations); filters must see the same, not SQL NULL.
+        const val TX_SOURCE = "(select id, client_id, ts, amount, volume, currency, fx_rate, type, direction, " +
+            "coalesce(payer_country, '') as payer_country, coalesce(payee_country, '') as payee_country, " +
+            "coalesce(payer_account, '') as payer_account, coalesce(payee_account, '') as payee_account from transaction)"
         val IDENTIFIER = Regex("[a-z_][a-z0-9_]*")
         val TRANSACTION_COLUMNS = Vocabulary.tx.keys + setOf("client_id", "ts", "volume", "fx_rate", "grain_key", "day")
     }

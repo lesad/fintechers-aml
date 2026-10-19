@@ -81,6 +81,18 @@ class RunServiceTest {
     }
 
     @Test
+    fun namesRuleAndClientWhenAConditionFailsAtRuntime() {
+        jdbc.sql(
+            """
+            insert into rule (key, version, alert_type, layer, grain, condition, status, author)
+            values ('DIV0', 1, 'A', 'company', 'transaction', 'tx.amount / 0 > 1', 'active', 'test')
+            """,
+        ).update()
+        assertThatThrownBy { runs.run() }.hasMessageContaining("DIV0").hasMessageContaining("client K")
+        assertThat(jdbc.sql("select count(*) from run").query(Long::class.java).single()).isZero()
+    }
+
+    @Test
     fun keepsEachRunsAlertsSeparate() {
         val first = runs.run().runId
         val firstAlerts = alertCount(first)
