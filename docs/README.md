@@ -6,18 +6,19 @@ This directory is durable, committed project memory. Live, in-flight work lives 
 
 ## Map
 
-| File             | What                                                                                       | Who writes                                |
-| ---------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `ROADMAP.md`     | Phased plan / milestones                                                                   | humans + agents                           |
-| `CHANGELOG.md`   | Release history (Keep a Changelog)                                                         | agents, per change                        |
-| `DECISIONS.md`   | Architecture decision records (ADRs)                                                       | whoever makes the call                    |
-| `STACK.md`       | Pinned stack versions + context7 doc IDs                                                   | agents, on dependency change              |
-| `QUICKSTART.md`  | Local / preview / production setup runbook                                                 | humans                                    |
-| `FORKING.md`     | One-time "make it yours" checklist for a new fork                                          | humans (new forks)                        |
-| `ENVIRONMENT.md` | Env-var manifest + secure-handling guide                                                   | humans + agents                           |
-| `challenge/`     | Hackathon challenge context (FINREG AML triage): start at `challenge/README.md`            | humans + agents, single source (ADR-0023) |
-| `UPSTREAM.md`    | Generic changes to contribute back — **consuming forks only**; empty in this template repo | agents + humans (forks)                   |
-| _(live tasks)_   | tracked in **dex** (`.dex/`), not a file here                                              | agents                                    |
+| File             | What                                                                                                                           | Who writes                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| `ROADMAP.md`     | Phased plan / milestones                                                                                                       | humans + agents                           |
+| `CHANGELOG.md`   | Release history (Keep a Changelog)                                                                                             | agents, per change                        |
+| `DECISIONS.md`   | Architecture decision records (ADRs)                                                                                           | whoever makes the call                    |
+| `STACK.md`       | Pinned stack versions + context7 doc IDs                                                                                       | agents, on dependency change              |
+| `QUICKSTART.md`  | Local / preview / production setup runbook                                                                                     | humans                                    |
+| `FORKING.md`     | One-time "make it yours" checklist for a new fork                                                                              | humans (new forks)                        |
+| `ENVIRONMENT.md` | Env-var manifest + secure-handling guide                                                                                       | humans + agents                           |
+| `challenge/`     | Hackathon challenge context (FINREG AML triage): start at `challenge/README.md`                                                | humans + agents, single source (ADR-0023) |
+| `rules/`         | Rule specifications we iterate on (detect, facts, gates, Jev questions, policy, priority, routing): start at `rules/README.md` | humans + agents                           |
+| `UPSTREAM.md`    | Generic changes to contribute back — **consuming forks only**; empty in this template repo                                     | agents + humans (forks)                   |
+| _(live tasks)_   | tracked in **dex** (`.dex/`), not a file here                                                                                  | agents                                    |
 
 ## Memory model
 
