@@ -13,7 +13,10 @@ const label = cva("inline-flex items-center gap-1.5", {
     /** A small framed chip (the detail header). */
     boxed: { true: "h-[22px] rounded border border-border px-2 text-xs font-medium text-fg" },
   },
-  compoundVariants: [{ status: "Escalated", boxed: true, className: "font-bold" }],
+  compoundVariants: [
+    { status: "Escalated", boxed: true, className: "border-yellow bg-sel font-bold" },
+    { status: "Reported", boxed: true, className: "border-high-bg bg-high-bg text-high" },
+  ],
 });
 
 const dot = cva("size-1.5 flex-none rounded-full border-[1.5px] border-current", {
