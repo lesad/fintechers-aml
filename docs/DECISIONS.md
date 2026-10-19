@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0031 — Component variants through `cva` (class-variance-authority)
+
+**Accepted.** Classes that depend on props or state are declared with `cva` from class-variance-authority, as named variants (`level`, `active`, `embedded`, `state`…) with `compoundVariants` where two props combine, instead of inline ternaries and string concatenation. `cn()` stays for merging a caller's `className` on top. Applies in `components/` and in features (`RiskBadge`, `StatusLabel`, `Tab`, `Table`, `Card`, the decision buttons, the money-flow ribbons). _Why:_ the team asked for it once the first components multiplied their conditional classes; variants give each visual state a name, keep Tailwind classes greppable, and are the pattern most Tailwind codebases use. Re-adds the `class-variance-authority` dependency that ADR-0028 removed with shadcn/ui; the rest of ADR-0028 (no component library) stands.
+
 ### ADR-0030 — No dex; the template docs are retired
 
 **Accepted.** Live, in-flight work is not tracked in a tool: it lives in the session, in the gitignored `docs/superpowers/` drafts (ADR-0004) and in the commit history. dex is removed from the skill list, `scripts/setup-skills.ts` and `skills-lock.json`. The template-era docs go with it: `docs/FORKING.md` and `docs/UPSTREAM.md` are deleted, and the "generic change → UPSTREAM" rule in `CLAUDE.md` is gone. The durable record stays as it is: `DECISIONS.md`, `CHANGELOG.md`, `STACK.md`, `ROADMAP.md`. _Why:_ `.dex/` never appeared in 40+ hackathon commits and the skill was never installed, so the docs described a loop nobody ran. This repo is the hackathon entry, not a template anyone forks; docs that address a fork consumer mislead the agents that read them. Supersedes ADR-0003.
@@ -15,6 +19,8 @@ _Amended the same day: `ROADMAP.md` is deleted too; it never held a phase._
 ### ADR-0028 — No component library: own Tailwind components on the design tokens; shadcn/ui is removed
 
 **Accepted.** The UI is built from our own small components in `src/components/` (`Tabs`/`Tab`, `Table`, `RatingBadge`, `StatusLabel`, exported from `components/index.ts`), styled with Tailwind on the `@theme` tokens taken from the Claude Design export (`docs/design/`, mirrored in `src/app/globals.css`). shadcn/ui is removed with everything that served it: `src/components/ui/`, `components.json`, `@base-ui/react`, `class-variance-authority`, `lucide-react`, `shadcn`, `tw-animate-css`, the shadcn MCP server and agent skill, and the `src/components/ui/**` lint and fallow exemptions. `cn()` (clsx + tailwind-merge) stays. _Why:_ the design is plain styled markup on the MoroSystems design system, not shadcn, and the team decided not to use a component library; the generated components were unused once the review queue landed. Supersedes the `ui/**` exemptions in ADR-0019.
+
+_Superseded in part by ADR-0031: `class-variance-authority` is back, for component variants._
 
 ### ADR-0027 — No regulatory rule layer; every monitoring rule is the institution's own
 

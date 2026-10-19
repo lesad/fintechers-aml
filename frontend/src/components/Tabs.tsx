@@ -1,6 +1,18 @@
+import { cva } from "class-variance-authority";
+
 import { cn } from "@/utils";
 
 import type { ReactNode } from "react";
+
+const tab = cva("flex flex-none cursor-pointer items-center gap-2 border-r border-border", {
+  variants: {
+    active: {
+      true: "bg-bg text-fg shadow-[inset_0_2px_0_var(--color-yellow)]",
+      false: "text-fg-muted",
+    },
+    closable: { true: "min-w-[150px] pr-1.5 pl-3", false: "px-3.5" },
+  },
+});
 
 export function Tabs({ children }: { children: ReactNode }) {
   return (
@@ -40,12 +52,7 @@ export function Tab({ active, onSelect, onClose, title, className, children }: T
       onAuxClick={(e) => {
         if (e.button === 1 && onClose) onClose();
       }}
-      className={cn(
-        "flex flex-none cursor-pointer items-center gap-2 border-r border-border",
-        onClose ? "min-w-[150px] pr-1.5 pl-3" : "px-3.5",
-        active ? "bg-bg text-fg shadow-[inset_0_2px_0_var(--color-yellow)]" : "text-fg-muted",
-        className,
-      )}
+      className={cn(tab({ active, closable: !!onClose }), className)}
     >
       {children}
       {onClose && (

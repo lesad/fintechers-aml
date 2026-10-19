@@ -1,6 +1,5 @@
+import { cva } from "class-variance-authority";
 import { useEffect, useRef, useState } from "react";
-
-import { cn } from "@/utils";
 
 import type { RiskLevel } from "@/components";
 
@@ -12,11 +11,18 @@ type HeaderProps = {
 
 const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl ";
 
-const dots: { level: RiskLevel; className: string }[] = [
-  { level: "High", className: "bg-header-high" },
-  { level: "Medium", className: "bg-header-med" },
-  { level: "Low", className: "bg-header-low" },
-];
+const levels: RiskLevel[] = ["High", "Medium", "Low"];
+
+// Brighter risk colours that read on the indigo bar.
+const dot = cva("size-[7px] rounded-[2px]", {
+  variants: {
+    level: { High: "bg-header-high", Medium: "bg-header-med", Low: "bg-header-low" },
+  },
+});
+
+const hint = cva("pointer-events-none absolute right-2 text-[11px]", {
+  variants: { miss: { true: "text-header-miss", false: "text-indigo-60" } },
+});
 
 export function Header({ openByRating, onJump }: HeaderProps) {
   const input = useRef<HTMLInputElement>(null);
@@ -48,10 +54,10 @@ export function Header({ openByRating, onJump }: HeaderProps) {
           title="Open cases by rule rating"
           className="flex min-w-0 flex-auto items-center justify-center gap-2.5 overflow-hidden text-xs whitespace-nowrap text-indigo-20 tabular-nums"
         >
-          {dots.map((d) => (
-            <span key={d.level} className="flex items-center gap-[5px]">
-              <span className={cn("size-[7px] rounded-[2px]", d.className)} />
-              <b className="text-white">{openByRating[d.level]}</b> {d.level}
+          {levels.map((level) => (
+            <span key={level} className="flex items-center gap-[5px]">
+              <span className={dot({ level })} />
+              <b className="text-white">{openByRating[level]}</b> {level}
             </span>
           ))}
         </div>
@@ -88,12 +94,7 @@ export function Header({ openByRating, onJump }: HeaderProps) {
           }}
           className="h-7 w-full rounded-md border border-indigo-80 bg-header-input pr-16 pl-7 font-mono text-[13px] text-white outline-none focus:border-yellow focus:bg-header-input-focus"
         />
-        <span
-          className={cn(
-            "pointer-events-none absolute right-2 text-[11px]",
-            miss ? "text-header-miss" : "text-indigo-60",
-          )}
-        >
+        <span className={hint({ miss })}>
           {miss ? "Not found" : focused ? "Enter" : `${modKey}K`}
         </span>
       </form>

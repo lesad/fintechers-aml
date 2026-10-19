@@ -1,7 +1,7 @@
+import { cva } from "class-variance-authority";
 import { useState } from "react";
 
 import { type Column, RatingBadge, Select, StatusLabel, Table } from "@/components";
-import { cn } from "@/utils";
 
 import { MOCK_NOW } from "./mock";
 import {
@@ -20,6 +20,15 @@ type ReviewQueueProps = {
   onOpen: (id: string, background: boolean) => void;
 };
 
+const txId = cva("font-mono text-xs", { variants: { open: { true: "font-bold" } } });
+
+/** Age since flagged: muted once closed, bold when an open case is older than 72 h. */
+const age = cva("", {
+  variants: {
+    state: { closed: "text-fg-subtle", overdue: "font-semibold text-fg", open: "text-fg-muted" },
+  },
+});
+
 export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const rows = filterQueue(items, filter);
@@ -36,11 +45,7 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
       key: "id",
       header: "Transaction",
       width: 130,
-      cell: (r) => (
-        <span className={cn("font-mono text-xs", openIds.includes(r.id) && "font-bold")}>
-          {r.id}
-        </span>
-      ),
+      cell: (r) => <span className={txId({ open: openIds.includes(r.id) })}>{r.id}</span>,
     },
     {
       key: "client",
@@ -72,16 +77,9 @@ export function ReviewQueue({ items, openIds, onOpen }: ReviewQueueProps) {
       className: "tabular-nums",
       cell: (r) => {
         const closed = r.status === "Closed";
-        const overdue = !closed && MOCK_NOW.getTime() - r.flagged.getTime() > 72 * 3_600_000;
-        return (
-          <span
-            className={cn(
-              closed ? "text-fg-subtle" : overdue ? "font-semibold text-fg" : "text-fg-muted",
-            )}
-          >
-            {formatAge(r.flagged, MOCK_NOW)}
-          </span>
-        );
+        const overdue = MOCK_NOW.getTime() - r.flagged.getTime() > 72 * 3_600_000;
+        const state = closed ? "closed" : overdue ? "overdue" : "open";
+        return <span className={age({ state })}>{formatAge(r.flagged, MOCK_NOW)}</span>;
       },
     },
   ];

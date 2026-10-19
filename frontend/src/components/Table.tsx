@@ -1,3 +1,5 @@
+import { cva } from "class-variance-authority";
+
 import { cn } from "@/utils";
 
 import type { MouseEvent, ReactNode } from "react";
@@ -18,43 +20,86 @@ type TableProps<T> = {
   rows: T[];
   rowKey: (row: T) => string;
   onRowClick?: (row: T, e: MouseEvent<HTMLTableRowElement>) => void;
+  /** Limits `onRowClick` (and the pointer/hover) to some rows; all rows when omitted. */
+  rowClickable?: (row: T) => boolean;
   rowTitle?: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
   /** Below this width the table scrolls sideways instead of squeezing columns. */
   minWidth?: number;
   empty?: ReactNode;
+  /**
+   * Inside a card: dense rows, a plain non-sticky header, sideways scroll only.
+   * Default is a page table that fills its flex column and scrolls under a sticky header.
+   */
+  embedded?: boolean;
 };
 
-/**
- * Fills the remaining height of its flex column and scrolls on its own; the header
- * row is sticky, so only the body moves.
- */
+const container = cva("", {
+  variants: { embedded: { true: "overflow-x-auto", false: "min-h-0 flex-1 overflow-auto" } },
+});
+
+const headRow = cva("text-left text-xs text-fg-muted", {
+  variants: { embedded: { true: "h-[26px]", false: "h-[34px]" } },
+});
+
+const headCell = cva("font-semibold whitespace-nowrap", {
+  variants: {
+    embedded: {
+      true: "border-y border-border-soft",
+      // Inset shadow, not border-b: a collapsed border doesn't stick with the header.
+      false: "sticky top-0 z-10 bg-bg-sub shadow-[inset_0_-1px_0_var(--color-border)]",
+    },
+  },
+});
+
+const row = cva("border-b border-border-soft", {
+  variants: {
+    embedded: { true: "h-7", false: "h-9" },
+    clickable: { true: "cursor-pointer hover:bg-hover" },
+  },
+});
+
+const cell = cva("", {
+  variants: {
+    embedded: { true: "px-2.5", false: "px-3" },
+    edge: { first: "", last: "", none: "" },
+    align: { left: "", right: "text-right" },
+  },
+  compoundVariants: [
+    { embedded: true, edge: "first", className: "pl-3.5" },
+    { embedded: true, edge: "last", className: "pr-3.5" },
+    { embedded: false, edge: "first", className: "pl-4" },
+    { embedded: false, edge: "last", className: "pr-4" },
+  ],
+  defaultVariants: { edge: "none", align: "left" },
+});
+
 export function Table<T>({
   columns,
   rows,
   rowKey,
   onRowClick,
+  rowClickable,
   rowTitle,
   rowClassName,
   minWidth,
   empty,
+  embedded = false,
 }: TableProps<T>) {
-  const pad = (i: number) => cn("px-3", i === 0 && "pl-4", i === columns.length - 1 && "pr-4");
+  const edge = (i: number) => (i === 0 ? "first" : i === columns.length - 1 ? "last" : "none");
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto">
+    <div className={container({ embedded })}>
       <table className="w-full table-fixed border-collapse" style={{ minWidth }}>
         <thead>
-          <tr className="h-[34px] text-left text-xs text-fg-muted">
+          <tr className={headRow({ embedded })}>
             {columns.map((c, i) => (
               <th
                 key={c.key}
                 style={{ width: c.width }}
                 className={cn(
-                  // Inset shadow, not border-b: a collapsed border doesn't stick with the header.
-                  "sticky top-0 z-10 bg-bg-sub font-semibold whitespace-nowrap shadow-[inset_0_-1px_0_var(--color-border)]",
-                  c.align === "right" && "text-right",
-                  pad(i),
+                  headCell({ embedded }),
+                  cell({ embedded, edge: edge(i), align: c.align }),
                 )}
               >
                 {c.header}
@@ -63,32 +108,30 @@ export function Table<T>({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              title={rowTitle?.(row)}
-              onClick={onRowClick && ((e) => onRowClick(row, e))}
-              className={cn(
-                "h-9 border-b border-border-soft",
-                onRowClick && "cursor-pointer hover:bg-hover",
-                rowClassName?.(row),
-              )}
-            >
-              {columns.map((c, i) => (
-                <td
-                  key={c.key}
-                  className={cn(
-                    "overflow-hidden whitespace-nowrap",
-                    c.align === "right" && "text-right",
-                    pad(i),
-                    c.className,
-                  )}
-                >
-                  {c.cell(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((r) => {
+            const clickable = !!onRowClick && (rowClickable?.(r) ?? true);
+            return (
+              <tr
+                key={rowKey(r)}
+                title={rowTitle?.(r)}
+                onClick={clickable ? (e) => onRowClick?.(r, e) : undefined}
+                className={cn(row({ embedded, clickable }), rowClassName?.(r))}
+              >
+                {columns.map((c, i) => (
+                  <td
+                    key={c.key}
+                    className={cn(
+                      "overflow-hidden whitespace-nowrap",
+                      cell({ embedded, edge: edge(i), align: c.align }),
+                      c.className,
+                    )}
+                  >
+                    {c.cell(r)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       {rows.length === 0 && empty && <div className="px-4 py-10 text-fg-subtle">{empty}</div>}
