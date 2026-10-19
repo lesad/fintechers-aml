@@ -29,6 +29,9 @@ type TableProps<T> = {
   empty?: ReactNode;
   /** Under the rows, inside the scroll area: a loader for the next page. */
   footer?: ReactNode;
+  /** A full-width row before the first row and after the last one, e.g. "show more"; none when null. */
+  leadRow?: ReactNode;
+  trailRow?: ReactNode;
   /**
    * Inside a card: dense rows, a plain non-sticky header, sideways scroll only.
    * Default is a page table that fills its flex column and scrolls under a sticky header.
@@ -76,6 +79,24 @@ const cell = cva("", {
   defaultVariants: { edge: "none", align: "left" },
 });
 
+function FullRow({
+  span,
+  embedded,
+  children,
+}: {
+  span: number;
+  embedded: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <tr className={row({ embedded, clickable: false })}>
+      <td colSpan={span} className="text-center">
+        {children}
+      </td>
+    </tr>
+  );
+}
+
 export function Table<T>({
   columns,
   rows,
@@ -87,6 +108,8 @@ export function Table<T>({
   minWidth,
   empty,
   footer,
+  leadRow,
+  trailRow,
   embedded = false,
 }: TableProps<T>) {
   const edge = (i: number) => (i === 0 ? "first" : i === columns.length - 1 ? "last" : "none");
@@ -111,6 +134,11 @@ export function Table<T>({
           </tr>
         </thead>
         <tbody>
+          {leadRow && (
+            <FullRow span={columns.length} embedded={embedded}>
+              {leadRow}
+            </FullRow>
+          )}
           {rows.map((r) => {
             const clickable = !!onRowClick && (rowClickable?.(r) ?? true);
             return (
@@ -135,6 +163,11 @@ export function Table<T>({
               </tr>
             );
           })}
+          {trailRow && (
+            <FullRow span={columns.length} embedded={embedded}>
+              {trailRow}
+            </FullRow>
+          )}
         </tbody>
       </table>
       {rows.length === 0 && empty && <div className="px-4 py-10 text-fg-subtle">{empty}</div>}

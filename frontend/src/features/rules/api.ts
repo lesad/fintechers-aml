@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { userHeaders } from "@/user";
+
 const window = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("day") }),
   z.object({ kind: z.literal("relative"), from: z.string(), to: z.string() }),
@@ -60,7 +62,10 @@ export class RuleRejectedError extends Error {}
 const problem = z.object({ detail: z.string() });
 
 export async function fetchRules(signal?: AbortSignal): Promise<RuleVersion[]> {
-  const res = await fetch("/api/rules", { signal, headers: { Accept: "application/json" } });
+  const res = await fetch("/api/rules", {
+    signal,
+    headers: { Accept: "application/json", ...userHeaders() },
+  });
   if (!res.ok) throw new Error(`/api/rules: HTTP ${res.status}`);
   return z.array(ruleVersion).parse(await res.json());
 }
@@ -69,7 +74,7 @@ export async function fetchRules(signal?: AbortSignal): Promise<RuleVersion[]> {
 async function postRule(path: string, body: NewRule): Promise<unknown> {
   const res = await fetch(path, {
     method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...userHeaders() },
     body: JSON.stringify(body),
   });
   if (res.status === 400 || res.status === 409 || res.status === 502) {

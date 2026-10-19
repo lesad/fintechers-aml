@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { type RiskLevel, riskDot, Tab, Tabs } from "@/components";
 import {
@@ -7,16 +7,21 @@ import {
   NotFoundError,
   type QueueFilter,
   ReviewQueue,
+  type Role,
+  ROLE_STATUSES,
+  STATUS_CODE,
+  setStatus,
+  statusParam,
   TransactionDetail,
   useDecisions,
   useQueue,
 } from "@/features/review-queue";
 import { RulesPage } from "@/features/rules";
 import { useTabs } from "@/hooks";
+import { fetchUsers, saveUser, savedUser, type User } from "@/user";
 import { cn } from "@/utils";
 
 import { Header } from "./Header";
-import { CURRENT_USER } from "./user";
 
 const NO_COUNTS: Record<RiskLevel, number> = { High: 0, Medium: 0, Low: 0 };
 
@@ -25,7 +30,31 @@ export function App() {
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const [view, setView] = useState<"review" | "rules">("review");
-  const queue = useQueue(filter.query, filter.rating, filter.status);
+  const [users, setUsers] = useState<User[]>([]);
+  const [user, setUser] = useState<User | null>(savedUser);
+  const role: Role = user?.role === "MANAGER" ? "Manager" : "Reviewer";
+  const chooseUser = (next: User) => {
+    // Saved before the state changes, so the queue reload it triggers already carries the new user.
+    saveUser(next);
+    setUser(next);
+  };
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchUsers(ctrl.signal)
+      .then((list) => {
+        setUsers(list);
+        // The engine's copy wins (a renamed user); nobody picked yet → the first user.
+        const chosen = list.find((u) => u.id === savedUser()?.id) ?? list[0];
+        if (chosen) chooseUser(chosen);
+      })
+      // Without users the header shows none and a decision fails with the engine's reason.
+      .catch(() => {});
+    return () => ctrl.abort();
+    // Loads the users once; `chooseUser` only wraps setters.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const queue = useQueue(filter.query, filter.rating, statusParam(role, filter.status));
   const items = review.apply(queue.items);
   const rating = new Map(items.map((r) => [r.id, r.rule]));
   const openByRating = review.openCounts(queue.countsByRating ?? NO_COUNTS);
@@ -35,6 +64,13 @@ export function App() {
     <div className="flex h-dvh flex-col overflow-hidden">
       <Header
         openByRating={queue.countsByRating ? openByRating : null}
+        user={user}
+        users={users}
+        onUser={(u) => {
+          chooseUser(u);
+          // A status chosen for one role may not exist for the other.
+          setFilter((f) => ({ ...f, status: "all" }));
+        }}
         onJump={async (id) => {
           try {
             await fetchDetail(id);
@@ -50,7 +86,7 @@ export function App() {
         onToggleRules={() => setView(view === "rules" ? "review" : "rules")}
       />
 
-      {view === "rules" && <RulesPage author={CURRENT_USER} />}
+      {view === "rules" && <RulesPage author={user?.name ?? ""} />}
 
       {/* NOTE: the review area stays mounted behind the rules page, so open tabs and half-written reasons survive. */}
       <div hidden={view === "rules"} className="flex min-h-0 flex-1 flex-col">
@@ -96,6 +132,7 @@ export function App() {
             onRetry={queue.retry}
             filter={filter}
             onFilter={setFilter}
+            statuses={ROLE_STATUSES[role]}
             openIds={tabs.open}
             onOpen={tabs.openTab}
           />
@@ -106,10 +143,12 @@ export function App() {
             <TransactionDetail
               id={id}
               decisions={review.decisions}
-              onDecide={(action, reason, level) =>
-                review.decide(id, { action, reason, rating: level })
-              }
-              onUndo={() => review.undo(id)}
+              role={role}
+              onDecide={async (d) => {
+                // The status goes to the engine's alerts; the reason is not stored yet.
+                await setStatus(id, STATUS_CODE[d.action]);
+                review.decide(id, { ...d, by: user?.name ?? "" });
+              }}
               onOpen={tabs.openTab}
             />
           </div>

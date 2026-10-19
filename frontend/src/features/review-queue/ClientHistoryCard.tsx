@@ -3,14 +3,17 @@ import { cva } from "class-variance-authority";
 import { Card, type Column, StatusLabel, Table } from "@/components";
 
 import { formatAmount, formatTs } from "./queue";
+import { useHistory } from "./use-history";
 
 import type { HistoryTransaction } from "./api";
 import type { Decision } from "./decisions";
+import type { ReactNode } from "react";
 
 type ClientHistoryCardProps = {
-  history: HistoryTransaction[];
   /** The transaction the detail is about: highlighted, not clickable. */
-  currentId: string;
+  current: HistoryTransaction;
+  /** All of the client's transactions. */
+  count: number;
   decisions: Record<string, Decision>;
   onOpen: (id: string, background: boolean) => void;
 };
@@ -23,13 +26,41 @@ const flagged = (h: HistoryTransaction) => h.alertTypes.length > 0;
 
 const directionText = { in: "Incoming", out: "Outgoing", unknown: "Unknown" } as const;
 
-/** All of the client's transactions in the period; flagged ones open in their own tab. */
-export function ClientHistoryCard({
-  history,
-  currentId,
-  decisions,
-  onOpen,
-}: ClientHistoryCardProps) {
+/** One side's "show more" row: a button while more exist, a note while loading, an error with a retry. */
+function moreRow(
+  side: "older" | "newer",
+  { more, loading, error }: { more: boolean; loading: boolean; error: string | null },
+  onLoad: () => void,
+): ReactNode {
+  if (loading) return <span className="text-xs text-fg-subtle">Loading {side}…</span>;
+  if (error)
+    return (
+      <span className="text-xs text-high">
+        {error}{" "}
+        <button type="button" onClick={onLoad} className={moreButton}>
+          Retry
+        </button>
+      </span>
+    );
+  if (!more) return null;
+  return (
+    <button type="button" onClick={onLoad} className={moreButton}>
+      Show 5 {side}
+    </button>
+  );
+}
+
+const moreButton =
+  "cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold text-fg underline underline-offset-[0.2em] hover:text-purple";
+
+/**
+ * The client's transactions around this one, five a side, with buttons for five more either way;
+ * flagged ones open in their own tab.
+ */
+export function ClientHistoryCard({ current, count, decisions, onOpen }: ClientHistoryCardProps) {
+  const currentId = current.id;
+  const history = useHistory(currentId);
+  const rows = [...history.newer.items, current, ...history.older.items];
   const columns: Column<HistoryTransaction>[] = [
     {
       key: "dt",
@@ -99,12 +130,14 @@ export function ClientHistoryCard({
     <Card
       padded={false}
       title="Client's transactions"
-      aside={<span className="text-[11px] text-fg-subtle">{history.length} in July</span>}
+      aside={<span className="text-[11px] text-fg-subtle">{count} in July</span>}
     >
       <Table
         embedded
         columns={columns}
-        rows={history}
+        rows={rows}
+        leadRow={moreRow("newer", history.newer, () => history.load("newer"))}
+        trailRow={moreRow("older", history.older, () => history.load("older"))}
         rowKey={(h) => h.id}
         minWidth={1000}
         rowClassName={(h) => historyRow({ current: h.id === currentId })}

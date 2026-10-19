@@ -4,7 +4,7 @@ import { useState } from "react";
 import { type CaseStatus, StatusLabel } from "@/components";
 import { cn } from "@/utils";
 
-import { DISPOSITION_LABEL, formatAge, formatAmount, formatTs } from "./queue";
+import { formatAge, formatAmount, formatTs } from "./queue";
 import { TriageBreakdown } from "./TriageBreakdown";
 
 import type { TransactionDetail } from "./api";
@@ -68,9 +68,6 @@ export function DetailStrip({
           <span className="flex items-baseline gap-0.5 leading-tight whitespace-nowrap">
             <span className="text-lg font-bold tabular-nums">{triage.score}</span>
             <span className="text-xs text-fg-muted">/100</span>
-            <span className="ml-1.5 text-xs text-fg-muted">
-              {DISPOSITION_LABEL[triage.disposition]}
-            </span>
           </span>
           <button
             type="button"

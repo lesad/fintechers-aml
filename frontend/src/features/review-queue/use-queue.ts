@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { fetchFlagged, type TransactionPage } from "./api";
-import { type QueueItem, STATUS_CODE, type StatusFilter, toQueueItem } from "./queue";
+import { type QueueItem, toQueueItem } from "./queue";
 
 import type { RiskLevel } from "@/components";
 
@@ -30,7 +30,8 @@ const EMPTY: QueueState = {
  * Flagged transactions from the engine, a page at a time: `loadMore` appends the next page.
  * A new search, rating or status starts over from page 0; all three filter on the engine; the search waits 300 ms for typing to stop.
  */
-export function useQueue(query: string, rating: RiskLevel | "all", status: StatusFilter) {
+/** `status` is the engine's comma-separated status codes (`statusParam`). */
+export function useQueue(query: string, rating: RiskLevel | "all", status: string) {
   const [state, setState] = useState<QueueState>(EMPTY);
   const inFlight = useRef<AbortController | null>(null);
 
@@ -44,16 +45,7 @@ export function useQueue(query: string, rating: RiskLevel | "all", status: Statu
       loading: true,
       error: null,
     }));
-    fetchFlagged(
-      {
-        q: query,
-        rating,
-        status: status === "all" ? "" : STATUS_CODE[status],
-        page,
-        size: PAGE_SIZE,
-      },
-      ctrl.signal,
-    )
+    fetchFlagged({ q: query, rating, status, page, size: PAGE_SIZE }, ctrl.signal)
       .then((res) =>
         setState((s) => ({
           items: [...(reset ? [] : s.items), ...res.items.map(toQueueItem)],

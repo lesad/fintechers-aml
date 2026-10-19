@@ -1,6 +1,6 @@
 import { rulesSummary } from "./rules";
 
-import type { Disposition, FlaggedTransaction } from "./api";
+import type { AlertStatus, Disposition, FlaggedTransaction } from "./api";
 import type { AiRating, CaseStatus, RiskLevel } from "@/components";
 
 export type QueueItem = {
@@ -41,8 +41,7 @@ export function toQueueItem(f: FlaggedTransaction): QueueItem {
     ai: "none",
     amount: f.amount,
     date: formatTs(f.ts),
-    // The engine has no case status yet; decisions live in the browser (useDecisions).
-    status: "New",
+    status: CASE_STATUS[f.status],
     flagged: new Date(f.flaggedAt),
     disposition: f.disposition,
     score: f.score,
@@ -61,11 +60,31 @@ export type QueueFilter = {
 export const NO_FILTER: QueueFilter = { query: "", rating: "all", status: "all" };
 
 /** The engine's alert status for each case status the UI shows (`GET /api/transactions?status=`). */
-export const STATUS_CODE: Record<CaseStatus, string> = {
+export const STATUS_CODE: Record<CaseStatus, AlertStatus> = {
   New: "NEW",
   Escalated: "ESCALATED",
   "False Positive": "FALSE_POSITIVE",
   Reported: "REPORTED",
+};
+
+export type Role = "Reviewer" | "Manager";
+
+/** The case statuses each role works: the reviewer the first line, the manager what was escalated. */
+export const ROLE_STATUSES: Record<Role, CaseStatus[]> = {
+  Reviewer: ["New", "False Positive"],
+  Manager: ["Escalated", "Reported"],
+};
+
+/** The engine's `status` parameter: the chosen status, or all of the role's when none is chosen. */
+export const statusParam = (role: Role, status: StatusFilter) =>
+  (status === "all" ? ROLE_STATUSES[role] : [status]).map((s) => STATUS_CODE[s]).join(",");
+
+/** The case status the UI shows for each engine status. */
+export const CASE_STATUS: Record<AlertStatus, CaseStatus> = {
+  NEW: "New",
+  ESCALATED: "Escalated",
+  FALSE_POSITIVE: "False Positive",
+  REPORTED: "Reported",
 };
 
 /** "12 min", "5h 3m", "2d 4h". */

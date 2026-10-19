@@ -19,6 +19,7 @@
     "paths": {
       "@/hooks": ["./src/core/hooks"],
       "@/test/*": ["./src/core/test/*"],
+      "@/user": ["./src/core/user"],
       "@/utils": ["./src/core/utils"],
       "@/features/*": ["./src/features/*"],
       "@/*": ["./src/*"]

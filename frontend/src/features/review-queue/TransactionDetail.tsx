@@ -12,16 +12,18 @@ import { useDetail } from "./use-detail";
 
 import type { TransactionDetail as Detail } from "./api";
 import type { Decision } from "./decisions";
+import type { Role } from "./queue";
 
 type TransactionDetailProps = {
   id: string;
   decisions: Record<string, Decision>;
-  onDecide: (action: Decision["action"], reason: string, rating: Detail["rating"]) => void;
-  onUndo: () => void;
+  role: Role;
+  /** Saves the status on the engine, then records the decision. */
+  onDecide: (d: Pick<Decision, "action" | "reason" | "rating">) => Promise<void>;
   onOpen: (id: string, background: boolean) => void;
 };
 
-/** Loads one transaction from the engine and shows it; the decision stays in the browser. */
+/** Loads one transaction from the engine and shows it; a decision saves the case status on the engine. */
 export function TransactionDetail({ id, ...rest }: TransactionDetailProps) {
   const detail = useDetail(id);
   if (detail.status === "ready") return <DetailView detail={detail.data} {...rest} />;
@@ -58,8 +60,8 @@ export function TransactionDetail({ id, ...rest }: TransactionDetailProps) {
 function DetailView({
   detail,
   decisions,
+  role,
   onDecide,
-  onUndo,
   onOpen,
 }: Omit<TransactionDetailProps, "id"> & { detail: Detail }) {
   const { transaction: tx, client, rating } = detail;
@@ -84,7 +86,6 @@ function DetailView({
                 ruleNames={state.ruleNames}
                 thresholds={state.thresholds}
                 alertTypes={state.alertTypes}
-                triage={state.triage}
               />
 
               <Card tone="ai" title={<AiLabel>Rating</AiLabel>} className="gap-2">
@@ -121,12 +122,15 @@ function DetailView({
               </div>
             </Card>
 
-            <ClientHistoryCard
-              history={detail.history}
-              currentId={tx.id}
-              decisions={decisions}
-              onOpen={onOpen}
-            />
+            {state.current && (
+              <ClientHistoryCard
+                key={tx.id}
+                current={state.current}
+                count={detail.historyCount}
+                decisions={decisions}
+                onOpen={onOpen}
+              />
+            )}
           </div>
 
           <div className="sticky top-3 flex flex-col gap-3">
@@ -142,8 +146,9 @@ function DetailView({
             {rating && state.decides === "reviewer" && (
               <DecisionPanel
                 decision={decision}
-                onDecide={(action, reason) => onDecide(action, reason, rating)}
-                onUndo={onUndo}
+                saved={state.saved}
+                role={role}
+                onDecide={(action, reason) => onDecide({ action, reason, rating })}
               />
             )}
           </div>

@@ -38,8 +38,9 @@ const base: TransactionDetail = {
   },
   rating: "Low",
   disposition: "AUTO_CLOSE",
+  status: "NEW",
   alerts: [],
-  history: [
+  day: [
     {
       id: "T1",
       ts: "2026-07-17T15:58:00",
@@ -49,19 +50,17 @@ const base: TransactionDetail = {
       amount: 1,
       alertTypes: ["A"],
     },
-    {
-      id: "T0",
-      ts: "2026-07-16T09:00:00",
-      direction: "in",
-      counterpartyAccount: "A2",
-      counterpartyCountry: "CZ",
-      amount: 1,
-      alertTypes: [],
-    },
   ],
+  historyCount: 2,
 };
 
-const closed: Decision = { action: "Escalated", reason: "r", at: "", by: "", rating: "Low" };
+const closed: Decision = {
+  action: "Escalated",
+  reason: "r",
+  at: "",
+  by: "",
+  rating: "Low",
+};
 
 describe("caseState", () => {
   it("leaves a case triage closed to triage, until a reviewer decides otherwise", () => {
@@ -70,6 +69,19 @@ describe("caseState", () => {
       decides: "triage",
     });
     expect(caseState(base, closed)).toMatchObject({ status: "Escalated", decides: "triage" });
+  });
+
+  it("shows the status the engine holds once someone decided", () => {
+    const escalated = {
+      ...base,
+      disposition: "REVIEW_HIGH" as const,
+      rating: "High" as const,
+      status: "ESCALATED" as const,
+    };
+    expect(caseState(escalated, undefined)).toMatchObject({
+      saved: "Escalated",
+      status: "Escalated",
+    });
   });
 
   it("gives a flagged case to the reviewer, new until decided", () => {

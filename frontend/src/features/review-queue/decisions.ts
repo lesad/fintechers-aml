@@ -4,7 +4,7 @@ import type { QueueItem } from "./queue";
 import type { RiskLevel } from "@/components";
 
 export type Decision = {
-  action: "False Positive" | "Escalated";
+  action: "False Positive" | "Escalated" | "Reported";
   reason: string;
   /** `YYYY-MM-DD HH:mm` */
   at: string;
@@ -22,17 +22,11 @@ export function useDecisions() {
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
   return {
     decisions,
-    decide: (id: string, d: Pick<Decision, "action" | "reason" | "rating">) =>
+    decide: (id: string, d: Pick<Decision, "action" | "reason" | "rating" | "by">) =>
       setDecisions((s) => ({
         ...s,
-        // shortcut: a fixed reviewer, until there is a signed-in user
-        [id]: { ...d, at: stamp(new Date()), by: "J. Novák" },
+        [id]: { ...d, at: stamp(new Date()) },
       })),
-    undo: (id: string) =>
-      setDecisions((s) => {
-        const { [id]: _removed, ...rest } = s;
-        return rest;
-      }),
     /** The queue with each decided item's status replaced by its decision. */
     apply: (items: QueueItem[]): QueueItem[] =>
       items.map((r) => {
@@ -43,8 +37,7 @@ export function useDecisions() {
     openCounts: (counts: Record<RiskLevel, number>): Record<RiskLevel, number> => {
       const open = { ...counts };
       for (const d of Object.values(decisions))
-        if (d.action === "False Positive" && d.rating)
-          open[d.rating] = Math.max(0, open[d.rating] - 1);
+        if (d.action !== "Escalated" && d.rating) open[d.rating] = Math.max(0, open[d.rating] - 1);
       return open;
     },
   };

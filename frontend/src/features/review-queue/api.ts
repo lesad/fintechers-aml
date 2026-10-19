@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { userHeaders } from "@/user";
+
 // The engine's /api/transactions contract (engine/.../transaction/TransactionModel.kt).
 // Amounts arrive in CZK; everything else is parsed here, so the UI never trusts a raw shape.
 
@@ -14,6 +16,9 @@ const disposition = z.enum([
   "ESCALATE",
 ]);
 
+/** Where a case stands on the engine (`alert.status`). */
+const alertStatus = z.enum(["NEW", "ESCALATED", "FALSE_POSITIVE", "REPORTED"]);
+
 const flagged = z.object({
   id: z.string(),
   clientId: z.string(),
@@ -27,6 +32,7 @@ const flagged = z.object({
   rating,
   disposition,
   score: z.number(),
+  status: alertStatus,
   flaggedAt: z.string(),
 });
 
@@ -44,6 +50,17 @@ const hit = z.object({
   version: z.number(),
   grainKey: z.string(),
   evidence: z.record(z.string(), z.unknown()),
+});
+
+/** One of the client's transactions, as the history and the money flow show it. */
+const historyTx = z.object({
+  id: z.string(),
+  ts: z.string(),
+  direction,
+  counterpartyAccount: z.string().nullable(),
+  counterpartyCountry: z.string().nullable(),
+  amount: z.number(),
+  alertTypes: z.array(z.string()),
 });
 
 const detail = z.object({
@@ -79,11 +96,13 @@ const detail = z.object({
   }),
   rating: rating.nullable(),
   disposition: disposition.nullable(),
+  status: alertStatus.nullable(),
   alerts: z.array(
     z.object({
       id: z.number(),
       alertType: z.string(),
       createdAt: z.string(),
+      status: alertStatus,
       triage: z
         .object({
           disposition,
@@ -98,31 +117,30 @@ const detail = z.object({
       hits: z.array(hit),
     }),
   ),
-  history: z.array(
-    z.object({
-      id: z.string(),
-      ts: z.string(),
-      direction,
-      counterpartyAccount: z.string().nullable(),
-      counterpartyCountry: z.string().nullable(),
-      amount: z.number(),
-      alertTypes: z.array(z.string()),
-    }),
-  ),
+  /** The client's transactions on this one's day, it among them. */
+  day: z.array(historyTx),
+  historyCount: z.number(),
 });
+
+const historyPage = z.object({ items: z.array(historyTx), more: z.boolean() });
 
 export type FlaggedTransaction = z.infer<typeof flagged>;
 export type TransactionPage = z.infer<typeof page>;
 export type Hit = z.infer<typeof hit>;
 export type Disposition = z.infer<typeof disposition>;
+export type AlertStatus = z.infer<typeof alertStatus>;
 export type TransactionDetail = z.infer<typeof detail>;
 export type DetailClient = TransactionDetail["client"];
-export type HistoryTransaction = TransactionDetail["history"][number];
+export type HistoryTransaction = z.infer<typeof historyTx>;
+export type HistoryPage = z.infer<typeof historyPage>;
 
 export class NotFoundError extends Error {}
 
 async function get<T>(url: string, schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+  const res = await fetch(url, {
+    signal,
+    headers: { Accept: "application/json", ...userHeaders() },
+  });
   if (res.status === 404) throw new NotFoundError(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   return schema.parse(await res.json());
@@ -137,6 +155,27 @@ export function fetchFlagged(
   if (params.rating !== "all") qs.set("rating", params.rating);
   if (params.status) qs.set("status", params.status);
   return get(`/api/transactions?${qs}`, page, signal);
+}
+
+/** Pins the status of the transaction's alerts in the latest run, e.g. `ESCALATED`. */
+export async function setStatus(id: string, status: string): Promise<void> {
+  const url = `/api/transactions/${encodeURIComponent(id)}/status`;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...userHeaders() },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(`Saving the status failed (HTTP ${res.status}).`);
+}
+
+/** Up to 5 of the client's transactions right before (`older`) or after (`newer`) transaction `id`. */
+export function fetchHistory(
+  id: string,
+  side: "older" | "newer",
+  signal?: AbortSignal,
+): Promise<HistoryPage> {
+  const qs = new URLSearchParams({ direction: side, limit: "5" });
+  return get(`/api/transactions/${encodeURIComponent(id)}/history?${qs}`, historyPage, signal);
 }
 
 export function fetchDetail(id: string, signal?: AbortSignal): Promise<TransactionDetail> {

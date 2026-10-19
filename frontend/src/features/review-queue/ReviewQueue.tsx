@@ -1,6 +1,14 @@
 import { cva } from "class-variance-authority";
 
-import { type Column, LoadMore, RatingBadge, Select, StatusLabel, Table } from "@/components";
+import {
+  type CaseStatus,
+  type Column,
+  LoadMore,
+  RatingBadge,
+  Select,
+  StatusLabel,
+  Table,
+} from "@/components";
 
 import {
   DISPOSITION_LABEL,
@@ -23,6 +31,8 @@ type ReviewQueueProps = {
   onRetry: () => void;
   filter: QueueFilter;
   onFilter: (f: QueueFilter) => void;
+  /** The statuses the current role works; the status filter offers only these. */
+  statuses: CaseStatus[];
   /** Ids open in a tab: their rows are highlighted. */
   openIds: string[];
   onOpen: (id: string, background: boolean) => void;
@@ -47,6 +57,7 @@ export function ReviewQueue({
   onRetry,
   filter,
   onFilter,
+  statuses,
   openIds,
   onOpen,
 }: ReviewQueueProps) {
@@ -144,10 +155,11 @@ export function ReviewQueue({
           onChange={(e) => onFilter({ ...filter, status: e.target.value as QueueFilter["status"] })}
         >
           <option value="all">All statuses</option>
-          <option value="New">New</option>
-          <option value="Escalated">Escalated</option>
-          <option value="False Positive">False Positive</option>
-          <option value="Reported">Reported</option>
+          {statuses.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
         </Select>
         {hasFilters && (
           <button

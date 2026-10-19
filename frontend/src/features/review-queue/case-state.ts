@@ -1,4 +1,4 @@
-import { formatTs } from "./queue";
+import { CASE_STATUS, formatTs } from "./queue";
 import { ruleThresholds } from "./rules";
 
 import type { HistoryTransaction, TransactionDetail } from "./api";
@@ -23,10 +23,14 @@ export function caseState(detail: TransactionDetail, decision: Decision | undefi
   const hits = alerts.flatMap((a) => a.hits);
   const autoClosed = detail.disposition === "AUTO_CLOSE";
   const day = tx.ts.slice(0, 10);
-  const dayTx = detail.history
-    .filter((h) => h.ts.startsWith(day))
-    .map(toFlow)
-    .toSorted((a, b) => (a.dt > b.dt ? 1 : -1));
+  const dayTx = detail.day.map(toFlow).toSorted((a, b) => (a.dt > b.dt ? 1 : -1));
+
+  const saved =
+    detail.status && detail.status !== "NEW"
+      ? CASE_STATUS[detail.status]
+      : autoClosed
+        ? "False Positive"
+        : "New";
 
   return {
     thresholds: ruleThresholds(hits),
@@ -39,10 +43,14 @@ export function caseState(detail: TransactionDetail, decision: Decision | undefi
     flaggedAt: alerts[0] ? new Date(alerts[0].createdAt) : null,
     /** The triage of the alert that set the transaction's (most severe) disposition. */
     triage: alerts.find((a) => a.triage?.disposition === detail.disposition)?.triage ?? null,
-    /** Not flagged → no status; a false positive when triage closed it, unless someone decided otherwise; else New. */
-    status: rating ? (decision?.action ?? (autoClosed ? "False Positive" : "New")) : null,
+    /** What the engine holds: its status once someone decided; a false positive when triage closed it; else New. */
+    saved,
+    /** Not flagged → no status; a decision made here wins over what the engine holds. */
+    status: rating ? (decision?.action ?? saved) : null,
     /** Who decides: nobody (not flagged), triage already did, or the reviewer. */
     decides: !rating ? "nobody" : autoClosed ? "triage" : "reviewer",
+    /** This transaction as a history row; the engine always lists it among its day's transactions. */
+    current: detail.day.find((h) => h.id === tx.id),
     dayTx,
     dayLabel: `${new Date(`${day}T12:00`).toLocaleDateString("en-GB", {
       day: "numeric",

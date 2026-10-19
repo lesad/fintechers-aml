@@ -1,15 +1,19 @@
 import { cva } from "class-variance-authority";
 import { useEffect, useRef, useState } from "react";
 
-import { CURRENT_USER } from "./user";
+import { UserMenu } from "./UserMenu";
 
 import type { RiskLevel } from "@/components";
+import type { User } from "@/user";
 
 type HeaderProps = {
   /** Null until the engine has answered: the counts show as skeletons. */
   openByRating: Record<RiskLevel, number> | null;
   /** Opens the transaction if it exists; resolves to false when the id is unknown. */
   onJump: (id: string) => Promise<boolean>;
+  user: User | null;
+  users: User[];
+  onUser: (user: User) => void;
   rulesOpen: boolean;
   onToggleRules: () => void;
 };
@@ -32,7 +36,15 @@ const hint = cva("pointer-events-none absolute right-2 text-[11px]", {
   variants: { miss: { true: "text-header-miss", false: "text-indigo-60" } },
 });
 
-export function Header({ openByRating, onJump, rulesOpen, onToggleRules }: HeaderProps) {
+export function Header({
+  openByRating,
+  onJump,
+  user,
+  users,
+  onUser,
+  rulesOpen,
+  onToggleRules,
+}: HeaderProps) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
@@ -136,10 +148,7 @@ export function Header({ openByRating, onJump, rulesOpen, onToggleRules }: Heade
             <circle cx="12" cy="12" r="3" />
           </svg>
         </button>
-        <span className="text-xs text-indigo-20">{CURRENT_USER}</span>
-        <div className="flex size-[26px] items-center justify-center rounded-full bg-indigo-80 text-[11px] font-semibold">
-          JN
-        </div>
+        <UserMenu user={user} users={users} onUser={onUser} />
       </div>
     </header>
   );

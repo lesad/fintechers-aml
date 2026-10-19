@@ -17,11 +17,12 @@ const flagged: FlaggedTransaction = {
   rating: "High",
   disposition: "ESCALATE",
   score: 92,
+  status: "ESCALATED",
   flaggedAt: "2026-10-19T18:25:35Z",
 };
 
 describe("toQueueItem", () => {
-  it("turns an engine row into a queue row in CZK, unrated by AI, new", () => {
+  it("turns an engine row into a queue row in CZK, unrated by AI, with its status", () => {
     expect(toQueueItem(flagged)).toMatchObject({
       id: "TX000123456",
       client: "K003797",
@@ -30,7 +31,7 @@ describe("toQueueItem", () => {
       ai: "none",
       amount: 184_500,
       date: "2026-07-17 15:58",
-      status: "New",
+      status: "Escalated",
       disposition: "ESCALATE",
       score: 92,
     });
