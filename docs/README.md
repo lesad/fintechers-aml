@@ -8,7 +8,6 @@ This directory is durable, committed project memory. Live, in-flight work lives 
 
 | File             | What                                                                                                                            | Who writes                                |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `ROADMAP.md`     | Phased plan / milestones                                                                                                        | humans + agents                           |
 | `CHANGELOG.md`   | Release history (Keep a Changelog)                                                                                              | agents, per change                        |
 | `DECISIONS.md`   | Architecture decision records (ADRs)                                                                                            | whoever makes the call                    |
 | `STACK.md`       | Pinned stack versions + context7 doc IDs                                                                                        | agents, on dependency change              |
@@ -25,7 +24,7 @@ This directory is durable, committed project memory. Live, in-flight work lives 
 Two layers, on purpose:
 
 - **live work** = the session, the gitignored `docs/superpowers/` drafts and the commit history. Nothing ephemeral is committed; describe the work in the commit and the changelog instead.
-- **committed docs** = _durable_ record — decisions (`DECISIONS.md`), releases (`CHANGELOG.md`), plan shape (`ROADMAP.md`), stack (`STACK.md`).
+- **committed docs** = _durable_ record — decisions (`DECISIONS.md`), releases (`CHANGELOG.md`), stack (`STACK.md`).
 
 Canonical specs belong committed under `docs/`; working drafts stay out of git (see ADR-0004).
 

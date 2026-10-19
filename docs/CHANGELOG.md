@@ -36,7 +36,7 @@
 
 ### Removed
 
-- dex, `docs/FORKING.md` and `docs/UPSTREAM.md` (ADR-0030): dex was never used here, and the fork-consumer docs described a template this repo no longer is.
+- dex, `docs/FORKING.md`, `docs/UPSTREAM.md` and the empty `docs/ROADMAP.md` (ADR-0030): dex was never used here, and the fork-consumer docs described a template this repo no longer is.
 - The Vercel MCP server from `.mcp.json`, the Vercel deploy section and skills from `CLAUDE.md`, and `drizzle-kit` from the Claude permission allowlist: none of them had a target left (ADR-0023, ADR-0025).
 - shadcn/ui and its leftovers: `src/components/ui/`, `components.json`, `@base-ui/react`, `class-variance-authority`, `lucide-react`, `shadcn`, `tw-animate-css`, the shadcn MCP server and agent skill (ADR-0028).
 - `pnpm ship` (`scripts/ship.sh`): PRs are no longer required; changes are pushed to `main` directly. ADR-0026.
