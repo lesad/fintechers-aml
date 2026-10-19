@@ -4,7 +4,7 @@ Designs from Claude Design, saved as the source of truth for the UI. They supers
 
 ## aml-review-queue/
 
-Project: https://claude.ai/design/p/6e79f47c-09c2-408b-8bfd-24e2b6cca745 (saved 2026-10-19).
+Project: https://claude.ai/design/p/6e79f47c-09c2-408b-8bfd-24e2b6cca745 (saved 2026-10-19, updated the same day with the triage score breakdown and the audit trail tab, which is work in progress).
 
 - `AML Review Queue.dc.html`: the current design, review queue (overview) and transaction detail in tabs. Markup, mock data and behaviour in one file.
 - `support.js`: the Claude Design runtime that renders `.dc.html` files.

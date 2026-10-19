@@ -50,8 +50,9 @@ select,input{font-family:inherit}
     </div>
     <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="0">
       <div role="tab" title="{{ tab.title }}" onClick="{{ tab.activate }}" onAuxClick="{{ tab.close }}" style="flex:none;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;min-width:150px;cursor:pointer;border-right:1px solid var(--border);background:{{ tab.bg }};box-shadow:{{ tab.shadow }};color:{{ tab.color }};">
-        <span style="width:7px;height:7px;border-radius:2px;background:{{ tab.dot }};flex:none;"></span>
-        <span style="font-family:var(--ms-font-mono);font-size:12px;flex:1;">{{ tab.id }}</span>
+        <sc-if value="{{ tab.isTx }}" hint-placeholder-val="{{ true }}"><span style="width:7px;height:7px;border-radius:2px;background:{{ tab.dot }};flex:none;"></span></sc-if>
+        <sc-if value="{{ tab.isAudit }}" hint-placeholder-val="{{ false }}"><span style="flex:none;width:10px;height:12px;border:1.5px solid currentColor;border-radius:2px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 1.5px;"><span style="height:1.5px;background:currentColor;"></span><span style="height:1.5px;background:currentColor;"></span></span></sc-if>
+        <span style="flex:1;white-space:nowrap;"><sc-if value="{{ tab.isAudit }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;">Audit · </span></sc-if><span style="font-family:var(--ms-font-mono);font-size:12px;">{{ tab.txid }}</span></span>
         <button aria-label="Close tab" onClick="{{ tab.close }}" style="width:20px;height:20px;border:0;background:transparent;color:var(--fg-subtle);border-radius:4px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--border-soft);color:var(--fg)">&#215;</button>
       </div>
     </sc-for>
@@ -89,7 +90,7 @@ select,input{font-family:inherit}
           
           <thead>
             <tr style="height:34px;text-align:left;color:var(--fg-muted);font-size:12px;">
-              <th style="box-sizing:border-box;width:210px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px 0 16px;font-weight:600;white-space:nowrap;">Rating</th>
+              <th style="box-sizing:border-box;width:124px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px 0 16px;font-weight:600;white-space:nowrap;">Rating</th>
               <th style="box-sizing:border-box;width:130px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;">Transaction</th>
               <th style="box-sizing:border-box;width:96px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;">Client</th>
               <th style="box-sizing:border-box;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;text-align:right;">Amount (CZK)</th>
@@ -103,26 +104,14 @@ select,input{font-family:inherit}
               <tr onClick="{{ r.open }}" title="Open {{ r.id }} in a new tab" style="height:{{ rowH }};cursor:pointer;border-bottom:1px solid var(--border-soft);background:{{ r.rowBg }};" style-hover="background:var(--hover)">
                 <td style="padding:0 12px 0 16px;white-space:nowrap;overflow:hidden;">
                   <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-                    <sc-if value="{{ r.aiMatch }}" hint-placeholder-val="{{ true }}">
+                    <sc-if value="{{ r.aiDone }}" hint-placeholder-val="{{ true }}">
                       <span title="{{ r.matchTip }}" style="flex:none;display:inline-flex;align-items:stretch;height:20px;border-radius:4px;overflow:hidden;font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;">
                         <span style="display:flex;align-items:center;gap:5px;padding:0 7px;background:{{ r.ruleBg }};color:{{ r.ruleFg }};"><span style="width:7px;height:7px;border-radius:2px;background:{{ r.ruleDot }};"></span>{{ r.rule }}</span>
                         <span style="display:flex;align-items:center;padding:0 5px;background:#8250be;color:#ffffff;font-size:10px;letter-spacing:0.06em;">AI</span>
                       </span>
                     </sc-if>
-                    <sc-if value="{{ r.aiFailed }}" hint-placeholder-val="{{ false }}">
-                      <span title="AI assessment failed · rule rating only" style="flex:none;display:inline-flex;align-items:stretch;height:20px;border-radius:4px;overflow:hidden;font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;">
-                        <span style="display:flex;align-items:center;gap:5px;padding:0 7px;background:{{ r.ruleBg }};color:{{ r.ruleFg }};"><span style="width:7px;height:7px;border-radius:2px;background:{{ r.ruleDot }};"></span>{{ r.rule }}</span>
-                        <span style="display:flex;align-items:center;padding:0 5px;background:var(--border);color:var(--fg-subtle);font-size:10px;letter-spacing:0.06em;text-decoration:line-through;">AI</span>
-                      </span>
-                    </sc-if>
-                    <sc-if value="{{ r.aiSplit }}" hint-placeholder-val="{{ false }}">
-                      <span title="Rule rating" style="flex:none;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ r.ruleBg }};color:{{ r.ruleFg }};font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;"><span style="width:7px;height:7px;border-radius:2px;background:{{ r.ruleDot }};"></span>{{ r.rule }}</span>
-                      <sc-if value="{{ r.aiRunning }}" hint-placeholder-val="{{ false }}">
-                        <span title="AI assessment is still running"><span style="flex:none;display:inline-flex;align-items:stretch;height:20px;border:1px solid var(--ai-line);border-radius:999px;overflow:hidden;font-size:12px;box-sizing:border-box;line-height:1;"><span style="display:flex;align-items:center;padding:0 6px;background:#8250be;color:#ffffff;font-size:10px;font-weight:700;letter-spacing:0.06em;">AI</span><span style="display:flex;align-items:center;gap:5px;padding:0 8px 0 6px;font-style:italic;color:var(--fg-subtle);background:var(--bg);"><span style="width:6px;height:6px;border-radius:999px;border:1.5px solid var(--fg-subtle);box-sizing:border-box;"></span>Running…</span></span></span>
-                      </sc-if>
-                      <sc-if value="{{ r.disagree }}" hint-placeholder-val="{{ false }}">
-                        <span title="{{ r.splitTip }}"><span style="flex:none;display:inline-flex;align-items:stretch;height:20px;border:1px solid var(--ai-line);border-radius:999px;overflow:hidden;font-size:12px;box-sizing:border-box;line-height:1;"><span style="display:flex;align-items:center;padding:0 6px;background:#8250be;color:#ffffff;font-size:10px;font-weight:700;letter-spacing:0.06em;">AI</span><span style="display:flex;align-items:center;gap:5px;padding:0 8px 0 6px;font-weight:600;color:{{ r.aiFg }};background:var(--bg);"><span style="width:6px;height:6px;border-radius:999px;background:{{ r.aiDot }};"></span>{{ r.ai }}</span></span></span>
-                      </sc-if>
+                    <sc-if value="{{ r.aiNone }}" hint-placeholder-val="{{ false }}">
+                      <span title="{{ r.noneTip }}" style="flex:none;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ r.ruleBg }};color:{{ r.ruleFg }};font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;"><span style="width:7px;height:7px;border-radius:2px;background:{{ r.ruleDot }};"></span>{{ r.rule }}</span>
                     </sc-if>
                   </div>
                 </td>
@@ -151,6 +140,11 @@ select,input{font-family:inherit}
     <main style="flex:1;min-height:0;display:flex;flex-direction:column;">
       <div style="flex:none;display:flex;align-items:stretch;padding:12px 0;overflow-x:auto;position:relative;z-index:1;background:var(--bg);box-shadow:0 2px 6px -2px rgba(37,39,70,.14);">
         <div style="display:flex;flex-direction:column;gap:4px;padding:0 24px 0 16px;flex:none;">
+          <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Triage score</span>
+          <span style="display:flex;align-items:baseline;gap:2px;line-height:1.2;"><span style="font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;">{{ det.prio }}</span><span style="font-size:12px;color:var(--fg-muted);">/100</span><span style="font-size:12px;color:var(--fg-muted);margin-left:6px;">{{ det.prioBand }}</span></span>
+          <button onClick="{{ det.openPrio }}" style="align-self:flex-start;border:0;background:transparent;padding:0;color:var(--fg);font:inherit;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:0.2em;cursor:pointer;white-space:nowrap;" style-hover="color:#8250be">Breakdown</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;padding:0 24px;border-left:1px solid var(--border-soft);flex:none;">
           <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Transaction</span>
           <span style="font-family:var(--ms-font-mono);font-size:18px;font-weight:600;letter-spacing:-0.01em;line-height:1.2;">{{ det.id }}</span>
           <span style="font-size:12px;color:var(--fg-muted);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ det.date }}</span>
@@ -176,9 +170,12 @@ select,input{font-family:inherit}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;padding:0 24px;border-left:1px solid var(--border-soft);min-width:0;flex:none;padding-right:16px;align-items:flex-start;">
           <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Case</span>
-          <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:{{ det.statusWeight }};">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:{{ det.statusWeight }};">
             <span style="width:6px;height:6px;border-radius:999px;border:1.5px solid currentColor;background:{{ det.statusFill }};box-sizing:border-box;"></span>{{ det.status }}
           </span>
+            <button onClick="{{ det.openAudit }}" style="border:0;background:transparent;padding:0;color:var(--fg);font:inherit;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:0.2em;cursor:pointer;white-space:nowrap;" style-hover="color:#8250be">Audit trail →</button>
+          </div>
           <span style="font-size:12px;color:var(--fg-muted);white-space:nowrap;">flagged <b style="color:var(--fg);font-variant-numeric:tabular-nums;">{{ det.age }}</b> ago</span>
         </div>
       </div>
@@ -191,32 +188,41 @@ select,input{font-family:inherit}
               <section style="border:0;border-radius:8px;background:var(--bg);padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
                 <div style="display:flex;align-items:center;gap:10px;">
                   <span style="font-size:12px;font-weight:600;color:var(--fg-muted);">Rule rating</span>
+                  <sc-if value="{{ det.multiRule }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;padding:0 6px;line-height:18px;border-radius:3px;background:var(--bg-sub);color:var(--fg);">{{ det.rulesCount }} rules fired · highest rating applies</span></sc-if>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
                   <span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ det.ruleBg }};color:{{ det.ruleFg }};font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;"><span style="width:7px;height:7px;border-radius:2px;background:{{ det.ruleDot }};"></span>{{ det.rule }}</span>
                   <span style="font-size:14px;font-weight:600;text-wrap:pretty;">{{ det.ruleReason }}</span>
                 </div>
-                <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:12px;padding-top:10px;border-top:1px solid var(--border-soft);">
-                  <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:var(--fg-subtle);">Rule fired</span><span>{{ det.ruleName }}</span></div>
-                  <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:var(--fg-subtle);">Threshold</span><span style="font-variant-numeric:tabular-nums;color:var(--fg-muted);">{{ det.limit }}</span></div>
-                  <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:11px;color:var(--fg-subtle);">Actual</span><span style="font-variant-numeric:tabular-nums;font-weight:700;color:{{ det.ruleFg }};">{{ det.actual }}</span></div>
+                <div style="display:flex;flex-direction:column;border-top:1px solid var(--border-soft);">
+                  <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:12px;padding:8px 0 4px;font-size:11px;color:var(--fg-subtle);">
+                    <span>{{ det.rulesLabel }}</span><span>Threshold</span><span>Actual</span>
+                  </div>
+                  <sc-for list="{{ det.rulesFired }}" as="rf" hint-placeholder-count="1">
+                    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr);gap:12px;padding:5px 0;border-top:{{ rf.sep }};align-items:baseline;">
+                      <span style="display:flex;align-items:baseline;gap:8px;min-width:0;"><span style="flex:none;font-family:var(--ms-font-mono);font-size:12px;font-weight:700;">{{ rf.key }}</span><span style="text-wrap:pretty;">{{ rf.name }}</span></span>
+                      <span style="font-variant-numeric:tabular-nums;color:var(--fg-muted);">{{ rf.limit }}</span>
+                      <span style="font-variant-numeric:tabular-nums;font-weight:700;color:{{ det.ruleFg }};">{{ rf.actual }}</span>
+                    </div>
+                  </sc-for>
                 </div>
               </section>
 
               <section style="border:0;border-radius:8px;background:linear-gradient(135deg, #f5f1fb 0%, #e4d8f3 100%);padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                  <span style="font-size:12px;font-weight:600;color:var(--ai-fg);">AI rating</span>
+                  <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;padding:0 6px;line-height:18px;border-radius:999px;background:#8250be;color:#ffffff;">AI</span>
+                  <span style="font-size:12px;font-weight:600;color:var(--ai-fg);">Rating</span>
                 </div>
                 <sc-if value="{{ det.aiFailed }}" hint-placeholder-val="{{ false }}">
-                  <span style="flex:none;align-self:flex-start;display:inline-flex;align-items:stretch;height:20px;border:1px solid var(--border);border-radius:999px;overflow:hidden;font-size:12px;box-sizing:border-box;line-height:1;"><span style="display:flex;align-items:center;padding:0 6px;background:var(--border);color:var(--fg-subtle);font-size:10px;font-weight:700;letter-spacing:0.06em;">AI</span><span style="display:flex;align-items:center;padding:0 8px 0 6px;font-weight:600;color:var(--fg-subtle);background:var(--bg);">Failed</span></span>
+                  <span style="font-size:13px;font-weight:600;color:var(--fg-muted);">Failed</span>
                   <p style="margin:0;font-size:13px;color:var(--fg-muted);line-height:1.5;">The AI assessment could not be completed for this transaction. Review it based on the rule rating.</p>
                 </sc-if>
                 <sc-if value="{{ det.aiRunning }}" hint-placeholder-val="{{ false }}">
-                  <span style="flex:none;display:inline-flex;align-items:stretch;height:20px;border:1px solid var(--ai-line);border-radius:999px;overflow:hidden;font-size:12px;box-sizing:border-box;line-height:1;"><span style="display:flex;align-items:center;padding:0 6px;background:#8250be;color:#ffffff;font-size:10px;font-weight:700;letter-spacing:0.06em;">AI</span><span style="display:flex;align-items:center;gap:5px;padding:0 8px 0 6px;font-style:italic;color:var(--fg-subtle);background:var(--bg);"><span style="width:6px;height:6px;border-radius:999px;border:1.5px solid var(--fg-subtle);box-sizing:border-box;"></span>Running…</span></span>
+                  <span style="font-size:13px;font-style:italic;color:var(--fg-muted);">Assessment in progress…</span>
                 </sc-if>
                 <sc-if value="{{ det.aiDone }}" hint-placeholder-val="{{ true }}">
                   <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="flex:none;display:inline-flex;align-items:stretch;height:20px;border:1px solid var(--ai-line);border-radius:999px;overflow:hidden;font-size:12px;box-sizing:border-box;line-height:1;"><span style="display:flex;align-items:center;padding:0 6px;background:#8250be;color:#ffffff;font-size:10px;font-weight:700;letter-spacing:0.06em;">AI</span><span style="display:flex;align-items:center;gap:5px;padding:0 8px 0 6px;font-weight:600;color:{{ det.aiFg }};background:var(--bg);"><span style="width:6px;height:6px;border-radius:999px;background:{{ det.aiDot }};"></span>{{ det.ai }}</span></span>
+                    <span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ det.aiBg }};color:{{ det.aiFg }};font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;"><span style="width:7px;height:7px;border-radius:2px;background:{{ det.aiDot }};"></span>{{ det.ai }}</span>
                     <sc-if value="{{ det.disagree }}" hint-placeholder-val="{{ false }}">
                       <span style="font-size:11px;font-weight:600;padding:0 5px;border-radius:3px;background:var(--fg);color:var(--bg);line-height:16px;">≠ {{ det.disagreeLabel }} than rule</span>
                     </sc-if>
@@ -346,9 +352,12 @@ select,input{font-family:inherit}
                   <span style="font-size:12px;color:var(--fg-muted);">{{ det.dec.doneMeta }}</span>
                   <span style="font-size:13px;text-wrap:pretty;">{{ det.dec.doneReason }}</span>
                 </div>
-                <sc-if value="{{ det.dec.canUndo }}" hint-placeholder-val="{{ false }}">
-                  <button onClick="{{ det.dec.undo }}" style="align-self:flex-start;border:0;background:transparent;padding:0;color:var(--fg-muted);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer;" style-hover="color:#8250be">Undo decision</button>
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <sc-if value="{{ det.dec.canUndo }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ det.dec.undo }}" style="border:0;background:transparent;padding:0;color:var(--fg-muted);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer;" style-hover="color:#8250be">Undo decision</button>
                 </sc-if>
+                  <button onClick="{{ det.openAudit }}" style="border:0;background:transparent;padding:0;color:var(--fg);font:inherit;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:0.2em;cursor:pointer;white-space:nowrap;font-weight:500;color:var(--fg-muted);" style-hover="color:#8250be">View audit trail</button>
+                </div>
               </sc-if>
             </section>
           </div>
@@ -356,25 +365,233 @@ select,input{font-family:inherit}
       </div>
     </main>
   </sc-if>
+  <sc-if value="{{ isAudit }}" hint-placeholder-val="{{ false }}">
+    <main style="flex:1;min-height:0;display:flex;flex-direction:column;">
+      <div style="flex:none;position:relative;z-index:1;background:var(--bg);box-shadow:0 2px 6px -2px rgba(37,39,70,.14);">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px 0;">
+          <span style="font-size:14px;font-weight:700;">Audit trail</span>
+          <span style="font-size:12px;color:var(--fg-subtle);">append-only · {{ au.count }} entries</span>
+        </div>
+        <div style="display:flex;align-items:stretch;padding:10px 0 12px;overflow-x:auto;">
+          <div style="display:flex;flex-direction:column;gap:4px;padding:0 20px 0 16px;flex:none;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Case</span>
+            <span style="font-family:var(--ms-font-mono);font-size:16px;font-weight:600;line-height:1.2;">{{ au.id }}</span>
+            <span style="font-size:12px;color:var(--fg-muted);font-variant-numeric:tabular-nums;">{{ au.date }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;padding:0 20px;border-left:1px solid var(--border-soft);min-width:0;flex:none;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Amount</span>
+            <span style="font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap;">{{ au.amount }} <span style="font-size:12px;font-weight:500;color:var(--fg-muted);">CZK</span></span>
+            <span style="font-size:12px;color:var(--fg-muted);white-space:nowrap;">{{ au.orig }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;padding:0 20px;border-left:1px solid var(--border-soft);min-width:0;flex:none;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">{{ au.dirLabel }}</span>
+            <span style="font-family:var(--ms-font-mono);font-size:13px;font-weight:600;white-space:nowrap;line-height:1.2;">{{ au.flow }}</span>
+            <span style="font-size:12px;color:var(--fg-muted);white-space:nowrap;">{{ au.flowSub }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;padding:0 20px;border-left:1px solid var(--border-soft);min-width:0;flex:none;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Alert {{ au.alertType }}</span>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ au.ruleBg }};color:{{ au.ruleFg }};font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;"><span style="width:7px;height:7px;border-radius:2px;background:{{ au.ruleDot }};"></span>{{ au.rule }}</span><span style="font-family:var(--ms-font-mono);font-size:12px;white-space:nowrap;">{{ au.hitKeys }}</span></div>
+            <span style="font-size:12px;color:var(--fg-muted);white-space:nowrap;">{{ au.alertName }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;padding:0 20px;border-left:1px solid var(--border-soft);min-width:0;flex:none;align-items:flex-start;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Status</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:{{ au.statusWeight }};white-space:nowrap;"><span style="width:6px;height:6px;border-radius:999px;border:1.5px solid currentColor;background:{{ au.statusFill }};box-sizing:border-box;"></span>{{ au.status }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;padding:0 20px;border-left:1px solid var(--border-soft);min-width:0;flex:none;padding-right:16px;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Client</span>
+            <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span style="font-family:var(--ms-font-mono);font-size:13px;font-weight:600;">{{ au.client }}</span><span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ au.riskBg }};color:{{ au.riskFg }};font-size:12px;font-weight:700;box-sizing:border-box;line-height:1;"><span style="width:7px;height:7px;border-radius:2px;background:{{ au.riskDot }};"></span>{{ au.risk }}</span></div>
+            <span style="font-size:12px;color:var(--fg-muted);white-space:nowrap;">{{ au.clientType }} · PEP <b style="color:var(--fg);">{{ au.pep }}</b></span>
+          </div>
+          <div style="flex:1 0 16px;"></div>
+          <div style="flex:none;align-self:flex-end;padding-right:16px;"><button onClick="{{ au.back }}" style="border:0;background:transparent;padding:0;color:var(--fg);font:inherit;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:0.2em;cursor:pointer;white-space:nowrap;" style-hover="color:#8250be">← Transaction {{ au.id }}</button></div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;background:var(--bg-sub);">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:12px 16px 24px;align-items:start;">
+          <div style="display:flex;flex-direction:column;min-width:0;">
+            <sc-for list="{{ au.entries }}" as="e" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;">
+                <sc-if value="{{ e.dayBreak }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:grid;grid-template-columns:72px 20px minmax(0,1fr);column-gap:8px;">
+                    <span></span>
+                    <span style="display:flex;justify-content:center;"><span style="width:1px;height:100%;background:{{ e.railTop }};"></span></span>
+                    <span style="padding:10px 0 4px;font-size:12px;font-weight:600;color:var(--fg-muted);">{{ e.day }}</span>
+                  </div>
+                </sc-if>
+                <div style="display:grid;grid-template-columns:72px 20px minmax(0,1fr);column-gap:8px;">
+                  <span style="padding-top:13px;text-align:right;font-size:12px;color:var(--fg-muted);font-variant-numeric:tabular-nums;">{{ e.time }}</span>
+                  <span style="position:relative;display:flex;justify-content:center;">
+                    <span style="position:absolute;left:50%;top:0;bottom:0;width:1px;margin-left:-0.5px;background:var(--border);"></span>
+                    <span style="position:relative;margin-top:16px;width:10px;height:10px;box-sizing:border-box;background:{{ e.nodeBg }};border:1.5px solid {{ e.nodeBorder }};border-radius:{{ e.nodeRadius }};transform:{{ e.nodeRot }};"></span>
+                  </span>
+                  <div style="border:0;border-radius:8px;background:var(--bg);margin:4px 0;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0;box-shadow:{{ e.shadow }};">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                      <span style="font-size:13px;font-weight:700;">{{ e.title }}</span>
+                      <span style="font-family:var(--ms-font-mono);font-size:11px;color:var(--fg-subtle);">{{ e.step }}</span>
+                      <div style="flex:1;"></div>
+                      <span style="display:inline-flex;align-items:stretch;height:20px;border-radius:4px;overflow:hidden;border:1px solid {{ e.kindLine }};box-sizing:border-box;font-size:11px;line-height:1;white-space:nowrap;">
+                        <span style="display:flex;align-items:center;padding:0 6px;background:{{ e.kindBg }};color:{{ e.kindFg }};font-weight:700;letter-spacing:0.04em;text-transform:uppercase;font-size:10px;">{{ e.kind }}</span>
+                        <sc-if value="{{ e.showActor }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;padding:0 7px;font-family:var(--ms-font-mono);color:var(--fg);">{{ e.actor }}</span></sc-if>
+                      </span>
+                      <span style="font-family:var(--ms-font-mono);font-size:11px;color:var(--fg-subtle);min-width:24px;text-align:right;">#{{ e.seq }}</span>
+                    </div>
+                    <div style="display:flex;align-items:baseline;gap:10px;min-width:0;">
+                      <span style="flex:none;font-size:13px;font-weight:700;padding:1px 6px;border-radius:4px;background:var(--bg-sub);font-variant-numeric:tabular-nums;">{{ e.result }}</span>
+                      <span style="font-size:13px;color:var(--fg-muted);text-wrap:pretty;">{{ e.reason }}</span>
+                    </div>
+                    <sc-if value="{{ e.hasInputs }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;gap:14px;">
+                        <button onClick="{{ e.toggle }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;color:var(--fg-muted);cursor:pointer;display:flex;align-items:center;gap:5px;" style-hover="color:#8250be"><span style="display:inline-block;width:8px;transform:{{ e.caret }};">▸</span>Inputs · {{ e.inputCount }}</button>
+                        <sc-if value="{{ e.open }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ e.toggleRaw }}" style="border:0;background:transparent;padding:0;font:inherit;font-size:12px;color:var(--fg-muted);cursor:pointer;text-decoration:underline;" style-hover="color:#8250be">{{ e.rawLabel }}</button>
+                        </sc-if>
+                      </div>
+                      <sc-if value="{{ e.showKv }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;flex-direction:column;gap:8px;padding:8px 10px;border-radius:6px;background:var(--bg-sub);">
+                          <sc-for list="{{ e.groups }}" as="g" hint-placeholder-count="1">
+                            <div style="display:flex;flex-direction:column;gap:2px;">
+                              <sc-if value="{{ g.hasTitle }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;color:var(--fg-muted);padding-bottom:2px;">{{ g.title }}</span></sc-if>
+                              <sc-for list="{{ g.rows }}" as="kv" hint-placeholder-count="3">
+                                <div style="display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:12px;font-size:12px;line-height:1.5;background:{{ kv.bg }};margin:0 -4px;padding:0 4px;border-radius:3px;">
+                                  <span style="font-family:var(--ms-font-mono);color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ kv.k }}</span>
+                                  <span style="font-variant-numeric:tabular-nums;font-weight:{{ kv.w }};word-break:break-word;">{{ kv.v }}</span>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ e.showRaw }}" hint-placeholder-val="{{ false }}">
+                        <pre style="margin:0;padding:8px 10px;border-radius:6px;background:var(--bg-sub);font-family:var(--ms-font-mono);font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--fg);max-height:320px;overflow:auto;">{{ e.json }}</pre>
+                      </sc-if>
+                    </sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ au.hasNext }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:72px 20px minmax(0,1fr);column-gap:8px;">
+                <span style="padding-top:13px;text-align:right;font-size:12px;color:var(--fg-subtle);">next</span>
+                <span style="position:relative;display:flex;justify-content:center;">
+                  <span style="position:absolute;left:50%;top:0;height:16px;width:1px;margin-left:-0.5px;border-left:1px dashed var(--fg-subtle);"></span>
+                  <span style="position:relative;margin-top:16px;width:10px;height:10px;box-sizing:border-box;border:1.5px dashed var(--fg-subtle);border-radius:999px;"></span>
+                </span>
+                <div style="margin:4px 0;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span style="font-size:13px;font-weight:700;color:var(--fg-muted);">{{ au.nextTitle }}</span>
+                  <span style="font-family:var(--ms-font-mono);font-size:11px;color:var(--fg-subtle);">{{ au.nextStep }}</span>
+                  <span style="font-size:12px;color:var(--fg-muted);">{{ au.nextNote }}</span>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:2px;padding:4px 2px 0;">
+              <span style="font-size:14px;font-weight:700;">Inputs as judged</span>
+              <span style="font-size:12px;color:var(--fg-muted);">Snapshot taken at run {{ au.runId }} · {{ au.snapAt }}. Later changes to client data do not alter it.</span>
+            </div>
+            <section style="border:0;border-radius:8px;background:var(--bg);padding:12px 14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--ms-shadow-md);">
+              <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:12px;font-weight:600;color:var(--fg-muted);">Client profile</span><span style="font-family:var(--ms-font-mono);font-size:12px;">{{ au.client }}</span></div>
+              <div style="display:grid;grid-template-columns:150px minmax(0,1fr);row-gap:5px;column-gap:8px;font-size:13px;">
+                <sc-for list="{{ au.profile }}" as="p" hint-placeholder-count="6">
+                  <span style="color:var(--fg-subtle);">{{ p.k }}</span><span style="font-variant-numeric:tabular-nums;font-weight:{{ p.w }};">{{ p.v }}</span>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px;padding-top:10px;border-top:1px solid var(--border-soft);">
+                <span style="font-size:12px;font-weight:600;color:var(--fg-muted);">Q2 2026 statistics</span>
+                <div style="display:grid;grid-template-columns:150px minmax(0,1fr);row-gap:5px;column-gap:8px;font-size:13px;">
+                  <sc-for list="{{ au.q2 }}" as="p" hint-placeholder-count="4">
+                    <span style="color:var(--fg-subtle);">{{ p.k }}</span><span style="font-variant-numeric:tabular-nums;">{{ p.v }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </section>
+            <section style="border:0;border-radius:8px;background:var(--bg);padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--ms-shadow-md);">
+              <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:12px;font-weight:600;color:var(--fg-muted);">Rule versions in run {{ au.runId }}</span><span style="font-size:11px;color:var(--fg-subtle);">{{ au.runPeriod }}</span></div>
+              <sc-for list="{{ au.rules }}" as="r" hint-placeholder-count="6">
+                <div style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:6px;background:{{ r.bg }};">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-family:var(--ms-font-mono);font-size:12px;font-weight:700;">{{ r.key }} {{ r.version }}</span>
+                    <span style="font-size:11px;color:var(--fg-subtle);">alert {{ r.type }} · {{ r.layer }}</span>
+                    <div style="flex:1;"></div>
+                    <sc-if value="{{ r.fired }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:0 6px;line-height:18px;border-radius:3px;background:#252746;color:#ffdc3c;">fired</span></sc-if>
+                  </div>
+                  <span style="font-size:12px;color:var(--fg);">{{ r.desc }}</span>
+                  <span style="font-family:var(--ms-font-mono);font-size:11px;color:var(--fg-muted);">{{ r.params }}</span>
+                  <sc-if value="{{ r.fired }}" hint-placeholder-val="{{ false }}">
+                    <pre style="margin:2px 0 0;padding:6px 8px;border-radius:4px;background:var(--bg);font-family:var(--ms-font-mono);font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;">{{ r.cond }}</pre>
+                    <span style="font-size:11px;color:var(--fg-muted);">{{ r.meta }}</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </sc-if>
+  <sc-if value="{{ prioModal.open }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ prioModal.close }}" style="position:fixed;inset:0;z-index:50;background:rgba(37,39,70,.38);display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div role="dialog" aria-label="Triage score breakdown" onClick="{{ prioModal.stop }}" style="width:100%;max-width:520px;background:var(--bg);border-radius:10px;box-shadow:var(--ms-shadow-lg);display:flex;flex-direction:column;overflow:hidden;">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:16px 18px 12px;">
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Triage score · {{ prioModal.id }}</span>
+            <span style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;"><span style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;">{{ prioModal.prio }}</span><span style="font-size:14px;color:var(--fg-muted);">/100 · {{ prioModal.band }}</span></span>
+          </div>
+          <button aria-label="Close" onClick="{{ prioModal.close }}" style="width:28px;height:28px;border:0;background:transparent;border-radius:6px;font-size:18px;line-height:1;color:var(--fg-muted);cursor:pointer;" style-hover="background:var(--bg-sub);color:var(--fg)">&#215;</button>
+        </div>
+        <div style="padding:0 18px 14px;display:flex;flex-direction:column;gap:6px;">
+          <div style="position:relative;height:8px;border-radius:2px;background:var(--border-soft);overflow:hidden;">
+            <span style="position:absolute;left:0;top:0;bottom:0;width:{{ prioModal.w }};background:var(--fg);"></span>
+            <span style="position:absolute;left:40%;top:0;bottom:0;width:2px;background:var(--bg);"></span>
+            <span style="position:absolute;left:70%;top:0;bottom:0;width:2px;background:var(--bg);"></span>
+          </div>
+          <div style="position:relative;height:14px;font-size:11px;color:var(--fg-subtle);">
+            <span style="position:absolute;left:0;">low</span><span style="position:absolute;left:40%;transform:translateX(-50%);">40 · medium</span><span style="position:absolute;left:70%;transform:translateX(-50%);">70 · high</span><span style="position:absolute;right:0;">100</span>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border-soft);padding:6px 18px 4px;">
+          <sc-for list="{{ prioModal.factors }}" as="pf" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 44px;gap:12px;align-items:center;height:30px;border-bottom:1px solid var(--border-soft);font-size:13px;">
+              <span>{{ pf.label }}</span>
+              <span style="position:relative;height:6px;"><span style="position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--border);"></span><span style="position:absolute;top:0;bottom:0;left:{{ pf.left }};width:{{ pf.width }};background:{{ pf.color }};border-radius:1px;"></span></span>
+              <span style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums;">{{ pf.pts }}</span>
+            </div>
+          </sc-for>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 44px;gap:12px;align-items:center;height:34px;font-size:13px;font-weight:700;">
+            <span>Total</span><span></span><span style="text-align:right;font-variant-numeric:tabular-nums;">{{ prioModal.prio }}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:12px 18px;background:linear-gradient(135deg, #f5f1fb 0%, #e4d8f3 100%);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;padding:0 6px;line-height:18px;border-radius:999px;background:#8250be;color:#ffffff;">AI</span>
+            <span style="font-size:12px;font-weight:600;color:var(--ai-fg);">Explanation</span>
+          </div>
+          <p style="margin:0;font-size:13px;line-height:1.5;color:var(--fg);text-wrap:pretty;">{{ prioModal.aiText }}</p>
+        </div>
+      </div>
+    </div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;standard&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;standard&quot;,&quot;tsType&quot;:&quot;'standard'|'compact'&quot;}}">
 class Component extends DCLogic {
-  state = { decisions: {}, drafts: {}, jump: '', jumpMiss: false, theme: null, query: '', rating: 'all', status: 'all', tabs: [], active: 'overview' };
+  state = { prioFor: null, decisions: this.seedDec(), decLog: this.seedLog(), auditOpen: {}, auditRaw: {}, drafts: {}, jump: '', jumpMiss: false, theme: null, query: '', rating: 'all', status: 'all', tabs: [], active: 'overview' };
 
   data = [
     ['TX000004812','K003797','High','Cash deposits split below reporting threshold, 6× in 48 h','High','Pattern consistent with structuring; counterparties are new',248900,'2026-10-16 09:12','In review','2026-10-16T09:14'],
     ['TX000123456','K003797','High','PEP outgoing payment over 100,000 CZK','Medium','Payee appears monthly with similar amounts; likely a regular supplier',184500,'2026-10-17 15:58','New','2026-10-17T16:02'],
     ['TX000004901','K002118','High','Partial name match on sanctions list (score 0.82)',null,'',82000,'2026-10-19 13:45','New','2026-10-19T13:48'],
-    ['TX000004790','K007731','High','Rapid in-out: funds forwarded within 15 min','High','Pass-through behaviour across 3 accounts',3200000,'2026-10-15 11:03','Escalated','2026-10-15T11:20'],
-    ['TX000004822','K003797','Medium','Amount 4× above client 12-month average','Medium','Seasonal spike also seen in 2024 and 2025',560000,'2026-10-16 14:31','New','2026-10-16T14:40'],
+    ['TX000004790','K007731','High','Rapid in-out: funds forwarded within 15 min','High','Pass-through behaviour across 3 accounts',3200000,'2026-10-15 11:03','In review','2026-10-15T11:20'],
+    ['TX000004822','K003797','Medium','Day volume far above client profile','Medium','Seasonal spike also seen in 2024 and 2025',560000,'2026-10-16 14:31','New','2026-10-16T14:40'],
     ['TX000004870','K015009','Medium','Third-party payer not linked to account','Low','Payer is the registered spouse of the account holder',120500,'2026-10-18 07:52','In review','2026-10-18T08:05'],
     ['TX000004888','K004256','Medium','Round-amount transfers, 5 in one day','Medium','Recipients unrelated; no stated purpose',500000,'2026-10-18 17:20','New','2026-10-18T17:31'],
-    ['TX000004760','K009980','Medium','New account, large incoming transfer in first week','Medium','Inflow consistent with declared property sale',890000,'2026-10-14 09:47','Escalated','2026-10-14T10:02'],
+    ['TX000004760','K009980','Medium','New account, large incoming transfer in first week','Medium','Inflow consistent with declared property sale',890000,'2026-10-14 09:47','In review','2026-10-14T10:02'],
     ['TX000004843','K011274','Low','First payment to this country','Low','Recurring tuition payee, documented',45300,'2026-10-17 10:09','New','2026-10-17T10:15'],
     ['TX000004897','K006613','Low','Change of beneficial owner in last 30 days','Low','Ownership change filed in public register',210000,'2026-10-19 09:33','In review','2026-10-19T09:40'],
     ['TX000004879','K013350','Low','Dormant account reactivated','Failed','',9800,'2026-10-18 12:02','New','2026-10-18T12:10'],
-    ['TX000004801','K002118','Low','Cash withdrawal at unusual ATM location','Low','Location matches card travel notice',18000,'2026-10-15 15:49','Closed','2026-10-15T15:55'],
+    ['TX000004801','K002118','Low','Cash withdrawal at unusual ATM location','Low','Location matches card travel notice',18000,'2026-10-15 15:49','In review','2026-10-15T15:55'],
   ].map(d => ({ id:d[0], client:d[1], rule:d[2], ruleReason:d[3], ai:d[4], aiSummary:d[5], amount:d[6], date:d[7], status:d[8], flagged:new Date(d[9]) }));
 
   now = new Date('2026-10-19T14:30');
@@ -382,6 +599,7 @@ class Component extends DCLogic {
   modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl ';
   componentDidMount() {
     this._onKey = e => {
+      if (e.key === 'Escape' && this.state.prioFor) { this.setState({ prioFor: null }); return; }
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K' || e.key === 'Enter')) {
         e.preventDefault();
         const el = this.jumpRef.current; if (el) { el.focus(); el.select(); }
@@ -399,7 +617,7 @@ class Component extends DCLogic {
     TX000123456: ['Outgoing', 'EUR', 7352, 'AAT00116', 'AT', 'PEP outgoing payment', '100,000 CZK', '184,500 CZK', "Payee appears monthly in the client's history with similar amounts; likely a regular supplier payment. The 2 previous payments to AAT00116 were 178,200 and 186,900 CZK. The client's PEP status alone triggers the rule."],
     TX000004901: ['Outgoing', null, null, 'ACY00877', 'CY', 'Sanctions name screening', 'match score 0.75', 'match score 0.82', ''],
     TX000004790: ['Outgoing', 'EUR', 127490, 'ALV00342', 'LV', 'Rapid pass-through', 'forwarded after 60 min or later', 'forwarded after 15 min', 'Funds of the same amount arrived 15 minutes earlier and left in full. The payee account also appears behind 3 related accounts. Typical behaviour of a pass-through account.'],
-    TX000004822: ['Incoming', 'EUR', 22310, 'ADE00921', 'DE', 'Deviation from client average', '3× 12-month avg (420,000 CZK)', '4× (560,000 CZK)', 'Payer ADE00921 is a known counterparty of this client. A similar spike occurred in October 2024 and 2025. Seasonal billing is a plausible explanation.'],
+    TX000004822: ['Incoming', 'EUR', 22310, 'ADE00921', 'DE', 'Day volume over profile', '100,000 CZK', '1,040,600 CZK', 'Payer ADE00921 is a known counterparty of this client. A similar spike occurred in October 2024 and 2025. Seasonal billing is a plausible explanation.'],
     TX000004870: ['Incoming', null, null, 'ACZ00455', 'CZ', 'Unlinked third-party payer', 'payer on account mandate', 'payer not on mandate', 'The payer account belongs to the registered spouse of the account holder. Earlier payments from it were small and regular. Little indication of third-party funding.'],
     TX000004888: ['Outgoing', null, null, 'ACZ00610', 'CZ', 'Round-amount series', 'max 3 round transfers / day', '5 round transfers / day', 'Five round-amount transfers to 5 different, previously unseen recipients. No payment references were given. The purpose cannot be inferred from the data.'],
     TX000004760: ['Remittance', 'EUR', 35460, 'ASK00203', 'SK', 'Early large inflow', '500,000 CZK in first 30 days', '890,000 CZK on day 6', 'The amount is consistent with the property sale declared at onboarding. The direction could not be confirmed from the payment message. Supporting documents would settle it.'],
@@ -438,6 +656,147 @@ class Component extends DCLogic {
     TX000004790: [['10:48', 'Incoming', 'ACZ00788', 'CZ', 3200000]],
     TX000004888: [['09:14', 'Outgoing', 'ACZ00611', 'CZ', 200000], ['11:02', 'Outgoing', 'ACZ00612', 'CZ', 300000], ['13:45', 'Outgoing', 'ACZ00613', 'CZ', 100000], ['15:30', 'Outgoing', 'ACZ00614', 'CZ', 250000]],
   };
+
+  t0 = Date.now();
+  ts() { const d = new Date(this.now.getTime() + (Date.now() - this.t0)); return this.fmtDt(d) + ':' + this.pad(d.getSeconds()); }
+  seedDec() { return {
+    TX000123456: { action: 'Escalated', reason: 'Monthly supplier payments, but source of funds for the PEP not documented.', at: '2026-10-19 11:42:10', by: 'J. Novák' },
+    TX000004790: { action: 'Escalated', reason: 'Pass-through pattern across 3 related accounts; needs L2 review.', at: '2026-10-16 09:15:32', by: 'P. Král' },
+    TX000004760: { action: 'Escalated', reason: 'Source of funds for the declared property sale is not documented.', at: '2026-10-15 10:30:04', by: 'M. Svobodová' },
+    TX000004801: { action: 'Closed', reason: 'Location matches the card travel notice; confirmed with the client by phone.', at: '2026-10-15 17:10:48', by: 'M. Svobodová' },
+  }; }
+  seedLog() { const s = this.seedDec(), o = {}; Object.keys(s).forEach(k => (o[k] = [{ step: 'decision', ...s[k] }])); return o; }
+  alertMap = { TX000004812: ['A', 'A2'], TX000123456: ['B', 'B2'], TX000004901: ['B', 'B1'], TX000004790: ['C', 'C1'], TX000004822: ['A', 'A1'], TX000004870: ['A', 'A3'], TX000004888: ['A', 'A2'], TX000004760: ['C', 'C1'], TX000004843: ['B', 'B1'], TX000004897: ['A', 'A1'], TX000004879: ['A', 'A1'], TX000004801: ['B', 'B1'] };
+  ruleDefs = [
+    ['A1', 'A', 'Day volume over 25 % of expected monthly volume', 'p.a1_pct = 25 %', 'sum(day.tx.amount) > client.expected_monthly_volume * p.a1_pct / 100'],
+    ['A2', 'A', 'Day volume over 3× the Q2 daily average', 'p.a2_mult = 3', 'sum(day.tx.amount) > p.a2_mult * client.q2_volume / client.q2_days'],
+    ['A3', 'A', 'One transaction over 2× the Q2 maximum', 'p.a3_mult = 2', 'tx.amount > p.a3_mult * client.q2_max_tx'],
+    ['B1', 'B', 'Over 10,000 CZK touching a high-risk country', 'p.b1_min = 10,000 CZK', 'tx.amount > p.b1_min && (tx.payer_country in hr_list || tx.payee_country in hr_list)'],
+    ['B2', 'B', 'PEP outgoing payment over 100,000 CZK', 'p.pep_min = 100,000 CZK', 'client.pep && tx.amount > p.pep_min && tx.direction in ["out","unknown"]'],
+    ['C1', 'C', 'Over 100,000 CZK in within 24 h, at least 80 % out within 6 h', 'p.c1_min = 100,000 CZK · p.forward_pct = 80 · p.out_hours = 6', 'sum(in_24h.amount) > p.c1_min && sum(out_6h.amount) >= sum(in_24h.amount) * p.forward_pct / 100'],
+  ];
+  fmtTs(d) { return this.fmtDt(d) + ':' + this.pad(d.getSeconds()); }
+
+  auditFor(d, s, risk) {
+    const t = this.txd[d.id], c = this.clients[d.client], [aType, aKey] = this.alertMap[d.id];
+    const F = d.flagged.getTime(), at = sec => this.fmtTs(new Date(F + sec * 1000));
+    const czk = n => this.money(n) + ' CZK';
+    const runStart = new Date(F - 175000), runId = Math.floor((runStart - new Date('2026-10-01T00:00')) / 3600000);
+    const pEnd = new Date(runStart); pEnd.setMinutes(0, 0, 0); const pStart = new Date(pEnd - 3600000);
+    const runPeriod = this.fmtDt(pStart) + ' → ' + this.fmtDt(pEnd).slice(11);
+    const hand = { K003797: [55, 182, 61400, 91] }[d.client];
+    const expCount = hand ? hand[0] : Math.max(4, Math.round(c.expected / 7300));
+    const q2c = c.q2 === null ? null : hand ? hand[1] : Math.round(c.q2 / 8900), q2max = c.q2 === null ? null : hand ? hand[2] : Math.round(c.q2 / 26 / 100) * 100, q2days = 91;
+    const years = (new Date(d.date.slice(0, 10)) - new Date(c.contract)) / 31557600000;
+    const dirShort = { Incoming: 'in', Outgoing: 'out', Remittance: 'unknown' }[t.dir];
+    const failed = d.ai === 'Failed', running = !d.ai;
+    const hist = this.hist(d.client), day = d.date.slice(0, 10);
+    const dayTx = hist.filter(x => x.dt.slice(0, 10) === day);
+    const dayVol = dayTx.reduce((a, x) => a + x.amount, 0);
+    const grp = (title, rows) => ({ title, hasTitle: !!title, rows: rows.map(r => ({ k: r[0], v: String(r[1]), w: r[2] ? 700 : 400, bg: r[2] ? 'var(--sel)' : 'transparent' })) });
+
+    // hits
+    let hits, fired, facts;
+    if (d.id === 'TX000123456') {
+      fired = ['B2'];
+      hits = [grp('Hit · B2 v1 · grain ' + d.id, [['tx.amount', czk(d.amount), true], ['p.pep_min', czk(100000)], ['client.pep', 'true'], ['tx.direction', 'out'], ['tx.payee_account', 'AAT00116 (AT)']])];
+      facts = [['amount_vs_pep_min', '1.85×'], ['payee_seen_months', '2 of last 2'], ['payee_avg_amount', czk(182550)], ['payee_amount_spread', '±2.4 %'], ['client_relationship_years', '7.6']];
+    } else if (d.id === 'TX000004822') {
+      fired = ['A1', 'A2', 'A3'];
+      const avg = Math.round(c.q2 / q2days);
+      hits = [
+        grp('Hit · A1 v1 · grain 2026-10-16', [['sum(day.tx.amount)', czk(dayVol), true], ['client.expected_monthly_volume', czk(c.expected)], ['p.a1_pct', '25 %'], ['threshold', czk(c.expected * 0.25)]]),
+        grp('Hit · A2 v1 · grain 2026-10-16', [['sum(day.tx.amount)', czk(dayVol), true], ['q2 daily average', czk(avg)], ['p.a2_mult', '3'], ['threshold', czk(avg * 3)]]),
+        grp('Hit · A3 v1 · grain ' + d.id, [['tx.amount', czk(d.amount), true], ['client.q2_max_tx', czk(q2max)], ['p.a3_mult', '2'], ['threshold', czk(q2max * 2)]]),
+        grp('Transactions on 2026-10-16 (anchor = largest)', dayTx.map(x => [x.id, x.dt.slice(11) + ' · ' + x.dir.toLowerCase() + ' · ' + x.cp + ' · ' + czk(x.amount), x.id === d.id])),
+      ];
+      facts = [['worst_day', '2026-10-16'], ['day_volume', czk(dayVol)], ['day_vs_expected_monthly', Math.round(dayVol / c.expected * 100) + ' %'], ['day_vs_q2_daily_avg', (dayVol / avg).toFixed(1) + '×'], ['largest_tx', czk(d.amount) + ' (' + d.id + ')'], ['same_day_cash_deposits', '2']];
+    } else {
+      fired = [aKey];
+      const rows = [['rule', t.ruleName], ['threshold', t.limit], ['actual', t.actual, true], ['tx.amount', czk(d.amount)], ['tx.direction', dirShort]];
+      hits = [grp('Hit · ' + aKey + ' v1 · grain ' + (aType === 'B' ? d.id : day), rows)];
+      if (aType !== 'B') hits.push(grp('Transactions in window (' + day + ')', dayTx.map(x => [x.id, x.dt.slice(11) + ' · ' + x.dir.toLowerCase() + ' · ' + x.cp + ' · ' + czk(x.amount), x.id === d.id])));
+      facts = [['measured', t.actual], ['threshold', t.limit], ['day_volume', czk(dayVol)], ['client_relationship_years', years.toFixed(1)]];
+    }
+
+    // AI
+    const qMap = { A: 'consistent with profile', B: 'regular counterparty', C: 'legitimate pass-through' };
+    const q = qMap[aType];
+    let p, ans;
+    if (d.id === 'TX000123456') { p = 0.74; ans = 'yes'; }
+    else if (d.id === 'TX000004822') { p = 0.68; ans = 'yes'; }
+    else if (!running && !failed) { const base = { Low: 0.86, Medium: 0.63, High: 0.82 }[d.ai]; p = base; ans = d.ai === 'High' ? 'no' : 'yes'; }
+    const sha = [...(d.id + 'sha')].reduce((a, ch) => (a * 33 + ch.charCodeAt(0)) >>> 0, 5381).toString(16).padStart(8, '0');
+    const aiReason = d.id === 'TX000123456' ? 'Payee appears monthly with similar amounts (178,200 and 186,900 CZK).' : d.id === 'TX000004822' ? 'Seasonal spike seen in Oct 2024 and 2025.' : d.aiSummary;
+
+    // priority
+    let factors;
+    if (d.id === 'TX000123456') factors = [['rule rating High', 20], ['client.pep', 20], ['client.risk high', 15], ['amount 184,500 CZK', 12], ['relationship 7 years', -5]];
+    else if (d.id === 'TX000004822') factors = [['rule rating Medium', 10], ['client.pep', 20], ['client.risk high', 15], ['amount 560,000 CZK', 8], ['relationship 7 years', -5], ['AI consistent with profile', -7]];
+    else {
+      factors = [['rule rating ' + d.rule, { High: 20, Medium: 10, Low: 4 }[d.rule]]];
+      if (c.pep) factors.push(['client.pep', 20]);
+      factors.push(['client.risk ' + c.risk.toLowerCase(), { High: 15, Medium: 8, Low: 0 }[c.risk]]);
+      factors.push(['amount ' + czk(d.amount), d.amount >= 1000000 ? 15 : d.amount >= 200000 ? 12 : d.amount >= 50000 ? 8 : 3]);
+      factors.push(['relationship ' + Math.floor(years) + ' years', -Math.min(10, Math.round(years * 0.7))]);
+      if (!running && !failed && d.ai !== d.rule) factors.push(['AI ' + (this.rank[d.ai] < this.rank[d.rule] ? 'higher' : 'lower') + ' than rule', this.rank[d.ai] < this.rank[d.rule] ? 5 : -5]);
+    }
+    const prio = Math.max(0, Math.min(100, factors.reduce((a, x) => a + x[1], 0)));
+    const band = prio < 40 ? 'low' : prio < 70 ? 'medium' : 'high';
+    const route = aType === 'A' ? ['l1_analyst', 'l2_analyst'] : ['l2_analyst', 'compliance_officer'];
+    const approver = route[1] + (c.pep ? ' + board_aml_member' : '');
+
+    const E = [];
+    const add = (sec, step, title, kind, actor, result, reason, groups, extra) => E.push({ sec, at: typeof sec === 'string' ? sec : at(sec), step, title, kind, actor, result, reason, groups: groups || [], ...(extra || {}) });
+    add(-175, 'rules_run', 'Rules run', 'engine', 'engine', 'run ' + runId, 'Production run over the last hour of data.', [grp('', [['run.id', runId], ['run.kind', 'production'], ['run.period', runPeriod], ['run.started_at', this.fmtTs(runStart)], ['run.finished_at', at(-86)], ['rule_versions', 'A1 v1 · A2 v1 · A3 v1 · B1 v1 · B2 v1 · C1 v1'], ['approved_by', 'J. Dvořák · 2026-09-18']])]);
+    add(-85, 'alert_raised', 'Alert raised', 'engine', 'engine', 'Alert ' + aType, 'Rule ' + fired.join(', ') + ' fired for client ' + d.client + '.', hits);
+    add(-84, 'facts_computed', 'Facts computed', 'engine', 'engine', facts.length + ' values', 'Named values the decision steps use.', [grp('', facts)]);
+    add(-84, 'gates_checked', 'Gates checked', 'policy', 'policy v0.3', c.pep ? 'always_review' : 'none', c.pep ? 'PEP alerts never close automatically.' : 'No hard rule applied.', [grp('', c.pep ? [['gate', 'pep_never_auto_close', true], ['client.pep', 'true']] : [['gates_evaluated', 'pep_never_auto_close · sanctions_hit · high_risk_country'], ['applied', 'none']])]);
+    if (running) add(-80, 'ai_judgement', 'AI judgement', 'model', 'jev-1.13.0', 'running', 'Waiting for the model response.', [grp('', [['question', q + '?'], ['status', 'pending']])]);
+    else if (failed) add(-20, 'ai_judgement', 'AI judgement', 'model', 'jev-1.13.0', 'failed', 'Model timed out; fallback claude-sonnet-4.5 also failed. Rule rating only.', [grp('', [['question', q + '?'], ['primary', 'jev-1.13.0 · timeout after 30 s'], ['fallback', 'claude-sonnet-4.5 · error 529'], ['input_sha256', sha + '…' + sha.slice(0, 4)]])]);
+    else add(-61, 'ai_judgement', 'AI judgement', 'model', 'jev-1.13.0', q + ': ' + ans + ' (p = ' + p.toFixed(2) + ')', aiReason, [grp('Answer', [['question', q + '?'], ['answer', ans, true], ['distribution', ans === 'yes' ? 'yes ' + p.toFixed(2) + ' · no ' + (1 - p - 0.05).toFixed(2) + ' · unsure 0.05' : 'no ' + p.toFixed(2) + ' · yes ' + (1 - p - 0.05).toFixed(2) + ' · unsure 0.05'], ['confidence', p.toFixed(2)], ['ai_rating', d.ai]]), grp('Call', [['model', 'jev-1.13.0'], ['fallback', 'claude-sonnet-4.5 (not used)'], ['input_sha256', sha + '7c1e' + sha + 'a90b'], ['latency', '2.4 s']])]);
+    add(-58, 'triage', 'Triage', 'policy', 'policy v0.3', 'REVIEW', c.pep ? 'PEP gate' : running || failed ? 'No AI answer; cannot auto-close.' : 'AI confidence below auto-close threshold.', [grp('', [['gate', c.pep ? 'always_review' : 'none'], ['ai_answer', running ? 'pending' : failed ? 'failed' : ans + ' (p = ' + p.toFixed(2) + ')'], ['threshold.auto_close', 'p ≥ 0.90 and no gate'], ['result', 'REVIEW', true]])]);
+    add(-58, 'priority', 'Priority', 'policy', 'policy v0.3', prio + ' · ' + band, 'Sum of factor points; bands low < 40, medium < 70, high.', [grp('Points per factor', factors.map(x => [x[0], (x[1] > 0 ? '+' : '') + x[1]]).concat([['total', prio + ' (' + band + ')', true]]))]);
+    add(-57, 'routed', 'Routed', 'policy', 'policy v0.3', route[0] + ' → ' + approver, 'Escalation matrix row ' + aType + (c.pep ? ' · PEP' : '') + '.', [grp('', [['matrix_row', aType + (c.pep ? ' · PEP' : '')], ['executive_role', route[0]], ['approver_role', approver]])]);
+    const log = s.decLog[d.id] || [];
+    let lastDecSeq = null, open = true;
+    log.forEach(x => {
+      if (x.step === 'decision') { add(x.at, 'decision', 'Decision', 'person', x.by, x.action, x.reason, [grp('', [['decision', x.action, true], ['reason', x.reason]])]); lastDecSeq = E.length; open = false; }
+      else { add(x.at, 'decision_undone', 'Decision undone', 'person', x.by, 'undone', 'Decision #' + lastDecSeq + ' was undone. The entry stays in the trail.', [grp('', [['undoes', '#' + lastDecSeq]])]); open = true; }
+    });
+
+    const kinds = { engine: ['Engine', 'var(--bg-sub)', 'var(--fg-muted)', 'var(--border)', 'var(--fg-subtle)', 'var(--fg-subtle)', '2px', 'none'], model: ['AI model', '#8250be', '#ffffff', 'var(--ai-line)', '#8250be', '#8250be', '999px', 'none'], policy: ['Policy', 'var(--bg-sub)', 'var(--fg-muted)', 'var(--border)', 'var(--bg)', 'var(--fg)', '1px', 'rotate(45deg)'], person: ['Person', '#252746', '#ffffff', '#252746', '#252746', '#252746', '999px', 'none'] };
+    let prevDay = null;
+    const entries = E.map((e, i) => {
+      const k = kinds[e.kind], key = d.id + ':' + (i + 1), isOpen = !!s.auditOpen[key], raw = !!s.auditRaw[key];
+      const dayStr = e.at.slice(0, 10), dayBreak = dayStr !== prevDay; prevDay = dayStr;
+      const inputs = {}; e.groups.forEach(g => g.rows.forEach(r => (inputs[r.k] = r.v)));
+      const json = JSON.stringify({ id: i + 1, at: e.at, actor: e.actor, actor_kind: e.kind, step: e.step, result: e.result, reason: e.reason, inputs }, null, 2);
+      return { ...e, seq: i + 1, time: e.at.slice(11), dayBreak, day: new Date(dayStr + 'T12:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }), railTop: i === 0 ? 'transparent' : 'var(--border)',
+        kind: k[0], showActor: e.actor.toLowerCase() !== k[0].toLowerCase(), kindBg: k[1], kindFg: k[2], kindLine: k[3], nodeBg: k[4], nodeBorder: k[5], nodeRadius: k[6], nodeRot: k[7],
+        shadow: e.kind === 'person' ? 'var(--ms-shadow-md)' : 'none',
+        hasInputs: e.groups.length > 0, inputCount: Object.keys(inputs).length, open: isOpen, showKv: isOpen && !raw, showRaw: isOpen && raw, caret: isOpen ? 'rotate(90deg)' : 'none',
+        rawLabel: raw ? 'Key / value' : 'Raw JSON', json,
+        toggle: () => this.setState(st => ({ auditOpen: { ...st.auditOpen, [key]: !st.auditOpen[key] } })),
+        toggleRaw: () => this.setState(st => ({ auditRaw: { ...st.auditRaw, [key]: !st.auditRaw[key] } })) };
+    });
+    const rk = risk(d.rule), cr = risk(c.risk), status = s.decisions[d.id] ? s.decisions[d.id].action : d.status;
+    const fx = t.cur ? t.cur + ' ' + this.money(t.orig, true) + ' at ' + (d.amount / t.orig).toFixed(3) : 'original CZK';
+    const flow = t.dir === 'Incoming' ? t.cp + ' → ' + d.client : d.client + (t.dir === 'Outgoing' ? ' → ' : ' ↔ ') + t.cp;
+    const flowSub = t.dir === 'Incoming' ? this.countries[t.cc] + ' → CZ' : 'CZ → ' + this.countries[t.cc];
+    return {
+      id: d.id, count: entries.length, entries, back: () => this.openTab(d.id),
+      date: d.date, amount: this.money(d.amount, true), orig: fx, dirLabel: { Incoming: 'Incoming', Outgoing: 'Outgoing', Remittance: 'Remittance · unknown' }[t.dir], flow, flowSub,
+      alertType: aType, alertName: t.ruleName, hitKeys: fired.map(x => x + ' v1').join(' · '), rule: d.rule, ruleBg: rk.bg, ruleFg: rk.fg, ruleDot: rk.dot,
+      status, statusWeight: status === 'Escalated' ? 700 : 500, statusFill: status === 'New' ? 'transparent' : 'currentColor',
+      client: d.client, clientType: c.type, pep: c.pep ? 'yes' : 'no', risk: c.risk, riskBg: cr.bg, riskFg: cr.fg, riskDot: cr.dot,
+      hasNext: true, nextTitle: open ? 'Decision' : 'Approval (four eyes)', nextStep: open ? 'decision' : 'approved', nextNote: open ? 'awaiting ' + route[0] : 'awaiting ' + approver,
+      runId, snapAt: this.fmtTs(runStart), runPeriod, prioScore: prio, prioBand: band, prioFactors: factors, prioAt: at(-58), firedKeys: fired,
+      profile: [['Type', c.type], ['Country', this.countries[c.cc]], ['Contract', c.contract + ' · ' + c.channel.toLowerCase()], ['PEP', c.pep ? 'yes' : 'no', c.pep], ['AML risk score', c.risk.toLowerCase() + ' (set by the bank)'], ['Expected monthly volume', czk(c.expected)], ['Expected count', expCount + ' / month']].map(x => ({ k: x[0], v: x[1], w: x[2] ? 700 : 400 })),
+      q2: c.q2 === null ? [{ k: 'History', v: 'none (account opened ' + c.contract + ')' }] : [['Volume', czk(c.q2)], ['Transactions', q2c], ['Largest transaction', czk(q2max)], ['Days', q2days], ['Daily average', czk(Math.round(c.q2 / q2days))]].map(x => ({ k: x[0], v: String(x[1]) })),
+      rules: this.ruleDefs.map(r => { const on = fired.includes(r[0]); return { key: r[0], version: 'v1', type: r[1], layer: 'company', desc: r[2], params: r[3], cond: r[4], fired: on, bg: on ? 'var(--sel)' : 'var(--bg-sub)', meta: 'active · author finreg-brief · approved by J. Dvořák, 2026-09-18' }; }),
+    };
+  }
   pastFlags = {
     TX000003970: ['High', 'Closed', 'Regular supplier payment, invoice verified'],
     TX000003311: ['High', 'Closed', 'Regular supplier payment, contract on file'],
@@ -545,7 +904,7 @@ class Component extends DCLogic {
     const dirLabel = { Incoming: 'Incoming', Outgoing: 'Outgoing', Remittance: 'Remittance · direction unknown' };
     const draft = s.drafts[d.id] || { choice: null, close: '', escalate: '' };
     const setDraft = p => this.setState(st => ({ drafts: { ...st.drafts, [d.id]: { ...(st.drafts[d.id] || { choice: null, close: '', escalate: '' }), ...p } } }));
-    const rec = s.decisions[d.id] || (d.id === 'TX000004801' ? { action: 'Closed', reason: 'Location matches the card travel notice; confirmed with the client by phone.', at: '2026-10-15 17:10', by: 'M. Svobodová', seed: true } : null);
+    const rec = s.decisions[d.id] || null;
     const reason = draft.choice ? draft[draft.choice] : '';
     const ok = reason.trim().length > 0;
     const pickBtn = on => ({ bg: on ? 'var(--fg)' : 'transparent', fg: on ? 'var(--bg)' : 'var(--fg)', border: on ? 'var(--fg)' : 'var(--border)' });
@@ -562,11 +921,19 @@ class Component extends DCLogic {
         : { pFrom: d.client, pFromSub: 'Client · ' + c.type, pTo: t.cp, pToSub: (t.dir === 'Outgoing' ? 'Payee · ' : 'Counterparty · ') + this.countries[t.cc], pArrow: t.dir === 'Outgoing' ? '→' : '↔' }),
       rule: d.rule, ruleReason: d.ruleReason, ruleFg: rk.fg, ruleBg: rk.bg, ruleDot: rk.dot,
       ruleName: t.ruleName, limit: t.limit, actual: t.actual,
-      ai: d.ai, aiRunning: !d.ai, aiDone: !!d.ai && !dFailed, aiFailed: dFailed, aiFg: ak.fg, aiDot: ak.dot, aiLong: t.aiLong,
+      ai: d.ai, aiRunning: !d.ai, aiDone: !!d.ai && !dFailed, aiFailed: dFailed, aiBg: ak.bg, aiFg: ak.fg, aiDot: ak.dot, aiLong: t.aiLong,
       disagree, disagreeLabel: disagree ? (this.rank[d.ai] < this.rank[d.rule] ? 'higher' : 'lower') : '',
       flowDay: sd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
       flowCount: dayTx.length + (dayTx.length === 1 ? ' transaction' : ' transactions'),
       flowSvg: this.flowSvg(dayTx, d.id, d.client),
+      openAudit: () => this.openTab('audit:' + d.id),
+      ...(() => { const a = this.auditFor(d, s, risk); const def = Object.fromEntries(this.ruleDefs.map(r => [r[0], r]));
+        const rows = d.id === 'TX000004822'
+          ? [['A1', def.A1[2], '100,000 CZK', '1,040,600 CZK'], ['A2', def.A2[2], '53,406 CZK', '1,040,600 CZK'], ['A3', def.A3[2], '122,800 CZK', '560,000 CZK']]
+          : [[a.firedKeys[0], t.ruleName, t.limit, t.actual]];
+        return { prio: a.prioScore, prioBand: a.prioBand, openPrio: () => this.setState({ prioFor: d.id }),
+          multiRule: rows.length > 1, rulesCount: rows.length, rulesLabel: rows.length > 1 ? 'Rules fired' : 'Rule fired',
+          rulesFired: rows.map((r, i) => ({ key: r[0], name: r[1], limit: r[2], actual: r[3], sep: i ? '1px solid var(--border-soft)' : '0' })) }; })(),
       histCount: 'last ' + hist.length,
       hist: hist.map(x => {
         const past = this.pastFlags[x.id];
@@ -596,10 +963,10 @@ class Component extends DCLogic {
         reason, onReason: e => setDraft({ [draft.choice]: e.target.value }),
         disabled: !ok, opacity: ok ? 1 : 0.4, cursor: ok ? 'pointer' : 'not-allowed',
         submitLabel: draft.choice === 'escalate' ? 'Escalate transaction' : 'Close transaction',
-        submit: () => { if (!ok) return; this.setState(st => ({ decisions: { ...st.decisions, [d.id]: { action: draft.choice === 'escalate' ? 'Escalated' : 'Closed', reason: reason.trim(), at: this.fmtDt(this.now), by: 'J. Novák' } } })); },
+        submit: () => { if (!ok) return; const rec2 = { action: draft.choice === 'escalate' ? 'Escalated' : 'Closed', reason: reason.trim(), at: this.ts(), by: 'J. Novák' }; this.setState(st => ({ decisions: { ...st.decisions, [d.id]: rec2 }, decLog: { ...st.decLog, [d.id]: [...(st.decLog[d.id] || []), { step: 'decision', ...rec2 }] } })); },
         doneTitle: rec ? rec.action : '', doneMeta: rec ? rec.by + ' · ' + rec.at : '', doneReason: rec ? rec.reason : '',
         canUndo: !!rec && !rec.seed,
-        undo: () => this.setState(st => { const n = { ...st.decisions }; delete n[d.id]; return { decisions: n }; }),
+        undo: () => this.setState(st => { const n = { ...st.decisions }; delete n[d.id]; return { decisions: n, decLog: { ...st.decLog, [d.id]: [...(st.decLog[d.id] || []), { step: 'decision_undone', at: this.ts(), by: 'J. Novák' }] } }; }),
       },
     };
   }
@@ -658,7 +1025,7 @@ class Component extends DCLogic {
         ruleFg: rk.fg, ruleBg: rk.bg, ruleDot: rk.dot,
         aiRunning: !r.ai, aiDone: !!r.ai && !failed, aiFg: ak.fg, aiDot: ak.dot,
         aiMatch: !!r.ai && !failed && !disagree, aiSplit: !r.ai || disagree, aiFailed: failed,
-        matchTip: 'Rule rating ' + r.rule + ' · AI rating matched (' + r.rule + ')',
+        matchTip: 'Rule rating ' + r.rule + ' · AI rating ' + r.ai + (disagree ? ' (differs)' : ' (matches)'), aiNone: !r.ai || failed, noneTip: 'Rule rating ' + r.rule + (failed ? ' · AI assessment failed' : ' · AI assessment running'),
         splitTip: 'AI rating ' + r.ai + ' differs from rule rating ' + r.rule,
         disagree, disagreeLabel: disagree ? (this.rank[r.ai] < this.rank[r.rule] ? 'higher' : 'lower') : '',
         age: this.age(r.flagged),
@@ -675,27 +1042,40 @@ class Component extends DCLogic {
 
     const activeShadow = 'inset 0 2px 0 #ffdc3c';
     const tabs = s.tabs.map(id => {
-      const on = s.active === id;
+      const on = s.active === id, isAudit = id.startsWith('audit:'), txid = isAudit ? id.slice(6) : id, row = byId[txid];
       return {
-        id, title: id + ' · ' + byId[id].client,
+        id, txid, isAudit, isTx: !isAudit, title: (isAudit ? 'Audit trail · ' : '') + txid + ' · ' + row.client,
         bg: on ? 'var(--bg)' : 'transparent', shadow: on ? activeShadow : 'none',
-        color: on ? 'var(--fg)' : 'var(--fg-muted)', dot: risk(byId[id].rule).dot,
-        rule: byId[id].rule, client: byId[id].client,
-        amount: byId[id].amount.toLocaleString('en-US') + ' CZK',
+        color: on ? 'var(--fg)' : 'var(--fg-muted)', dot: risk(row.rule).dot,
         activate: () => this.setState({ active: id }),
         close: e => { e.stopPropagation(); this.closeTab(id); },
       };
     });
 
-    const d = byId[s.active];
+    const isAudit = s.active.startsWith('audit:');
+    const d = isAudit ? null : byId[s.active];
     const det = d ? this.detailFor(d, s, risk, byId) : {};
+    const au = isAudit ? this.auditFor(byId[s.active.slice(6)], s, risk) : {};
     const hasFilters = !!q || s.rating !== 'all' || s.status !== 'all';
 
     return {
       theme, themeLabel: theme === 'dark' ? 'Light theme' : 'Dark theme',
       toggleTheme: () => this.setState({ theme: theme === 'dark' ? 'light' : 'dark' }),
       tabs, openCount: data.filter(r => r.status !== 'Closed').length,
-      isOverview: s.active === 'overview', isDetail: s.active !== 'overview',
+      isOverview: s.active === 'overview', isDetail: !!d, isAudit, au,
+      prioModal: (() => { const pd = s.prioFor && byId[s.prioFor]; if (!pd) return { open: false };
+        const a = this.auditFor(pd, s, risk), mx = Math.max(...a.prioFactors.map(x => Math.abs(x[1])), 1);
+        const pos = a.prioFactors.filter(x => x[1] > 0).sort((p, q) => q[1] - p[1]), neg = a.prioFactors.filter(x => x[1] < 0);
+        const nm = x => x[0].replace('client.pep', 'PEP status').replace('client.risk', 'client risk') + ' (' + (x[1] > 0 ? '+' : '−') + Math.abs(x[1]) + ')';
+        const share = pos.slice(0, 2).reduce((t, x) => t + x[1], 0);
+        const cap = s2 => s2.charAt(0).toUpperCase() + s2.slice(1);
+        const aiText = 'Main drivers are ' + pos.slice(0, 2).map(nm).join(' and ') + ', +' + share + ' points together. '
+          + (neg.length ? cap(neg.map(nm).join(' and ')) + (neg.length > 1 ? ' lower' : ' lowers') + ' the score. ' : 'No factor lowers the score. ')
+          + (a.prioBand === 'high' ? 'High band: take it before medium and low cases.' : a.prioBand === 'medium' ? 'Medium band: review within the standard time limit.' : 'Low band: review after higher bands.');
+        return { open: true, id: pd.id, aiText, prio: a.prioScore, band: a.prioBand, w: a.prioScore + '%', at: a.prioAt,
+          factors: a.prioFactors.map(x => ({ label: x[0], pts: (x[1] > 0 ? '+' : '') + x[1], width: (Math.abs(x[1]) / mx * 50) + '%', left: x[1] >= 0 ? '50%' : (50 - Math.abs(x[1]) / mx * 50) + '%', color: x[1] >= 0 ? 'var(--fg)' : 'var(--fg-subtle)' })),
+          close: () => this.setState({ prioFor: null }), stop: e => e.stopPropagation(),
+          toAudit: () => { this.setState({ prioFor: null }); this.openTab('audit:' + pd.id); } }; })(),
       ovBg: s.active === 'overview' ? 'var(--bg)' : 'transparent',
       ovShadow: s.active === 'overview' ? activeShadow : 'none',
       cntHigh: data.filter(r => r.status !== 'Closed').filter(r => r.rule === 'High').length,
@@ -729,3 +1109,4 @@ class Component extends DCLogic {
 </script>
 </body>
 </html>
+
