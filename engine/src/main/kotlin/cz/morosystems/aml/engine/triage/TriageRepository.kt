@@ -143,7 +143,10 @@ class TriageRepository(private val jdbc: JdbcClient) {
             .groupBy({ it.first }, { it.second })
             .mapValues { it.value.toSet() }
 
-    /** Upserts the decisions so a re-triage of the same run replaces its earlier verdict instead of failing. */
+    /**
+     * Upserts the decisions so a re-triage of the same run replaces its earlier verdict instead of failing,
+     * and moves alerts triaged `ESCALATE` from `NEW` to `ESCALATED`.
+     */
     fun save(decisions: List<TriageDecision>) {
         decisions.chunked(BATCH).forEach { chunk ->
             val values = chunk.joinToString(", ") { "(?, ?, ?, ?::jsonb, ?, ?)" }
@@ -169,6 +172,10 @@ class TriageRepository(private val jdbc: JdbcClient) {
                     decided_at = now()
                 """,
             ).params(params).update()
+        }
+        // An ESCALATE verdict goes straight to the manager. Only a NEW alert moves: a person's status stays.
+        decisions.filter { it.disposition == Disposition.ESCALATE }.map { it.alertId }.chunked(BATCH).forEach { ids ->
+            jdbc.sql("update alert set status = 'ESCALATED' where status = 'NEW' and id in (:ids)").param("ids", ids).update()
         }
     }
 

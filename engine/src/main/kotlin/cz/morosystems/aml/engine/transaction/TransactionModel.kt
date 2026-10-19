@@ -28,6 +28,8 @@ data class FlaggedTransaction(
     val disposition: String,
     /** The highest triage score of the transaction's alerts. */
     val score: Int,
+    /** Where the case stands: the most advanced status of its alerts (`NEW` < `FALSE_POSITIVE` < `ESCALATED` < `REPORTED`). */
+    val status: String,
     /** When the first alert on this transaction was created. */
     val flaggedAt: OffsetDateTime,
 )
@@ -98,6 +100,8 @@ data class TransactionAlert(
     val createdAt: OffsetDateTime,
     /** Null when the alert has not been triaged. */
     val triage: AlertTriage?,
+    /** `NEW`, `ESCALATED`, `FALSE_POSITIVE` or `REPORTED`. */
+    val status: String,
     val hits: List<Hit>,
 )
 
@@ -119,7 +123,14 @@ data class TransactionDetail(
     val rating: String?,
     /** The most severe triage disposition of its alerts; `AUTO_CLOSE` means triage closed it without a person. */
     val disposition: String?,
+    /** The most advanced status of its alerts, as in the queue; null when the latest run raised none. */
+    val status: String?,
     val alerts: List<TransactionAlert>,
-    /** All of the client's transactions, newest first. */
-    val history: List<HistoryTransaction>,
+    /** The client's transactions on this transaction's day, newest first (it among them): the money flow. */
+    val day: List<HistoryTransaction>,
+    /** All of the client's transactions; `GET /api/transactions/{id}/history` pages through them. */
+    val historyCount: Int,
 )
+
+/** A batch of the client's transactions next to another one, newest first. */
+data class HistoryPage(val items: List<HistoryTransaction>, val more: Boolean)

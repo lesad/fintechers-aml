@@ -12,6 +12,11 @@ import tools.jackson.databind.json.JsonMapper
 class TransactionRepository(private val jdbc: JdbcClient) {
     private val json = JsonMapper()
 
+    /** Sets the status of the transaction's alerts in the latest finished run, and who set it; false when it has none there. */
+    fun setStatus(id: String, status: String, userId: Long): Boolean =
+        jdbc.sql("update alert set status = ?, status_by = ? where transaction_id = ? and run_id = ($LATEST_RUN)")
+            .params(status, userId, id).update() > 0
+
     /**
      * The review queue: transactions the latest finished run alerted on and triage did not close on its own,
      * most severe disposition first, then highest score. `statuses` keeps a transaction when any of its alerts
@@ -30,7 +35,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
             """
             $QUEUE
             select q.id, t.client_id, t.ts, t.amount, t.volume, t.currency, t.direction,
-                   q.alert_types, q.rules, q.rule_names, q.flagged_at, q.rating, q.disposition, q.score
+                   q.alert_types, q.rules, q.rule_names, q.flagged_at, q.rating, q.disposition, q.score, q.status
             from queue q join transaction t on t.id = q.id
             $filter
             order by q.sev desc, q.score desc, q.id
@@ -49,6 +54,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 rules = rs.strings("rules").zip(rs.strings("rule_names"), ::RuleRef),
                 rating = rs.getString("rating"),
                 disposition = rs.getString("disposition"),
+                status = rs.getString("status"),
                 score = rs.getInt("score"),
                 flaggedAt = rs.getObject("flagged_at", OffsetDateTime::class.java),
             )
@@ -114,13 +120,16 @@ class TransactionRepository(private val jdbc: JdbcClient) {
 
         val alerts = alerts(id)
         val worst = alerts.mapNotNull { it.triage?.disposition }.maxByOrNull { DISPOSITIONS.indexOf(it) }
-        return TransactionDetail(tx, client, worst?.let(::ratingOf), worst, alerts, history(client.id))
+        val status = alerts.map { it.status }.maxByOrNull { STATUSES.indexOf(it) }
+        val historyCount = jdbc.sql("select count(*) from transaction where client_id = ?").param(client.id)
+            .query(Int::class.java).single()
+        return TransactionDetail(tx, client, worst?.let(::ratingOf), worst, status, alerts, day(client.id, tx.ts), historyCount)
     }
 
     private fun alerts(transactionId: String): List<TransactionAlert> {
         val alerts = jdbc.sql(
             """
-            select a.id, a.alert_type, a.created_at,
+            select a.id, a.alert_type, a.status, a.created_at,
                    tr.disposition, tr.score, tr.reasons::text as reasons, tr.config_version, tr.decided_at
             from alert a left join alert_triage tr on tr.alert_id = a.id
             where a.run_id = ($LATEST_RUN) and a.transaction_id = ? order by a.id
@@ -135,7 +144,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                     decidedAt = rs.getObject("decided_at", OffsetDateTime::class.java),
                 )
             }
-            AlertRow(rs.getLong("id"), rs.getString("alert_type"), rs.getObject("created_at", OffsetDateTime::class.java), triage)
+            AlertRow(rs.getLong("id"), rs.getString("alert_type"), rs.getString("status"), rs.getObject("created_at", OffsetDateTime::class.java), triage)
         }.list()
         return alerts.map { row ->
             val hits = jdbc.sql(
@@ -149,7 +158,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 val evidence = rs.getString("evidence")?.let { json.readValue(it, Map::class.java) as Map<String, Any?> } ?: emptyMap()
                 Hit(rs.getString("key"), rs.getString("name"), rs.getInt("version"), rs.getString("grain_key"), evidence)
             }.list()
-            TransactionAlert(row.id, row.type, row.createdAt, row.triage, hits)
+            TransactionAlert(row.id, row.type, row.createdAt, row.triage, row.status, hits)
         }
     }
 
@@ -159,7 +168,30 @@ class TransactionRepository(private val jdbc: JdbcClient) {
             TriageReason(it["code"] as String, it["description"] as String, (it["points"] as Number).toInt())
         }
 
-    private fun history(clientId: String): List<HistoryTransaction> =
+    /**
+     * Up to [limit] of the client's transactions right before (`older`) or after (`newer`) transaction [id],
+     * newest first, and whether more lie beyond them. Null for an unknown transaction.
+     */
+    fun history(id: String, older: Boolean, limit: Int): HistoryPage? {
+        val anchor = jdbc.sql("select client_id, ts from transaction where id = ?").param(id)
+            .query { rs, _ -> rs.getString("client_id") to rs.getObject("ts", LocalDateTime::class.java) }
+            .optional().orElse(null) ?: return null
+        val rows = historyRows(
+            if (older) "(t.ts, t.id) < (:ts, :id) order by t.ts desc, t.id desc" else "(t.ts, t.id) > (:ts, :id) order by t.ts, t.id",
+            mapOf("client" to anchor.first, "ts" to anchor.second, "id" to id, "limit" to limit + 1),
+        )
+        val page = rows.take(limit)
+        return HistoryPage(if (older) page else page.reversed(), more = rows.size > limit)
+    }
+
+    /** The client's transactions on the calendar day of [ts], newest first. */
+    private fun day(clientId: String, ts: LocalDateTime): List<HistoryTransaction> =
+        historyRows(
+            "t.ts::date = :day order by t.ts desc, t.id desc",
+            mapOf("client" to clientId, "day" to ts.toLocalDate(), "limit" to Int.MAX_VALUE),
+        )
+
+    private fun historyRows(condition: String, params: Map<String, Any>): List<HistoryTransaction> =
         jdbc.sql(
             """
             select t.id, t.ts, t.direction, t.amount,
@@ -171,10 +203,10 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 select transaction_id, array_agg(distinct alert_type order by alert_type) as types
                 from alert where run_id = ($LATEST_RUN) group by transaction_id
             ) a on a.transaction_id = t.id
-            where t.client_id = ?
-            order by t.ts desc, t.id
+            where t.client_id = :client and $condition
+            limit :limit
             """,
-        ).param(clientId).query { rs, _ ->
+        ).params(params).query { rs, _ ->
             HistoryTransaction(
                 id = rs.getString("id"),
                 ts = rs.getObject("ts", LocalDateTime::class.java),
@@ -189,13 +221,16 @@ class TransactionRepository(private val jdbc: JdbcClient) {
     private fun ResultSet.strings(column: String): List<String> =
         (getArray(column).array as Array<*>).map { it as String }
 
-    private data class AlertRow(val id: Long, val type: String, val createdAt: OffsetDateTime, val triage: AlertTriage?)
+    private data class AlertRow(val id: Long, val type: String, val status: String, val createdAt: OffsetDateTime, val triage: AlertTriage?)
 
     private companion object {
         val RATINGS = listOf("High", "Medium", "Low")
 
         /** Triage dispositions, mildest first, as in `triage/TriageModel.kt`. */
         val DISPOSITIONS = listOf("AUTO_CLOSE", "REVIEW_LOW", "REVIEW_MEDIUM", "REVIEW_HIGH", "ESCALATE")
+
+        /** Alert statuses in workflow order: a case shows the most advanced one of its alerts. */
+        val STATUSES = listOf("NEW", "FALSE_POSITIVE", "ESCALATED", "REPORTED")
 
         /** The three-level rating the UI shows. Must match the `rating` case in [QUEUE]. */
         fun ratingOf(disposition: String): String = when (disposition) {
@@ -223,10 +258,13 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                        array_agg(distinct alert_type order by alert_type) as alert_types,
                        array_agg(id) as alert_ids,
                        array_agg(distinct status) as statuses,
+                       (array['NEW','FALSE_POSITIVE','ESCALATED','REPORTED'])[
+                           max(array_position(array['NEW','FALSE_POSITIVE','ESCALATED','REPORTED'], status))
+                       ] as status,
                        max(sev) as sev, max(score) as score, min(created_at) as flagged_at
                 from alert_sev group by transaction_id
             ), queue as (
-                select p.id, p.alert_types, p.statuses, p.sev, p.score, p.flagged_at,
+                select p.id, p.alert_types, p.statuses, p.status, p.sev, p.score, p.flagged_at,
                        coalesce(rk.rules, '{}') as rules, coalesce(rk.rule_names, '{}') as rule_names,
                        (array['AUTO_CLOSE','REVIEW_LOW','REVIEW_MEDIUM','REVIEW_HIGH','ESCALATE'])[p.sev] as disposition,
                        (case when p.sev >= 4 then 'High' when p.sev = 3 then 'Medium' else 'Low' end) as rating

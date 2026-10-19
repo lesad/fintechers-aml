@@ -90,6 +90,26 @@ class TriageServiceTest {
         assertThat(stored).isNotEmpty().allMatch { name -> Disposition.entries.any { it.name == name } }
     }
 
+    @Test
+    fun anEscalateVerdictSendsANewAlertToTheManager() {
+        val runId = runs.run().runId
+        val mismatched = jdbc.sql(
+            "select count(*) from alert a join alert_triage t on t.alert_id = a.id where a.run_id = ? and (t.disposition = 'ESCALATE') <> (a.status = 'ESCALATED')",
+        ).param(runId).query(Long::class.java).single()
+        assertThat(mismatched).isZero()
+
+        val (fresh, decided) = jdbc.sql("select id from alert where run_id = ? order by id limit 2").param(runId).query(Long::class.java).list().map { it!! }
+        jdbc.sql("update alert set status = 'NEW' where id = ?").param(fresh).update()
+        jdbc.sql("update alert set status = 'FALSE_POSITIVE' where id = ?").param(decided).update()
+        repository.save(listOf(fresh, decided).map { TriageDecision(it, Disposition.ESCALATE, 90, emptyList(), "test", "hash-$it") })
+
+        assertThat(status(fresh)).isEqualTo("ESCALATED")
+        assertThat(status(decided)).isEqualTo("FALSE_POSITIVE")
+    }
+
+    private fun status(alertId: Long) =
+        jdbc.sql("select status from alert where id = ?").param(alertId).query(String::class.java).single()
+
     private fun hashes(runId: Long): Map<Long, String> =
         jdbc.sql("select t.alert_id, t.input_hash from alert_triage t join alert a on a.id = t.alert_id where a.run_id = ?")
             .param(runId).query { rs, _ -> rs.getLong(1) to rs.getString(2) }.list().toMap()

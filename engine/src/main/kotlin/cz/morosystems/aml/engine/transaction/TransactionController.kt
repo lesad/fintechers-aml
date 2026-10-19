@@ -1,16 +1,21 @@
 package cz.morosystems.aml.engine.transaction
 
+import cz.morosystems.aml.engine.user.UserRepository
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/api/transactions")
-class TransactionController(private val transactions: TransactionRepository) {
+class TransactionController(private val transactions: TransactionRepository, private val users: UserRepository) {
     /**
      * Flagged transactions of the latest finished run, one page at a time.
      * `q` matches a transaction or client id; `rating` is `High`, `Medium` or `Low`; `status` (repeatable or
@@ -36,9 +41,44 @@ class TransactionController(private val transactions: TransactionRepository) {
     fun detail(@PathVariable id: String): TransactionDetail =
         transactions.detail(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "transaction $id not found")
 
+    /**
+     * Up to `limit` of the client's transactions right before (`direction=older`) or after (`newer`)
+     * transaction `id`, newest first; `more` says whether further ones exist. Page on with the last id shown.
+     */
+    @GetMapping("/{id}/history")
+    fun history(
+        @PathVariable id: String,
+        @RequestParam direction: String,
+        @RequestParam(defaultValue = "5") limit: Int,
+    ): HistoryPage {
+        if (direction !in DIRECTIONS) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "direction is one of $DIRECTIONS")
+        if (limit !in 1..MAX_SIZE) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "limit 1..$MAX_SIZE")
+        return transactions.history(id, older = direction == "older", limit)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "transaction $id not found")
+    }
+
+    /**
+     * Sets the status of the transaction's alerts in the latest run, e.g. `{"status": "ESCALATED"}`, on behalf
+     * of the user in `X-User-Id`, which is stored with it.
+     */
+    @PutMapping("/{id}/status")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun status(
+        @PathVariable id: String,
+        @RequestHeader("X-User-Id", required = false) userId: Long?,
+        @RequestBody body: StatusChange,
+    ) {
+        if (userId == null || !users.exists(userId)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "X-User-Id names no known user")
+        if (body.status !in STATUSES) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $STATUSES")
+        if (!transactions.setStatus(id, body.status, userId)) throw ResponseStatusException(HttpStatus.NOT_FOUND, "transaction $id has no alert in the latest run")
+    }
+
     private companion object {
         const val MAX_SIZE = 200
         val RATINGS = setOf("High", "Medium", "Low")
         val STATUSES = setOf("NEW", "ESCALATED", "FALSE_POSITIVE", "REPORTED")
+        val DIRECTIONS = setOf("older", "newer")
     }
 }
+
+data class StatusChange(val status: String)

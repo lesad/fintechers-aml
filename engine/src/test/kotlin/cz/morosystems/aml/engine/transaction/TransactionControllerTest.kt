@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.web.servlet.assertj.MockMvcTester
 
@@ -50,6 +51,7 @@ class TransactionControllerTest {
             .containsExactly("ESCALATE", "REVIEW_HIGH", "REVIEW_MEDIUM", "REVIEW_LOW")
         body.extractingPath("$.items[*].rating").asArray().containsExactly("High", "High", "Medium", "Low")
         body.extractingPath("$.items[0].score").isEqualTo(90)
+        body.extractingPath("$.items[0].status").isEqualTo("NEW")
         body.extractingPath("$.items[0].rules[*].key").asArray().containsExactly("B2")
         body.extractingPath("$.items[0].rules[0].name").isEqualTo("PEP outgoing payment above the limit")
         body.extractingPath("$.items[0].amount").isEqualTo(184_500.0)
@@ -71,6 +73,63 @@ class TransactionControllerTest {
 
         assertThat(mvc.get().uri("/api/transactions?q=k2")).hasStatusOk()
             .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T2")
+    }
+
+    @Test
+    fun setsTheStatusOfTheLatestRunsAlerts() {
+        assertThat(putStatus("T3", "ESCALATED")).hasStatus(HttpStatus.NO_CONTENT)
+        val escalated = assertThat(mvc.get().uri("/api/transactions?status=ESCALATED")).hasStatusOk().bodyJson()
+        escalated.extractingPath("$.items[*].id").asArray().containsExactly("T3")
+        escalated.extractingPath("$.items[0].status").isEqualTo("ESCALATED")
+        assertThat(mvc.get().uri("/api/transactions/T3")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("ESCALATED")
+        assertThat(putStatus("T3", "REPORTED")).hasStatus(HttpStatus.NO_CONTENT)
+        assertThat(mvc.get().uri("/api/transactions/T3")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("REPORTED")
+        val earlier = jdbc.sql("select status from alert where transaction_id = 'T3' and run_id = (select min(id) from run)")
+            .query(String::class.java).single()
+        assertThat(earlier).isEqualTo("NEW")
+
+        assertThat(putStatus("T3", "CLOSED")).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(putStatus("T9", "ESCALATED")).hasStatus(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun aStatusChangeNeedsAKnownUserAndRecordsThem() {
+        val reviewer = jdbc.sql("select id from app_user where role = 'REVIEWER'").query(Long::class.java).single()
+        assertThat(putStatus("T3", "ESCALATED", user = null)).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(putStatus("T3", "ESCALATED", user = 999_999)).hasStatus(HttpStatus.BAD_REQUEST)
+
+        assertThat(putStatus("T3", "ESCALATED", user = reviewer)).hasStatus(HttpStatus.NO_CONTENT)
+        val by = jdbc.sql("select distinct status_by from alert where transaction_id = 'T3' and run_id = (select max(id) from run)")
+            .query(Long::class.java).single()
+        assertThat(by).isEqualTo(reviewer)
+    }
+
+    private fun putStatus(id: String, status: String, user: Long? = firstUser()) =
+        mvc.put().uri("/api/transactions/$id/status").contentType(MediaType.APPLICATION_JSON).content("""{"status": "$status"}""")
+            .apply { if (user != null) header("X-User-Id", user.toString()) }
+
+    private fun firstUser(): Long = jdbc.sql("select min(id) from app_user").query(Long::class.java).single()
+
+    @Test
+    fun pagesTheClientsHistoryAroundATransaction() {
+        // K1 has T9 (07-01), T4 (07-02), T1 (07-03); around T4 one each way, around T1 only older.
+        val older = assertThat(mvc.get().uri("/api/transactions/T4/history?direction=older&limit=5")).hasStatusOk().bodyJson()
+        older.extractingPath("$.items[*].id").asArray().containsExactly("T9")
+        older.extractingPath("$.more").isEqualTo(false)
+        assertThat(mvc.get().uri("/api/transactions/T4/history?direction=newer")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T1")
+
+        val first = assertThat(mvc.get().uri("/api/transactions/T1/history?direction=older&limit=1")).hasStatusOk().bodyJson()
+        first.extractingPath("$.items[*].id").asArray().containsExactly("T4")
+        first.extractingPath("$.items[0].alertTypes").asArray().containsExactly("A")
+        first.extractingPath("$.more").isEqualTo(true)
+        assertThat(mvc.get().uri("/api/transactions/T4/history?direction=older&limit=1")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T9")
+        assertThat(mvc.get().uri("/api/transactions/T1/history?direction=newer")).hasStatusOk()
+            .bodyJson().extractingPath("$.items").asArray().isEmpty()
+
+        assertThat(mvc.get().uri("/api/transactions/T1/history?direction=sideways")).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(mvc.get().uri("/api/transactions/NOPE/history?direction=older")).hasStatus(HttpStatus.NOT_FOUND)
     }
 
     @Test
@@ -109,9 +168,8 @@ class TransactionControllerTest {
         body.extractingPath("$.alerts[0].hits[0].rule").isEqualTo("B2")
         body.extractingPath("$.alerts[0].hits[0].name").isEqualTo("PEP outgoing payment above the limit")
         body.extractingPath("$.alerts[0].hits[0].evidence['tx.amount']").isEqualTo(184_500)
-        body.extractingPath("$.history[*].id").asArray().containsExactly("T1", "T4", "T9")
-        body.extractingPath("$.history[1].alertTypes").asArray().containsExactly("A")
-        body.extractingPath("$.history[2].alertTypes").asArray().isEmpty()
+        body.extractingPath("$.day[*].id").asArray().containsExactly("T1")
+        body.extractingPath("$.historyCount").isEqualTo(3)
     }
 
     @Test

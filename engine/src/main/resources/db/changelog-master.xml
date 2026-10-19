@@ -20,4 +20,6 @@
     <include file="db/migrations/0014-param-unit.sql" />
     <include file="db/migrations/0015-amounts-in-czk.sql" />
     <include file="db/migrations/0016-no-count-unit.sql" />
+    <include file="db/migrations/0017-escalate-status.sql" />
+    <include file="db/migrations/0018-users.sql" />
 </databaseChangeLog>
