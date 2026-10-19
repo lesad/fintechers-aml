@@ -133,6 +133,25 @@ class TransactionControllerTest {
     }
 
     @Test
+    fun aUserSeesOnlyTheirRolesCasesInTheListAndTheCounts() {
+        jdbc.sql("update alert set status = 'ESCALATED' where transaction_id = 'T1'").update()
+        val reviewer = jdbc.sql("select id from app_user where role = 'REVIEWER'").query(Long::class.java).single()
+        val manager = jdbc.sql("select id from app_user where role = 'MANAGER'").query(Long::class.java).single()
+
+        val asReviewer = assertThat(mvc.get().uri("/api/transactions").header("X-User-Id", reviewer)).hasStatusOk().bodyJson()
+        asReviewer.extractingPath("$.items[*].id").asArray().containsExactly("T4", "T3", "T2")
+        asReviewer.extractingPath("$.countsByRating.High").isEqualTo(1)
+
+        val asManager = assertThat(mvc.get().uri("/api/transactions").header("X-User-Id", manager)).hasStatusOk().bodyJson()
+        asManager.extractingPath("$.items[*].id").asArray().containsExactly("T1")
+        asManager.extractingPath("$.countsByRating.High").isEqualTo(1)
+        asManager.extractingPath("$.countsByRating.Low").isEqualTo(0)
+
+        assertThat(mvc.get().uri("/api/transactions?status=ESCALATED").header("X-User-Id", reviewer)).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(mvc.get().uri("/api/transactions").header("X-User-Id", 999_999)).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
     fun filtersByAlertStatus() {
         jdbc.sql("update alert set status = 'ESCALATED' where transaction_id = 'T3' and run_id = (select max(id) from run)").update()
         jdbc.sql("update alert set status = 'REPORTED' where transaction_id = 'T2'").update()

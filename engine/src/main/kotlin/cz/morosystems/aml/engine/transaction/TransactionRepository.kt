@@ -19,17 +19,19 @@ class TransactionRepository(private val jdbc: JdbcClient) {
 
     /**
      * The review queue: transactions the latest finished run alerted on and triage did not close on its own,
-     * most severe disposition first, then highest score. `statuses` keeps a transaction when any of its alerts
-     * has one of them; empty keeps all.
+     * reported last, then most severe disposition first, then highest score. `statuses` keeps a transaction whose
+     * case status is one of them; empty keeps all. The per-rating counts cover the `scope` statuses (the
+     * caller's role), whatever the other filters; empty counts the whole queue.
      */
-    fun flagged(query: String?, rating: String?, statuses: List<String>, page: Int, size: Int): TransactionPage {
+    fun flagged(query: String?, rating: String?, statuses: List<String>, scope: List<String>, page: Int, size: Int): TransactionPage {
         val filter = """
             where (:q = '' or q.id ilike :like or t.client_id ilike :like)
               and (:rating = '' or q.rating = :rating)
-              and (:statuses = '' or q.statuses && string_to_array(:statuses, ','))
+              and (:statuses = '' or q.status = any(string_to_array(:statuses, ',')))
         """
         val q = query?.trim().orEmpty()
         val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty(), "statuses" to statuses.joinToString(","))
+        val inScope = "where (:scope = '' or q.status = any(string_to_array(:scope, ',')))"
 
         val items = jdbc.sql(
             """
@@ -63,8 +65,8 @@ class TransactionRepository(private val jdbc: JdbcClient) {
         val total = jdbc.sql("$QUEUE select count(*) from queue q join transaction t on t.id = q.id $filter")
             .params(params).query(Long::class.java).single()
 
-        val counts = jdbc.sql("$QUEUE select q.rating, count(*) as n from queue q group by 1")
-            .query { rs, _ -> rs.getString("rating") to rs.getLong("n") }.list().toMap()
+        val counts = jdbc.sql("$QUEUE select q.rating, count(*) as n from queue q $inScope group by 1")
+            .param("scope", scope.joinToString(",")).query { rs, _ -> rs.getString("rating") to rs.getLong("n") }.list().toMap()
 
         return TransactionPage(items, page, size, total, RATINGS.associateWith { counts[it] ?: 0L })
     }

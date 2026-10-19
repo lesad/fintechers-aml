@@ -19,7 +19,9 @@ class TransactionController(private val transactions: TransactionRepository, pri
     /**
      * Flagged transactions of the latest finished run, one page at a time.
      * `q` matches a transaction or client id; `rating` is `High`, `Medium` or `Low`; `status` (repeatable or
-     * comma-separated) keeps transactions with an alert in one of those statuses.
+     * comma-separated) keeps transactions whose case status is one of those. With `X-User-Id` the list and the
+     * counts hold only that user's role's statuses (reviewer `NEW`/`FALSE_POSITIVE`, manager
+     * `ESCALATED`/`REPORTED`), and a `status` outside them is a 400.
      */
     @GetMapping
     fun list(
@@ -28,12 +30,19 @@ class TransactionController(private val transactions: TransactionRepository, pri
         @RequestParam(required = false) status: List<String>?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "50") size: Int,
+        @RequestHeader("X-User-Id", required = false) userId: Long?,
     ): TransactionPage {
         if (page < 0 || size !in 1..MAX_SIZE) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "page >= 0, size 1..$MAX_SIZE")
         if (rating != null && rating !in RATINGS) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "rating is one of $RATINGS")
         val statuses = status.orEmpty()
         if (!STATUSES.containsAll(statuses)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $STATUSES")
-        return transactions.flagged(q, rating, statuses, page, size)
+        // A user sees only their role's cases: the list and the counts both. No user, no limit.
+        val scope = userId?.let { users.find(it) ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "X-User-Id names no known user") }
+            ?.queueStatuses.orEmpty()
+        if (scope.isNotEmpty() && !scope.containsAll(statuses)) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $scope for this user")
+        }
+        return transactions.flagged(q, rating, statuses.ifEmpty { scope }, scope, page, size)
     }
 
     /** One transaction with its client, its alerts and their evidence, and the client's other transactions. */
