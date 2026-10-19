@@ -2,9 +2,15 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0021 — Postgres on AWS; Supabase and Playwright dropped
+
+**Accepted.** The deployed database is Postgres on AWS RDS in `eu-central-1`, reached through `POSTGRES_URL` (plus `POSTGRES_URL_NON_POOLING` for DDL when the app connects through a proxy). Local dev runs `postgres:17-alpine` from `compose.yaml`; CI runs the same image as a service container. Drizzle and `postgres-js` are unchanged; migrations live in `db/migrations`, the seed in `db/seed.sql`. Supabase is removed: the client, the auth refresh in `src/proxy.ts`, the CLI stack, the MCP server, the skills and the RLS convention. The hackathon build has no auth layer. Playwright e2e and the Storybook browser-test project are removed too, which cuts setup and CI time before the code freeze; unit and integration tests remain. _Why:_ the team settled on AWS for the database, and fewer moving parts before the freeze. Supersedes the open database sentence in ADR-0020 and the e2e parts of ADR-0017.
+
 ### ADR-0020 — Hackathon AML build: Vercel app, AWS Bedrock through a role, Jev for typed decisions
 
 **Accepted.** The app is the FINREG AML triage entry for The FinTechers Hackathon 2026. It runs on Vercel; model calls go to AWS Bedrock in Frankfurt through an IAM role (the team account blocks access keys); typed decisions come from TypeSafe's Jev, with Laya as a later migration behind the same request shape. Rules A, B and C and all arithmetic are deterministic code; the model only answers typed questions, and code validates its output. The organisers' data stays out of git (`data/`, pulled by `scripts/pull-data.sh`). _Why:_ the team is frontend-heavy, Jev has a TypeScript SDK, the hackathon provides Bedrock credits, and FINREG grades explainable, auditable decisions. Detail: `docs/challenge/decision-architecture.md`. The database (Supabase from the template or Postgres on AWS) is still open.
+
+_Superseded in part by ADR-0021: the database is Postgres on AWS (RDS)._
 
 ### ADR-0019 — Lint policy: `type` over `interface`, PascalCase component files, and the test-relaxation block covers every test suffix
 
@@ -45,6 +51,8 @@ _Why:_ a template that ships a deprecated convention teaches it to every fork, a
 **Integration runs reseed the database on teardown** — `src/core/test/integration-global.ts`, wired as `globalSetup` on the integration project, shelling out to a new `pnpm db:seed` (`scripts/seed.ts`, which applies `supabase/seed.sql` — the same file `supabase db reset` uses, so there is one seed source and not two). ADR-0016's global truncating `beforeEach` means a finished suite leaves the database **empty**, and the next thing to read it silently gets nothing: a dev server, an e2e run, or a `next build` that prerenders from `generateStaticParams` and exits 0 having prerendered almost nothing. A `globalSetup` **teardown** rather than a command chained after vitest in `package.json`, for two reasons: it runs whether the suite passed or failed — the failing run is exactly the one you want the database restored after — and it cannot mask vitest's exit code, which `vitest run …; pnpm db:seed` would, because a chained command's status becomes the script's. The seed must stay idempotent (delete-then-insert the rows it owns); nothing resets in front of it.
 
 _Why:_ every one of these traded a small, predictable cost for a failure that is expensive precisely because it is intermittent and points somewhere else. _Trade-off:_ slightly slower unit startup, a flag to remember for Storybook tests, less local e2e parallelism, and one more `package.json` script.
+
+_Superseded in part by ADR-0021: Playwright and the Storybook vitest project are removed, so the Playwright workers and `STORYBOOK_TEST` sections no longer apply. The seed file moved to `db/seed.sql`._
 
 ### ADR-0016 — Integration isolation is a global truncating `beforeEach`, not per-test `BEGIN`/`ROLLBACK`
 
@@ -116,6 +124,8 @@ _Amended by ADR-0016: `withRollback` was replaced by `@/test/db`; the barrel rul
 
 _Why:_ keeps `@/test`'s root barrel genuinely browser-safe for `T`/`loc` consumers without giving up the deep-import escape hatch for the node-only test helper. _Trade-off:_ `withRollback` callers must know to reach past the barrel — same trade-off already accepted for `supabase`.
 
+_Superseded in part by ADR-0021: the `@/test` root barrel is removed with `loc`; every `@/test` member is a deep import._
+
 ### ADR-0008 — Zod message i18n: per-parse next-intl error map, Zod default fallback
 
 **Accepted.** Localize Zod v4 validation messages through a small per-parse error map (`@/validation` → `zodErrorMap(t)`), **never** a global `z.config()`. Defaults stay Zod's built-in (English); a `validation` message namespace whose keys mirror Zod's issue taxonomy overrides only the codes it defines, and any untranslated code returns `undefined` to fall through to Zod's default. Wire it per parse at each boundary — `schema.safeParse(input, { error: zodErrorMap(t) })`, or `zodResolver(schema, { error: zodErrorMap(t) })` on the client. Keys are derived from the issue by convention (`too_small.<origin>`, `invalid_format.<format>`, missing field → `required`), so the mapping lives in the message catalog, not in code.
@@ -129,6 +139,8 @@ _Why:_ `z.config()` mutates module-global state, which races across concurrent R
 Each core module gets a **bare alias** in `tsconfig.json` `paths` — `@/db`, `@/env`, `@/hooks`, `@/i18n`, `@/test`, `@/utils` — while `@/*` → `src/*` covers `@/app`/`@/components`/`@/middleware`. Consumers import only through the root alias (`import { cn } from "@/utils"`), never `@/core/…` or a deep internal path; `index.ts` files name exports explicitly (no `export *` grab-bags). `supabase` is the one exception — it has **no** root index because `server.ts` is `server-only`, so callers import `@/supabase/client` or `@/supabase/server` to keep server-only code out of client bundles. **Amended by ADR-0009:** `@/test` is a second exception (excludes `withRollback` from its barrel for the same client-bundle reason). **Amended by ADR-0011:** `src/` now also contains `features/` (vertical slices); that layer is intentionally non-barreled — features are imported by direct path, not a root alias.
 
 _Why:_ one obvious home for infrastructure; fewer top-level folders; uniform short imports; and the bare alias decouples the import path from the physical location, so moving a module within `core` doesn't churn every importer. _Trade-off:_ a `paths` entry per core module, and a one-time mechanical import rewrite.
+
+_Superseded in part by ADR-0021: `src/core/supabase` and its aliases are removed._
 
 ### ADR-0006 — Commit-quality gate via Claude PreToolUse hook; husky dropped
 

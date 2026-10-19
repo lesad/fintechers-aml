@@ -1,4 +1,4 @@
-# `src/core/db` — database layer (Drizzle + Supabase)
+# `src/core/db` — database layer (Drizzle + Postgres)
 
 **Server-only.** Everything here imports `server-only`; never import from a Client Component.
 
@@ -13,10 +13,9 @@ Data-access **query functions live in their feature** (`src/features/<name>/quer
 ## Schema-change workflow (never `drizzle-kit push`)
 
 1. Add/edit a table in `src/core/db/schema/*.ts`; re-export it from `schema/index.ts`.
-2. `pnpm db:gen` → generates SQL in `supabase/migrations/`.
+2. `pnpm db:gen` → generates SQL in `db/migrations/`.
 3. **Review the SQL. A rename emits `DROP`+`ADD`** — hand-edit to `RENAME COLUMN`.
-4. Every tenant-scoped table needs a companion `NNNN_rls_<name>.sql` RLS migration.
-5. `pnpm db:reset` (replay migrations) → `pnpm db:types` (regen `src/core/db/supabase-types.ts`).
-6. Commit schema + migration(s) + types together.
+4. `pnpm db:reset` (recreate the local container, replay migrations, seed).
+5. Commit schema + migration(s) together.
 
 Pooled vs direct: the app runtime uses pooled `POSTGRES_URL`; migrations use `POSTGRES_URL_NON_POOLING` (falls back to `POSTGRES_URL`). See `docs/ENVIRONMENT.md`.

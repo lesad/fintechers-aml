@@ -30,4 +30,4 @@ Track 5, FINREG PARTNERS "AML transaction monitoring: triage and red-flag escala
 - The escalation matrix and conflict-of-interest rules ("given at the briefing").
 - Which high-risk list FINREG means: no country in the data is on the July 2026 lists.
 - Whether "expected volume at contract" is monthly, and the day count for the Q2 daily average.
-- Jev access and hosting region; the database choice.
+- Jev access and hosting region.

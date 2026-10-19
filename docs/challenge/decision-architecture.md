@@ -4,10 +4,10 @@ Agreed 2026-10-19 on the way to the event. Builds on [ux-and-typed-ai.md](ux-and
 
 ## Stack
 
-- **App:** Next.js on Vercel, from Adrian's `agentic-next-app` template (Next.js 16, strict TypeScript, Tailwind v4, shadcn/ui, zod, Vitest, Playwright). Declare it to the organisers before hacking and tag `hackathon-start` on the template baseline.
+- **App:** Next.js on Vercel, from Adrian's `agentic-next-app` template (Next.js 16, strict TypeScript, Tailwind v4, shadcn/ui, zod, Vitest). Declare it to the organisers before hacking and tag `hackathon-start` on the template baseline.
 - **Backend services:** AWS, chiefly Bedrock in Frankfurt (gpt-oss-120b, fallback Claude Haiku 4.5 through the EU profile). The team account blocks IAM users and access keys ([aws-participant-guide.md](aws-participant-guide.md)), so Vercel either federates to an IAM role through OIDC or calls a small AWS backend (Lambda with a role) that calls Bedrock. gpt-oss-120b has effectively unlimited throughput; Claude models share 50 requests/min.
 - **Typed decisions:** TypeSafe's Jev through its TypeScript SDK, pinned to one version. Laya is the proposed migration later, once velocity allows, behind the same request and answer shape.
-- **Database:** not settled. The template ships Supabase (Postgres, Frankfurt region possible); an AWS-hosted Postgres is the alternative. Vercel functions keep no local state, so DuckDB is out as the store.
+- **Database:** Postgres on AWS (RDS, Frankfurt), reached through `POSTGRES_URL`. Local dev and CI run a Postgres 17 container. Supabase is dropped (ADR-0021). Vercel functions keep no local state, so DuckDB is out as the store.
 - **Batch jobs:** loading the ČNB CSVs, running rules A, B and C, and the first decision pass over all alerts run as `tsx` scripts, not in page requests. The app re-decides single alerts on demand.
 
 ## Who decides what
@@ -87,4 +87,3 @@ The labelling screen is the analyst case view the demo needs, so the team builds
 - Jev access: keys from https://console.typesafe.ai/keys; whether signup is instant or gated, and any free credits, is not documented.
 - Jev hosting region is not documented. Acceptable for synthetic data; state it in the pitch.
 - Whether Vercel OIDC federation to an IAM role passes the account guardrails, or the Bedrock calls move to a Lambda.
-- The database choice.

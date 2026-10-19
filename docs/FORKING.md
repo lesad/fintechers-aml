@@ -9,15 +9,15 @@ This repo is a **template** (copied, not forked with shared history). `docs/UPST
 - `package.json` → `name`.
 - `README.md` title + description.
 - Find leftovers: `git grep -n agentic-next-app`.
-- Vercel / Supabase project names when you link them.
+- Vercel project name when you link it.
 
-## 2. Wire your own Supabase
+## 2. Wire your own database
 
-Local dev needs only Docker (`pnpm db:start`). For preview/prod, create a Supabase project and link it through the Vercel↔Supabase integration — it injects `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING`. Set `NEXT_PUBLIC_SUPABASE_*` + `SUPABASE_SERVICE_ROLE_KEY` in Vercel. Full manifest: `docs/ENVIRONMENT.md`.
+Local dev needs only Docker or Podman (`pnpm db:start` runs `compose.yaml`). For preview/prod, create a Postgres database (AWS RDS here) and set `POSTGRES_URL` (plus `POSTGRES_URL_NON_POOLING` if `POSTGRES_URL` goes through a proxy) in the Vercel env. Full manifest: `docs/ENVIRONMENT.md`.
 
-## 3. First table → migration → RLS → types
+## 3. First table → migration
 
-Follow `src/core/db/README.md`: add a table in `src/core/db/schema/`, `pnpm db:gen`, review the SQL, add a `NNNN_rls_<name>.sql` migration for any tenant-scoped table, `pnpm db:reset`, `pnpm db:types`. Never `drizzle-kit push`.
+Follow `src/core/db/README.md`: add a table in `src/core/db/schema/`, `pnpm db:gen`, review the SQL, `pnpm db:reset`. Never `drizzle-kit push`.
 
 ## 4. First feature
 
@@ -34,11 +34,11 @@ The app ships the `en` locale only; add locales to `messages/` + the `next-intl`
 
 ## 6. Agentic setup
 
-`pnpm setup:agentic` installs the curated skills and symlinks the authored ones. `.mcp.json` ships Supabase / Playwright / shadcn / Storybook / Fallow / Vercel. See `CLAUDE.md` → Skills / MCPs.
+`pnpm setup:agentic` installs the curated skills and symlinks the authored ones. `.mcp.json` ships shadcn / Storybook / Fallow / Vercel. See `CLAUDE.md` → Skills / MCPs.
 
 ## 7. Deploy
 
-`docs/QUICKSTART.md` §2–3 (Vercel preview/prod). Confirm env vars, applied migrations, and clean Supabase security advisors before promoting.
+`docs/QUICKSTART.md` §2–3 (Vercel preview/prod). Confirm env vars and applied migrations before promoting.
 
 ## 8. Make the docs yours
 

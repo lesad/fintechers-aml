@@ -10,10 +10,19 @@
 - `scripts/pull-data.sh` and `pnpm data:pull`: sync the organisers' datasets from S3 and the ČNB FX fixings into the git-ignored `data/raw/`.
 - `reference/high-risk-countries-2026-07.json`: EU and FATF high-risk countries for July 2026 (rule B).
 - ADR-0020 for the hackathon build.
+- `compose.yaml`: local Postgres 17 (`pnpm db:start`), shared by every worktree. CI runs the same image as a service container. ADR-0021.
 
 ### Changed
 
 - Renamed the app to `fintechers-aml`, removed the guestbook example, added the "Built during the hackathon" README section.
+- Migrations and seed moved from `supabase/` to `db/migrations` and `db/seed.sql`. `pnpm db:reset` recreates the container, migrates and seeds; `pnpm db:migrate` exits cleanly while there are no migrations.
+- `src/proxy.ts` is next-intl only; there is no session refresh.
+
+### Removed
+
+- Supabase: `@supabase/ssr`, `@supabase/supabase-js`, `src/core/supabase`, the CLI stack, `pnpm db:types`, the Supabase env vars, MCP server and skills, and the RLS convention.
+- Playwright: e2e tests, `playwright.config.ts`, `pnpm test:e2e`, the CI e2e job, the MCP server and skill, `allowedDevOrigins`, and `loc()` with the `@/test` barrel.
+- The Storybook vitest project (`@storybook/addon-vitest`, `pnpm test:storybook`, `pnpm test:all`). Storybook itself stays.
 
 ## [0.2.0] — 2026-08-13
 

@@ -1,8 +1,8 @@
 # `src/core/test/ids` — portable test-id system
 
-Stable, hierarchical `data-testid`s shared between components and Playwright, so ids aren't stringly-typed and scattered. All ids are kebab-cased (`format.ts`). Three complementary tools:
+Stable, hierarchical `data-testid`s shared between components and tests, so ids aren't stringly-typed and scattered. All ids are kebab-cased (`format.ts`). Three complementary tools:
 
-## 1. Static tree — known structure + e2e locators
+## 1. Static tree — known structure
 
 `tree.ts`:
 
@@ -16,8 +16,6 @@ export const T = tree({
 - `action(id)` / `field(id)` — interactive / form-field leaves.
 - `tree(def)` — stamps each node's absolute `$path` and freezes it.
 - `chain(node)` → id segments from root to the node.
-
-Playwright: `loc(page, T.home.cta)` (`src/core/test/loc.ts`) chains `getByTestId` down `$path`.
 
 ## 2. Runtime scope — dynamic composition
 
