@@ -1,4 +1,4 @@
-/** What an AI section shows while no model is connected; the same in the detail and the breakdown. */
+/** What an AI section shows while no model is connected. */
 export function AiNotConnected() {
   return (
     <>

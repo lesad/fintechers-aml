@@ -286,6 +286,17 @@ describe("App", () => {
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
   });
 
+  it("opens the rules page straight from /rules and sends an unknown path back to the overview", async () => {
+    const { unmount } = render(<App />, { route: "/rules" });
+    expect(screen.getByRole("button", { name: "Rules" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    unmount();
+
+    render(<App />, { route: "/nowhere" });
+    expect(await screen.findByRole("tab", { name: /Review queue/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rules" })).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("opens a row as a detail tab with the rule's parameters as stored", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
@@ -301,7 +312,7 @@ describe("App", () => {
     expect(
       within(breakdown).queryByText("0 earlier filing(s) for this client"),
     ).not.toBeInTheDocument();
-    expect(within(breakdown).getByText("Not connected")).toBeInTheDocument();
+    expect(within(breakdown).queryByText("Not connected")).not.toBeInTheDocument();
     fireEvent.click(within(breakdown).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 

@@ -1,8 +1,7 @@
 import { cva } from "class-variance-authority";
 
-import { AiLabel, Modal } from "@/components";
+import { Modal } from "@/components";
 
-import { AiNotConnected } from "./AiNotConnected";
 import { DISPOSITION_LABEL } from "./queue";
 
 import type { TransactionDetail } from "./api";
@@ -55,12 +54,6 @@ export function TriageBreakdown({
               style={{ width: `${triage.score}%` }}
             />
           </div>
-        </div>
-      }
-      footer={
-        <div className="flex flex-col gap-1.5 bg-[linear-gradient(135deg,var(--color-ai-from)_0%,var(--color-ai-to)_100%)] px-[18px] py-3">
-          <AiLabel>Explanation</AiLabel>
-          <AiNotConnected />
         </div>
       }
     >

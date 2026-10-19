@@ -10,6 +10,7 @@
 | React Compiler              | 1.0.0          | via `/reactjs/react.dev` (topic: React Compiler)                  |
 | Tailwind CSS                | 4.2.4          | `/tailwindlabs/tailwindcss.com`                                   |
 | zod                         | 4.4.3          | `/websites/zod_dev_v4`                                            |
+| react-router                | 8.5.0          | not resolved yet: run `resolve-library-id` once and record it here |
 | react-hook-form / resolvers | 7.75.0 / 5.2.2 | `/react-hook-form/react-hook-form` · `/react-hook-form/resolvers` |
 | Vitest                      | 4.1.5          | `/vitest-dev/vitest` (tag `v4.1.6`)                               |
 

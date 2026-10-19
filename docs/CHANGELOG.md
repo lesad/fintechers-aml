@@ -14,6 +14,8 @@
 
 ### Added
 
+- `react-router` (ADR-0039): `/` is the review overview and `/rules` the rules page, so a refresh or a link keeps the page and the back button works; other paths go to `/`. Open transaction tabs survive the switch, but are not in the URL yet.
+- The triage breakdown modal no longer has the AI explanation section; `Modal` keeps its `footer` option.
 - The queue lists reported cases last: they are resolved, so the manager's escalated cases come first whatever their score.
 - Users instead of a role switch: `app_user` (name, role `REVIEWER` or `MANAGER`; migration 0018 seeds one of each) and `GET /api/users`. Clicking the avatar in the header opens a select to switch user; the choice is kept in localStorage (`aml.user`), the name in the header and on decisions and rules comes from it, and its role decides the queue. Every call to the engine sends `X-User-Id`; a status change requires it and stores it in `alert.status_by`.
 - Triage sends an `ESCALATE` verdict straight to the manager: saving it moves the alert from `NEW` to `ESCALATED` (a status a person set stays). Migration 0017 does the same for alerts triaged before.

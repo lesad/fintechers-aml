@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate, Route, Routes, useMatch, useNavigate } from "react-router";
 
 import { type RiskLevel, riskDot, Tab, Tabs } from "@/components";
 import {
@@ -29,7 +30,9 @@ export function App() {
   const tabs = useTabs();
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
-  const [view, setView] = useState<"review" | "rules">("review");
+  // Routes: `/` is the review overview, `/rules` the rules page; anything else goes back to `/`.
+  const navigate = useNavigate();
+  const rulesOpen = useMatch("/rules") !== null;
   const [users, setUsers] = useState<User[]>([]);
   const [user, setUser] = useState<User | null>(savedUser);
   const role: Role = user?.role === "MANAGER" ? "Manager" : "Reviewer";
@@ -79,17 +82,21 @@ export function App() {
             if (err instanceof NotFoundError) return false;
           }
           tabs.openTab(id);
-          setView("review");
+          void navigate("/");
           return true;
         }}
-        rulesOpen={view === "rules"}
-        onToggleRules={() => setView(view === "rules" ? "review" : "rules")}
+        rulesOpen={rulesOpen}
+        onToggleRules={() => void navigate(rulesOpen ? "/" : "/rules")}
       />
 
-      {view === "rules" && <RulesPage author={user?.name ?? ""} />}
+      <Routes>
+        <Route path="/" element={null} />
+        <Route path="/rules" element={<RulesPage author={user?.name ?? ""} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       {/* NOTE: the review area stays mounted behind the rules page, so open tabs and half-written reasons survive. */}
-      <div hidden={view === "rules"} className="flex min-h-0 flex-1 flex-col">
+      <div hidden={rulesOpen} className="flex min-h-0 flex-1 flex-col">
         <Tabs>
           <Tab
             active={tabs.active === null}

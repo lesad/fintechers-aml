@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0039 — React Router for the overview and the rules page
+
+**Accepted.** The SPA uses `react-router` (declarative mode: `BrowserRouter` in `main.tsx`, `Routes` in `App.tsx`). `/` is the review overview, `/rules` the rules page, and any other path redirects to `/`. The review area stays mounted while `/rules` is open, so open transaction tabs and half-written reasons survive the switch; the tabs themselves are not in the URL yet. Tests render through `@/test/render`, which wraps every render in a `MemoryRouter` (`route` option, `/` by default). _Why:_ the app grew a second page; with a URL per page a refresh or a shared link lands where it was, and the browser's back button works. Partly supersedes ADR-0025 ("no router").
+
 ### ADR-0038 — Parameter units are amount, percent and multiple
 
 **Accepted.** The `count` unit is gone (migration `0016`); a parameter is an `amount` (CZK), a `percent` or a `multiple` of a client figure. _Why:_ no rule used `count`, and an option nobody picks only invites the wrong pick: a factor saved as `count` would read as "5 payers" instead of "5 times". A future rule that needs a plain number of things brings the unit back with its first use. Supersedes the `count` unit of ADR-0036.
@@ -72,6 +76,8 @@ _Superseded in part by ADR-0035: thresholds change through a new or replacing ru
 ### ADR-0025 — The frontend is a plain Vite + React SPA; Next.js, next-intl and the data layer are removed
 
 **Accepted.** The app is a client-only React 19 SPA built by Vite 8: `index.html` → `src/app/main.tsx` → `src/app/App.tsx`, with no router (one page) and no server of its own. Next.js and everything that only existed to serve it are gone — `next.config.ts`, the App Router tree under `src/app/[locale]/`, `src/proxy.ts`, `next-intl` and `messages/`, `@t3-oss/env-nextjs` and `src/core/env.ts`, the SWC `data-testid` strip plugin (ADR-0014), and the Drizzle/`postgres` layer with `compose.yaml`, `db/`, the `db:*` scripts and the whole `*.spec.ts` integration project. Error boundaries are a single `src/app/ErrorBoundary.tsx` class component instead of the `error.tsx` / `global-error.tsx` / `global-not-found.tsx` conventions; UI strings are inline English, so `zodErrorMap` (ADR-0008) goes too. `src/app/` survives as the application shell, which keeps the `app → features → components → core` layering and its oxlint enforcement intact. React Compiler stays on, wired as a Rolldown Babel preset (`@vitejs/plugin-react` v6 transforms JSX with oxc and no longer accepts a `babel` option). Tailwind moves from the PostCSS plugin to `@tailwindcss/vite`; Vitest config merges into `vite.config.ts`. _Why:_ ADR-0024 already moved the database and the rules behind a Kotlin engine, which left the Next.js app with no server work to do — no RSC data access, no Server Actions, no middleware, one locale. A single-page SPA that calls the engine over HTTP is the smallest thing that serves the demo, and it removes the whole server-only/barrel-reachability class of problems before the freeze. Supersedes the frontend half of ADR-0005 (RSC + Server Actions), ADR-0008, ADR-0013, ADR-0014, and the integration-test halves of ADR-0016 and ADR-0017.
+
+_Partly superseded by ADR-0039: the SPA now has a router (`/` and `/rules`)._
 
 ### ADR-0024 — A Kotlin + Spring Boot engine owns the monitoring rules and the database; local only for now
 
