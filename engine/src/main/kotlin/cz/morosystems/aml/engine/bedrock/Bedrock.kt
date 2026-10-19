@@ -38,9 +38,9 @@ class Bedrock(private val properties: BedrockProperties) {
         BedrockRuntimeClient.builder().region(Region.of(properties.region)).build()
     }
 
-    fun ask(system: String, prompt: String): String = answerText(
+    fun ask(system: String, prompt: String, modelId: String = properties.modelId): String = answerText(
         client.converse { request ->
-            request.modelId(properties.modelId)
+            request.modelId(modelId)
                 .system(SystemContentBlock.fromText(system))
                 .messages(Message.builder().role(ConversationRole.USER).content(ContentBlock.fromText(prompt)).build())
         },
