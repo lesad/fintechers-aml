@@ -4,5 +4,8 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.28.xsd">
 
-    <!-- all scripts use the SQL format: migrations/NNNN-name.sql, each a "liquibase formatted sql" file -->
+    <include file="db/migrations/0001-data.sql" />
+    <include file="db/migrations/0002-rules.sql" />
+    <include file="db/migrations/0003-runs.sql" />
+    <include file="db/migrations/0004-seed-rules.sql" />
 </databaseChangeLog>
