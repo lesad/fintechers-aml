@@ -20,7 +20,7 @@ request → evidence → decide → document
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Request              | An alert from rules A, B or C                                                                                                      |
 | Evidence             | The rule facts and the transactions they cite                                                                                      |
-| Decide               | Jev typed answers; gpt-oss second opinion; regression for priority                                                                 |
+| Decide               | Jev typed answers; code rules and a scorecard for priority; Claude Sonnet 4.5 writes the audit summary                             |
 | Document             | Justification citing transaction ids, the CSV row, the audit log                                                                   |
 | Math in code         | SQL rules, CZK conversion, priority formula, range checks                                                                          |
 | Measured             | Agreement with our labelled hold-out set                                                                                           |

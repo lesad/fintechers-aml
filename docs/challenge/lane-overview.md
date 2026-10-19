@@ -61,7 +61,7 @@ Confirmed on 2026-10-19 from the full page and the current brief (`AML_challenge
 
 - The escalation matrix and conflict-of-interest rules ("given at the briefing"): stage intro at about 10:25, AML crash course at 13:30 (room 1), or the FINREG mentor.
 - Whether "EU or FATF high-risk list" includes the FATF grey list (we assume yes) and whether "volume" is redefined.
-- Whether gpt-oss-120b is still active in the Frankfurt console (its card mentions EOL "no sooner than 2026-08-05"); fallback is Haiku 4.5 through the EU profile.
+- Resolved 2026-10-19: Claude Sonnet 4.5 through the EU profile is the default runtime model; gpt-oss-120b is active and stays for high-volume batch work. Haiku 4.5's EU profile fails.
 
 **Legal facts that shape the design.**
 
