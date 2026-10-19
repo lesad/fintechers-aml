@@ -171,10 +171,10 @@ export async function setStatus(id: string, status: string): Promise<void> {
 /** Up to 5 of the client's transactions right before (`older`) or after (`newer`) transaction `id`. */
 export function fetchHistory(
   id: string,
-  side: "older" | "newer",
+  { side, limit }: { side: "older" | "newer"; limit: number },
   signal?: AbortSignal,
 ): Promise<HistoryPage> {
-  const qs = new URLSearchParams({ direction: side, limit: "5" });
+  const qs = new URLSearchParams({ direction: side, limit: String(limit) });
   return get(`/api/transactions/${encodeURIComponent(id)}/history?${qs}`, historyPage, signal);
 }
 

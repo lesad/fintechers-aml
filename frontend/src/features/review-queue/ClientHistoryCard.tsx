@@ -32,7 +32,8 @@ function moreRow(
   { more, loading, error }: { more: boolean; loading: boolean; error: string | null },
   onLoad: () => void,
 ): ReactNode {
-  if (loading) return <span className="text-xs text-fg-subtle">Loading {side}…</span>;
+  const word = side === "older" ? "earlier" : "later";
+  if (loading) return <span className="text-xs text-fg-subtle">Loading {word}…</span>;
   if (error)
     return (
       <span className="text-xs text-high">
@@ -45,7 +46,7 @@ function moreRow(
   if (!more) return null;
   return (
     <button type="button" onClick={onLoad} className={moreButton}>
-      Show 5 {side}
+      Load {word}
     </button>
   );
 }
@@ -54,13 +55,13 @@ const moreButton =
   "cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold text-fg underline underline-offset-[0.2em] hover:text-purple";
 
 /**
- * The client's transactions around this one, five a side, with buttons for five more either way;
+ * The client's transactions around this one, oldest first, two a side, with buttons for ten more either way;
  * flagged ones open in their own tab.
  */
 export function ClientHistoryCard({ current, count, decisions, onOpen }: ClientHistoryCardProps) {
   const currentId = current.id;
   const history = useHistory(currentId);
-  const rows = [...history.newer.items, current, ...history.older.items];
+  const rows = [...history.older.items.toReversed(), current, ...history.newer.items.toReversed()];
   const columns: Column<HistoryTransaction>[] = [
     {
       key: "dt",
@@ -136,8 +137,8 @@ export function ClientHistoryCard({ current, count, decisions, onOpen }: ClientH
         embedded
         columns={columns}
         rows={rows}
-        leadRow={moreRow("newer", history.newer, () => history.load("newer"))}
-        trailRow={moreRow("older", history.older, () => history.load("older"))}
+        leadRow={moreRow("older", history.older, () => history.load("older"))}
+        trailRow={moreRow("newer", history.newer, () => history.load("newer"))}
         rowKey={(h) => h.id}
         minWidth={1000}
         rowClassName={(h) => historyRow({ current: h.id === currentId })}

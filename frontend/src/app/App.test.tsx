@@ -125,7 +125,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 let observers: IntersectionObserverCallback[] = [];
 
-/** TX1's client has OLD1…OLD7 before it and nothing after: five, then the last two. */
+/** TX1's client has OLD1…OLD7 before it, newest first, and nothing after. */
 const older = Array.from({ length: 7 }, (_, i) => ({
   id: `OLD${i + 1}`,
   ts: `2026-07-0${7 - i}T10:00:00`,
@@ -140,7 +140,8 @@ const history = (url: URL) => {
   const from = url.pathname.includes("/TX1/")
     ? 0
     : older.findIndex((h) => url.pathname.includes(`/${h.id}/`)) + 1;
-  return { items: older.slice(from, from + 5), more: from + 5 < older.length };
+  const limit = Number(url.searchParams.get("limit"));
+  return { items: older.slice(from, from + limit), more: from + limit < older.length };
 };
 /** The case status the engine reports for TX1. */
 let detailStatus = "NEW";
@@ -391,17 +392,25 @@ describe("App", () => {
     expect(lastPut?.[1]).toMatchObject({ body: JSON.stringify({ status: "REPORTED" }) });
   });
 
-  it("shows five of the client's transactions before this one and loads five more on request", async () => {
+  it("shows two of the client's transactions before this one, oldest first, and loads earlier ones above", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
-    expect(await screen.findByText("OLD5")).toBeInTheDocument();
-    expect(screen.queryByText("OLD6")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Show 5 newer" })).not.toBeInTheDocument();
+    const old2 = await screen.findByText("OLD2");
+    expect(screen.queryByText("OLD3")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Load later" })).not.toBeInTheDocument();
+    const earlier = screen.getByRole("button", { name: "Load earlier" });
+    const card = old2.closest("tbody");
+    expect(card?.querySelector("tr")).toContainElement(earlier);
+    expect(card?.textContent?.indexOf("OLD2")).toBeLessThan(
+      card?.textContent?.indexOf("OLD1") ?? 0,
+    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Show 5 older" }));
+    fireEvent.click(earlier);
     expect(await screen.findByText("OLD7")).toBeInTheDocument();
-    expect(String(vi.mocked(fetch).mock.lastCall?.[0])).toContain("/api/transactions/OLD5/history");
-    expect(screen.queryByRole("button", { name: "Show 5 older" })).not.toBeInTheDocument();
+    const last = String(vi.mocked(fetch).mock.lastCall?.[0]);
+    expect(last).toContain("/api/transactions/OLD2/history");
+    expect(last).toContain("limit=10");
+    expect(screen.queryByRole("button", { name: "Load earlier" })).not.toBeInTheDocument();
   });
 
   it("opens a transaction typed into the header and flags unknown ids", async () => {
