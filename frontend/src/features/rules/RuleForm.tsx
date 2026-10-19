@@ -1,6 +1,12 @@
 import { cva } from "class-variance-authority";
 import { useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  type Control,
+  type UseFormRegister,
+  useFieldArray,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 
 import { Select } from "@/components";
 
@@ -127,6 +133,135 @@ function toNewRule(values: FormValues, from: RuleVersion | null, author: string)
   };
 }
 
+type FieldsProps = { control: Control<FormValues>; register: UseFormRegister<FormValues> };
+
+const legend = "mb-1 text-[11px] tracking-[0.04em] text-fg-subtle uppercase";
+
+function ParamFields({ control, register }: FieldsProps) {
+  const params = useFieldArray({ control, name: "params" });
+  const paramValues = useWatch({ control, name: "params" });
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className={legend}>Parameters</legend>
+      {params.fields.map((field, i) => {
+        const value = Number(paramValues[i]?.value);
+        return (
+          <div key={field.id} className="flex items-center gap-2">
+            <input
+              {...register(`params.${i}.name`)}
+              aria-label={`Name of parameter ${i + 1}`}
+              className={input({ mono: true })}
+            />
+            <input
+              {...register(`params.${i}.value`)}
+              aria-label={`Value of parameter ${i + 1}`}
+              inputMode="numeric"
+              className={input({ mono: true })}
+            />
+            {Number.isFinite(value) && value > 0 && (
+              <span className="text-xs text-fg-subtle">= {formatCzk(value)} if an amount</span>
+            )}
+            <button
+              type="button"
+              aria-label={`Remove parameter ${i + 1}`}
+              onClick={() => params.remove(i)}
+              className="text-fg-subtle hover:text-high"
+            >
+              ✕
+            </button>
+          </div>
+        );
+      })}
+      <button
+        type="button"
+        onClick={() => params.append({ name: "", value: "" })}
+        className="self-start text-xs text-fg-muted hover:text-fg"
+      >
+        + parameter
+      </button>
+    </fieldset>
+  );
+}
+
+function VariableFields({ control, register }: FieldsProps) {
+  const variables = useFieldArray({ control, name: "variables" });
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className={legend}>Variables</legend>
+      {variables.fields.map((field, i) => (
+        <div key={field.id} className="flex flex-wrap items-center gap-2">
+          <input
+            {...register(`variables.${i}.name`)}
+            aria-label={`Name of variable ${i + 1}`}
+            className={input({ mono: true })}
+          />
+          <Select
+            {...register(`variables.${i}.agg`)}
+            aria-label={`Aggregation of variable ${i + 1}`}
+          >
+            {["sum", "max", "min", "count", "set"].map((agg) => (
+              <option key={agg} value={agg}>
+                {agg}
+              </option>
+            ))}
+          </Select>
+          <input
+            {...register(`variables.${i}.field`)}
+            aria-label={`Field of variable ${i + 1}`}
+            className={input({ mono: true })}
+          />
+          <input
+            {...register(`variables.${i}.filter`)}
+            aria-label={`Filter of variable ${i + 1}`}
+            className={input({ mono: true, width: "wide" })}
+          />
+          <Select {...register(`variables.${i}.kind`)} aria-label={`Window of variable ${i + 1}`}>
+            <option value="day">calendar day</option>
+            <option value="relative">hours around the anchor</option>
+          </Select>
+          <input
+            {...register(`variables.${i}.from`)}
+            aria-label={`Window start of variable ${i + 1} in hours`}
+            inputMode="numeric"
+            className={input({ mono: true, width: "hours" })}
+          />
+          <input
+            {...register(`variables.${i}.to`)}
+            aria-label={`Window end of variable ${i + 1} in hours`}
+            inputMode="numeric"
+            className={input({ mono: true, width: "hours" })}
+          />
+          <button
+            type="button"
+            aria-label={`Remove variable ${i + 1}`}
+            onClick={() => variables.remove(i)}
+            className="text-fg-subtle hover:text-high"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() =>
+          variables.append({
+            name: "",
+            agg: "sum",
+            field: "amount",
+            filter: "true",
+            kind: "day",
+            from: "0",
+            to: "0",
+          })
+        }
+        className="self-start text-xs text-fg-muted hover:text-fg"
+      >
+        + variable
+      </button>
+    </fieldset>
+  );
+}
+
 function Labelled({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-0.5 text-[11px] text-fg-subtle">
@@ -141,11 +276,8 @@ export function RuleForm({ from, author, onSaved, onCancel }: RuleFormProps) {
   const { register, handleSubmit, control } = useForm<FormValues>({
     defaultValues: defaults(from),
   });
-  const params = useFieldArray({ control, name: "params" });
-  const variables = useFieldArray({ control, name: "variables" });
   const grain = useWatch({ control, name: "grain" });
   const layer = useWatch({ control, name: "layer" });
-  const paramValues = useWatch({ control, name: "params" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -239,123 +371,8 @@ export function RuleForm({ from, author, onSaved, onCancel }: RuleFormProps) {
         </p>
       )}
 
-      <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-1 text-[11px] tracking-[0.04em] text-fg-subtle uppercase">
-          Parameters
-        </legend>
-        {params.fields.map((field, i) => {
-          const value = Number(paramValues[i]?.value);
-          return (
-            <div key={field.id} className="flex items-center gap-2">
-              <input
-                {...register(`params.${i}.name`)}
-                aria-label={`Name of parameter ${i + 1}`}
-                className={input({ mono: true })}
-              />
-              <input
-                {...register(`params.${i}.value`)}
-                aria-label={`Value of parameter ${i + 1}`}
-                inputMode="numeric"
-                className={input({ mono: true })}
-              />
-              {Number.isFinite(value) && value > 0 && (
-                <span className="text-xs text-fg-subtle">= {formatCzk(value)} if an amount</span>
-              )}
-              <button
-                type="button"
-                aria-label={`Remove parameter ${i + 1}`}
-                onClick={() => params.remove(i)}
-                className="text-fg-subtle hover:text-high"
-              >
-                ✕
-              </button>
-            </div>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => params.append({ name: "", value: "" })}
-          className="self-start text-xs text-fg-muted hover:text-fg"
-        >
-          + parameter
-        </button>
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-1 text-[11px] tracking-[0.04em] text-fg-subtle uppercase">
-          Variables
-        </legend>
-        {variables.fields.map((field, i) => (
-          <div key={field.id} className="flex flex-wrap items-center gap-2">
-            <input
-              {...register(`variables.${i}.name`)}
-              aria-label={`Name of variable ${i + 1}`}
-              className={input({ mono: true })}
-            />
-            <Select
-              {...register(`variables.${i}.agg`)}
-              aria-label={`Aggregation of variable ${i + 1}`}
-            >
-              {["sum", "max", "min", "count", "set"].map((agg) => (
-                <option key={agg} value={agg}>
-                  {agg}
-                </option>
-              ))}
-            </Select>
-            <input
-              {...register(`variables.${i}.field`)}
-              aria-label={`Field of variable ${i + 1}`}
-              className={input({ mono: true })}
-            />
-            <input
-              {...register(`variables.${i}.filter`)}
-              aria-label={`Filter of variable ${i + 1}`}
-              className={input({ mono: true, width: "wide" })}
-            />
-            <Select {...register(`variables.${i}.kind`)} aria-label={`Window of variable ${i + 1}`}>
-              <option value="day">calendar day</option>
-              <option value="relative">hours around the anchor</option>
-            </Select>
-            <input
-              {...register(`variables.${i}.from`)}
-              aria-label={`Window start of variable ${i + 1} in hours`}
-              inputMode="numeric"
-              className={input({ mono: true, width: "hours" })}
-            />
-            <input
-              {...register(`variables.${i}.to`)}
-              aria-label={`Window end of variable ${i + 1} in hours`}
-              inputMode="numeric"
-              className={input({ mono: true, width: "hours" })}
-            />
-            <button
-              type="button"
-              aria-label={`Remove variable ${i + 1}`}
-              onClick={() => variables.remove(i)}
-              className="text-fg-subtle hover:text-high"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() =>
-            variables.append({
-              name: "",
-              agg: "sum",
-              field: "amount",
-              filter: "true",
-              kind: "day",
-              from: "0",
-              to: "0",
-            })
-          }
-          className="self-start text-xs text-fg-muted hover:text-fg"
-        >
-          + variable
-        </button>
-      </fieldset>
+      <ParamFields control={control} register={register} />
+      <VariableFields control={control} register={register} />
 
       <div className="flex items-center gap-2">
         <button
