@@ -37,6 +37,23 @@ Proposals from the data run ([data-patterns.md](../challenge/data-patterns.md)),
 
 On the rule A factors the data run computed (no country, no multiple flags), the proposed points give p50 10, p90 25, p99 40, max 65; under 20: 4,382 clients, 20 to 39: 1,055, 40 and above: 56. K005492 has no Q2 baseline; the score script set its percentiles to 1. Decide that explicitly in code.
 
+### Data run, round 2
+
+Status default (data run), not fitted.
+
+**Risk score, country and channel are one variable.** In the client table no client resident outside the EU and EEA is rated low (205 of 205 medium or high), PEPs are never rated low (9 high, 14 medium), and every client resident outside CZ and SK was onboarded distant (855 of the 1,500 distant clients are foreign). Scoring all three separately gives a third-country client triple credit for one fact. Proposal: cap the combined points of AML risk score, country and contract channel at 25 (the current maximum of risk plus channel). On this data the country factor scores 0, so the cap binds only when the list changes (the TR and ZA demo) or if residence is ever scored. Inferred, not verified: the generator's exact rating rule.
+
+**Rule A amount factor from the single-payment tail (T1).** `z_max` is the client's largest `z = ln(amount / (exp_vol / exp_cnt))`, raw amount against the declared ticket, as in [rule F](F-tail-payment-context.md). Points: `max(0, min(15, round(5 × (z_max - 2.77))))`. 2.77 is `ln 16`, the cut rule A's single-transaction branch already applies, so the branch's own hits start at 0; z 4 gives 6, z 5 gives 11, and the cap of 15 is reached near z 5.8. This orders the 1,003 branch hits by rarity rather than by FX, and is an alternative to the raw peer P95 points above.
+
+**Novel rules D to G as factors.** Until mentor question 5 is answered, each also feeds this scorecard:
+
+| Rule                                        | Factor              | Proposed points (default (data run))                                                             |
+| ------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
+| [D](D-kyc-rating-inconsistent.md) rating    | AML risk score      | Score at `max(current_rating, suggested_rating)`, inside the cap above; +5 for the inconsistency |
+| [E](E-kyc-profile-implausible.md) profile   | Conduct discrepancy | `profile_plausible` at most 0.3: +10; above 0.3 and at most 0.5: +5                              |
+| [F](F-tail-payment-context.md) tail payment | Amount              | On A and B: +5 for a hit, +5 more when `plausible_for_profile` is below 0.3                      |
+| [G](G-unusual-corridor.md) corridor         | Conduct discrepancy | +10 with a corridor below 1e-3 and `corridor_plausible` below 0.5                                |
+
 ## Floors
 
 Applied after the sum. The highest floor that matches wins.

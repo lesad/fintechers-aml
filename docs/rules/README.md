@@ -12,6 +12,10 @@ Background and sources live in [`../challenge/`](../challenge/README.md). This f
 | [A-profile-discrepancy.md](A-profile-discrepancy.md)            | Rule A: daily volume or single transaction out of line with the profile   |
 | [B-high-risk-pep.md](B-high-risk-pep.md)                        | Rule B: high-risk jurisdiction or PEP                                     |
 | [C-flow-through.md](C-flow-through.md)                          | Rule C: money in and out again within hours                               |
+| [D-kyc-rating-inconsistent.md](D-kyc-rating-inconsistent.md)    | Rule D (proposal): AML risk rating inconsistent with the client's facts   |
+| [E-kyc-profile-implausible.md](E-kyc-profile-implausible.md)    | Rule E (proposal): declared profile implausible for the client type       |
+| [F-tail-payment-context.md](F-tail-payment-context.md)          | Rule F (proposal): tail payment with a country fact                       |
+| [G-unusual-corridor.md](G-unusual-corridor.md)                  | Rule G (proposal): unusual foreign corridor                               |
 | [priority.md](priority.md)                                      | The 0 to 100 priority scorecard shared by every rule                      |
 | [escalation.md](escalation.md)                                  | Who decides and who approves, with the conflict-of-interest checks        |
 | [jev-questions.md](jev-questions.md)                            | How to write a Jev question, what Jev returns, what we log                |
@@ -67,5 +71,9 @@ A rule is done when every parameter is `brief`, `law` or `confirmed`, it has han
 | A        | dry run     | draft            | draft   | none  | 5              |
 | B        | dry run     | none (by design) | draft   | none  | 3              |
 | C        | approximate | draft            | draft   | none  | 3              |
+| D        | proposal    | draft            | draft   | none  | 2              |
+| E        | proposal    | draft            | draft   | none  | 2              |
+| F        | proposal    | draft            | draft   | none  | 3              |
+| G        | proposal    | draft            | draft   | none  | 3              |
 | Priority | n/a         | input only       | draft   | none  | 2              |
 | Routing  | n/a         | none             | default | none  | 3              |

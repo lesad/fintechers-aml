@@ -27,6 +27,8 @@ For each client and each July day, compute the day's volume in CZK. The client g
 
 Prorating: a client contracted on 1 June 2026 has 30 days in Q2, so its Q2 average day is the Q2 volume divided by 30, not 91.
 
+K005492 (contracted 30 June, `q2_cnt` 0, `q2_max` 0) is the one client inactive in Q2. Per the rule text it is compared to projected volume only: it never enters the Q2 day branch or the single-transaction branch. The round 2 count of that branch (tails results) included 60 of its July payments, measured against `2 × q2_max = 0`. Code must skip both Q2 branches when `q2_cnt` is 0.
+
 ## 2. Facts (code)
 
 | Fact                      | Meaning                                                                                 | Unit or band                                                                                                                                                    |

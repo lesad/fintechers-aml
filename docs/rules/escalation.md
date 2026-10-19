@@ -28,6 +28,16 @@ The data links no client to a staff member, so `executive_person` and `approver`
 
 Source: [czech-aml-escalation.md](../challenge/czech-aml-escalation.md) section 6, our recommendation, not a matrix from law.
 
+### Proposed rows for the novel rules D to G
+
+Status: default (data run). They apply only if FINREG accepts further red flags as alerts (mentor question 5); otherwise D to G are priority factors and the A, B or C row routes the alert.
+
+| Alert                           | Executive (`executive_role`) | Approver (4 eyes)                                                                                   | FAÚ trigger                                                            |
+| ------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| D, E (rating or profile review) | `l2_analyst`                 | `compliance_officer`: the outcome changes the client's rating or CDD intensity (AMLR Art. 76(5)(b)) | none by itself; suspicion found in the review goes to `contact_person` |
+| F, G, FP                        | `l1_analyst` (QA sample)     | a second `l1_analyst`, outside the client's business line                                           | none                                                                   |
+| F, G, REVIEW                    | `l2_analyst`                 | a second analyst, outside the client's business line                                                | L2 confirms suspicion, then `contact_person` files                     |
+
 ## Conflict-of-interest checks (code)
 
 A row is invalid, and the run fails, when any of these holds:

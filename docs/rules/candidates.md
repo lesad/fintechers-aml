@@ -33,6 +33,19 @@ From the team's pattern research, [aml-pattern-research.md](../challenge/aml-pat
 | 12  | Night activity                | Share of a client's transactions between 00:00 and 06:00                                                                      | Typology unconfirmed                           | Assigned by quota; per-client counts are binomial (22 clients above z = 3, about 20 expected)                                                                                                                       | Drop, or at most 3 points                                                                                   |
 | 13  | Many currencies               | Distinct currencies per client above the peer group's 99th percentile                                                         | Typology unconfirmed                           | Currency follows the counterparty country, so the count follows the transaction count (p50 6, max 15)                                                                                                               | Drop                                                                                                        |
 
+## Novel rules
+
+Round 2 of the data run looked for new alert types whose value is a typed Jev question ([data-patterns.md](../challenge/data-patterns.md), round 2). Each is a proposal with its own spec, and each states both uses: its own `alert_type`, or a priority factor on A, B and C, pending mentor question 5.
+
+| Rule                                                  | What it asks                                                           | Count (strict / loose) |
+| ----------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------- |
+| [D](D-kyc-rating-inconsistent.md) rating inconsistent | Is the AML risk rating adequate for the client's stacked risk factors? | 20 / 22                |
+| [E](E-kyc-profile-implausible.md) profile implausible | Is the declared profile plausible for this client type?                | 80 / 212               |
+| [F](F-tail-payment-context.md) tail payment           | Is a payment this rare, with this country, plausible for this client?  | 49 tx / 150 tx         |
+| [G](G-unusual-corridor.md) unusual corridor           | Is a regular corridor with this country plausible for this client?     | 13 / 101               |
+
+Considered, not adopted: a natural person transacting with 7 or more countries outside the EU and EEA in July (geo R2). 10 clients against 5.6 expected (null range 3 to 7 over 5 seeds; Poisson P about 0.07). The question it would ask overlaps G's, and the excess is within chance.
+
 ## Planted patterns: none found
 
 The data run looked for generator traces in CZK and in raw amounts. None showed ([data-patterns.md](../challenge/data-patterns.md)):
