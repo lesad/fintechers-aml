@@ -1,6 +1,9 @@
-import { AiLabel, Card } from "@/components";
+import { useState } from "react";
+
+import { AiLabel, Card, Toast } from "@/components";
 
 import { AiNotConnected } from "./AiNotConnected";
+import { fetchSuggestion } from "./api";
 import { caseState } from "./case-state";
 import { ClientCard } from "./ClientCard";
 import { ClientHistoryCard } from "./ClientHistoryCard";
@@ -8,9 +11,10 @@ import { DecisionPanel } from "./DecisionPanel";
 import { DetailStrip } from "./DetailStrip";
 import { MoneyFlow } from "./MoneyFlow";
 import { RuleRatingCard } from "./RuleRatingCard";
+import { SuggestionModal } from "./SuggestionModal";
 import { useDetail } from "./use-detail";
 
-import type { TransactionDetail as Detail } from "./api";
+import type { TransactionDetail as Detail, Suggestion } from "./api";
 import type { Decision } from "./decisions";
 import type { Role } from "./queue";
 
@@ -67,6 +71,22 @@ function DetailView({
   const { transaction: tx, client, rating } = detail;
   const decision = decisions[tx.id];
   const state = caseState(detail, decision);
+  // A false positive asks for a rule change on the alert; a transaction with several alerts uses the first.
+  const alertId = detail.alerts[0]?.id;
+  const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // A false positive first asks for a rule change, then records the decision (and with it the alert status) whatever
+  // the answer: a suggestion opens the modal, no suggestion or a failure only confirms the decision.
+  const markFalsePositive = async (reason: string) => {
+    const result =
+      alertId === undefined ? null : await fetchSuggestion(alertId, reason).catch(() => undefined);
+    await onDecide({ action: "False Positive", reason, rating });
+    if (result?.kind === "rule_version") setSuggestion(result);
+    else if (result === undefined)
+      setToast("Marked as false positive. The rule suggestion failed.");
+    else setToast("Marked as false positive.");
+  };
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
@@ -148,12 +168,20 @@ function DetailView({
                 decision={decision}
                 saved={state.saved}
                 role={role}
-                onDecide={(action, reason) => onDecide({ action, reason, rating })}
+                onDecide={(action, reason) =>
+                  action === "False Positive"
+                    ? markFalsePositive(reason)
+                    : onDecide({ action, reason, rating })
+                }
               />
             )}
           </div>
         </div>
       </div>
+      {suggestion && (
+        <SuggestionModal suggestion={suggestion} onClose={() => setSuggestion(null)} />
+      )}
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </main>
   );
 }

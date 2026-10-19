@@ -181,3 +181,88 @@ export function fetchHistory(
 export function fetchDetail(id: string, signal?: AbortSignal): Promise<TransactionDetail> {
   return get(`/api/transactions/${encodeURIComponent(id)}`, detail, signal);
 }
+
+// The engine's /api/alerts/{id}/suggestion contract (engine/.../suggestion/SuggestionModel.kt).
+// `rule` has the shape of the /api/rules POST body without `author`.
+
+const param = z.object({
+  value: z.number(),
+  unit: z.enum(["amount", "percent", "multiple"]),
+});
+
+const suggestedRule = z.object({
+  key: z.string(),
+  version: z.number(),
+  alertType: z.string(),
+  layer: z.enum(["company", "segment", "client"]),
+  scopeSegmentId: z.number().nullable(),
+  scopeClientId: z.string().nullable(),
+  grain: z.string(),
+  anchor: z.string().nullable(),
+  condition: z.string(),
+  replacesKey: z.string().nullable(),
+  variables: z.array(
+    z.object({
+      name: z.string(),
+      agg: z.string(),
+      field: z.string(),
+      filter: z.string(),
+      window: z.object({
+        kind: z.string(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      }),
+    }),
+  ),
+  params: z.record(z.string(), param),
+});
+
+const impactCounts = z.object({
+  hitsStopped: z.number(),
+  hitsAdded: z.number(),
+  alertsClosed: z.number(),
+  closedByDisposition: z.record(z.string(), z.number()),
+});
+
+const impact = z.object({
+  stopsThisAlert: z.boolean(),
+  closesThisAlert: z.boolean(),
+  client: impactCounts,
+  company: impactCounts.nullable(),
+});
+
+const suggestion = z.object({
+  kind: z.enum(["rule_version", "none"]),
+  explanation: z.array(z.object({ text: z.string(), refs: z.array(z.string()) })),
+  rule: suggestedRule.nullable(),
+  previousParams: z.record(z.string(), param).nullable(),
+  retires: z.object({ key: z.string(), version: z.number() }).nullable(),
+  ruleExplanation: z.string().nullable(),
+  impact: impact.nullish(),
+  declined: z.string().nullish(),
+});
+
+export type Suggestion = z.infer<typeof suggestion>;
+export type SuggestedRule = z.infer<typeof suggestedRule>;
+export type Impact = z.infer<typeof impact>;
+export type ImpactCounts = z.infer<typeof impactCounts>;
+
+/** Asks the engine for a rule change from a false-positive reason; nothing is saved. */
+export async function fetchSuggestion(
+  alertId: number,
+  reason: string,
+  signal?: AbortSignal,
+): Promise<Suggestion> {
+  const url = `/api/alerts/${alertId}/suggestion`;
+  const res = await fetch(url, {
+    method: "POST",
+    signal,
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) {
+    const problem = z.object({ detail: z.string() }).safeParse(await res.json().catch(() => null));
+    throw new Error(problem.success ? problem.data.detail : `${url}: HTTP ${res.status}`);
+  }
+  return suggestion.parse(await res.json());
+}

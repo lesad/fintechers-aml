@@ -123,6 +123,41 @@ const routes: Record<string, (url: URL) => unknown> = {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
+const noSuggestion = {
+  kind: "none",
+  explanation: [{ text: "A one-off payment is not a pattern a rule can cover.", refs: ["reason"] }],
+  rule: null,
+  previousParams: null,
+  retires: null,
+  ruleExplanation: null,
+  impact: null,
+  declined: null,
+};
+
+const ruleSuggestion = {
+  ...noSuggestion,
+  kind: "rule_version",
+  explanation: [{ text: "The client pays this supplier every month.", refs: ["reason"] }],
+  rule: {
+    key: "B2-K1",
+    version: 1,
+    alertType: "B",
+    layer: "client",
+    scopeSegmentId: null,
+    scopeClientId: "K1",
+    grain: "transaction",
+    anchor: null,
+    condition: 'client.pep && tx.amount > p.pep_min && tx.payee_account != "ACZ00000"',
+    replacesKey: "B2",
+    variables: [],
+    params: { pep_min: { value: 50_000, unit: "amount" } },
+  },
+  previousParams: { pep_min: { value: 50_000, unit: "amount" } },
+  ruleExplanation:
+    "Flags outgoing payments above CZK 50,000 by this PEP client, except to the supplier.",
+};
+
+let suggestionReply: unknown = noSuggestion;
 let observers: IntersectionObserverCallback[] = [];
 
 /** TX1's client has OLD1…OLD7 before it, newest first, and nothing after. */
@@ -147,6 +182,7 @@ const history = (url: URL) => {
 let detailStatus = "NEW";
 
 beforeEach(() => {
+  suggestionReply = noSuggestion;
   observers = [];
   detailStatus = "NEW";
   // Node's own experimental localStorage shadows happy-dom's and throws without a backing file.
@@ -172,6 +208,7 @@ beforeEach(() => {
       if (init?.method === "PUT" && url.pathname === "/api/transactions/TX1/status") {
         return new Response(null, { status: 204 });
       }
+      if (url.pathname === "/api/alerts/7/suggestion") return json(suggestionReply);
       if (url.pathname.endsWith("/history")) return json(history(url));
       const route = routes[url.pathname];
       return route ? json(route(url)) : json({ message: "not found" }, 404);
@@ -335,6 +372,15 @@ describe("App", () => {
     expect(
       await screen.findByText("Supplier payment, invoice on file.", { selector: "span" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Marked as false positive.");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/alerts/7/suggestion",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ reason: "Supplier payment, invoice on file." }),
+      }),
+    );
 
     fireEvent.click(screen.getByRole("tab", { name: /Review queue/ }));
     expect(within(queueTable()).getByText("TX1").closest("tr")).toHaveTextContent("False Positive");
@@ -411,6 +457,37 @@ describe("App", () => {
     expect(last).toContain("/api/transactions/OLD2/history");
     expect(last).toContain("limit=10");
     expect(screen.queryByRole("button", { name: "Load earlier" })).not.toBeInTheDocument();
+  });
+
+  it("opens the rule suggestion when the engine proposes a change", async () => {
+    suggestionReply = ruleSuggestion;
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    fireEvent.click(await screen.findByRole("button", { name: "False positive" }));
+    fireEvent.change(screen.getByPlaceholderText("Why the transaction is not suspicious"), {
+      target: { value: "Monthly supplier payment." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Mark as false positive" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Rule suggestion" });
+    expect(within(dialog).getByText("Suggested rule change")).toBeInTheDocument();
+    expect(screen.getByText("Monthly supplier payment.", { selector: "span" })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("still records the false positive when the suggestion fails", async () => {
+    suggestionReply = { detail: "nope" };
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    fireEvent.click(await screen.findByRole("button", { name: "False positive" }));
+    fireEvent.change(screen.getByPlaceholderText("Why the transaction is not suspicious"), {
+      target: { value: "Fine." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Mark as false positive" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("The rule suggestion failed.");
+    expect(screen.getByText("Fine.", { selector: "span" })).toBeInTheDocument();
   });
 
   it("opens a transaction typed into the header and flags unknown ids", async () => {

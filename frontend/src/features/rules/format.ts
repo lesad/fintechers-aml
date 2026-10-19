@@ -1,21 +1,6 @@
-import type { RuleParam, RuleVersion, RuleWindow } from "./api";
+import type { RuleVersion, RuleWindow } from "./api";
 
-const unitSuffix: Record<RuleParam["unit"], string> = {
-  amount: "CZK",
-  percent: "%",
-  multiple: "×",
-};
-
-/** A parameter's display value and unit: an amount is CZK already (ADR-0037), the rest as stored. */
-export const paramParts = ({ value, unit }: RuleParam) => ({
-  value: value.toLocaleString("en-US"),
-  unit: unitSuffix[unit],
-});
-
-export const paramText = (param: RuleParam) => {
-  const { value, unit } = paramParts(param);
-  return unit ? `${value} ${unit}` : value;
-};
+export { paramParts, paramText } from "@/utils";
 
 export const scopeLabel = (v: Pick<RuleVersion, "layer" | "scopeSegmentId" | "scopeClientId">) =>
   v.layer === "company"

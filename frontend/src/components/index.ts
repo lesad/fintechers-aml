@@ -14,3 +14,4 @@ export { Select } from "./Select";
 export { type CaseStatus, StatusLabel } from "./StatusLabel";
 export { type Column, Table } from "./Table";
 export { Tab, Tabs } from "./Tabs";
+export { Toast } from "./Toast";
