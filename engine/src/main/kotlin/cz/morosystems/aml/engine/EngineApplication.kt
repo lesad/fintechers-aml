@@ -1,6 +1,7 @@
 package cz.morosystems.aml.engine
 
 import cz.morosystems.aml.engine.importer.DataImporter
+import cz.morosystems.aml.engine.run.RunService
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -11,9 +12,10 @@ import org.springframework.context.annotation.Bean
 @ConfigurationPropertiesScan
 class EngineApplication {
     @Bean
-    fun commandRunner(importer: DataImporter) = ApplicationRunner { args ->
+    fun commandRunner(importer: DataImporter, runs: RunService) = ApplicationRunner { args ->
         when (args.nonOptionArgs.firstOrNull()) {
             "import" -> println(importer.import())
+            "run" -> println(runs.run())
             else -> println(USAGE)
         }
     }

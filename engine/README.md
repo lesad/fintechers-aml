@@ -38,11 +38,12 @@ Run from `engine/`:
 
 ```sh
 ./gradlew bootRun --args=import   # load data/raw/ into Postgres
+./gradlew bootRun --args=run      # run the rules into hits, alerts and data/out/alerts-<run>.csv
 ./gradlew test                    # tests use a throwaway Postgres container, never the dev database
 ./gradlew build                   # compile, test, package (what CI runs)
 ```
 
-`./gradlew bootRun --args=run` (run the rules, output to `data/out/`) arrives with the rule runner; until then it prints the usage line.
+`./gradlew bootRun --args=run` runs every active rule over July 2026 (~30 s on the full data), stores hits and alerts, and writes `data/out/alerts-<run>.csv`. On the July data: A 5,493 alerts, B 112 (22 PEP clients), C 720.
 
 Schema changes are Liquibase SQL files in `src/main/resources/db/migrations/`, listed in `db/changelog-master.xml`.
 
