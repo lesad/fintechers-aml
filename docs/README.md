@@ -15,7 +15,7 @@ This directory is durable, committed project memory. Live, in-flight work lives 
 | `ENVIRONMENT.md` | Env-var manifest + secure-handling guide                                                                                        | humans + agents                           |
 | `challenge/`     | Hackathon challenge context (FINREG AML triage): start at `challenge/README.md`                                                 | humans + agents, single source (ADR-0023) |
 | `rules/`         | Rule specifications we iterate on (detect, facts, gates, Jev questions, policy, priority, routing): start at `rules/README.md`  | humans + agents                           |
-| `engine/`        | Design of the Kotlin monitoring rules engine (CEL rules, layers, Z3 checks, alerts): `engine/rules-engine-design.md` (ADR-0024) | humans + agents                           |
+| `engine/`        | Design of the Kotlin monitoring rules engine (CEL rules, layers, Z3 checks, alerts): `engine/rules-engine-design.md` (ADR-0024); sample alert summaries: `engine/alert-summary-samples.md` | humans + agents                           |
 | `design/`        | Saved Claude Design screens, the source of truth for the UI: start at `design/README.md`                                        | humans + agents                           |
 | `superpowers/`   | Gitignored plan, spec and handoff drafts (ADR-0004)                                                                             | agents                                    |
 
