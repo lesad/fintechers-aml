@@ -93,7 +93,7 @@ class RuleRepository(private val jdbc: JdbcClient) {
         val params = jdbc.sql("select p.rule_id, p.name, p.value, p.unit from rule_param p join rule r on r.id = p.rule_id where $where")
             .params(*args)
             .query { rs, _ ->
-                Triple(rs.getLong("rule_id"), rs.getString("name"), Param(rs.getLong("value"), ParamUnit.valueOf(rs.getString("unit").uppercase())))
+                Triple(rs.getLong("rule_id"), rs.getString("name"), Param(rs.getDouble("value"), ParamUnit.valueOf(rs.getString("unit").uppercase())))
             }.list()
             .groupBy({ it.first }, { it.second to it.third }).mapValues { it.value.toMap() }
 

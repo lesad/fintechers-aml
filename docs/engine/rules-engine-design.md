@@ -73,7 +73,7 @@ That loop is the differentiator for the pitch. This slice builds steps 2 and 4 a
 
 - Service lives in `engine/` at the repo root: Gradle Kotlin DSL, JDK 25 (current LTS), Spring Boot 4, Kotlin 2.3, `dev.cel` 0.14.x. Greenfield, so no reason to start on the previous generation; the Z3 and cel2sql4j spikes confirm the libraries run on JDK 25.
 - **Only the engine touches the database.** Tables live in the default `public` schema, migrated by **Liquibase** from the engine, the same way as `cyrrus/backend`: `src/main/resources/db/changelog-master.xml` includes numbered SQL files `db/migrations/NNNN-<name>.sql`, each starting `--liquibase formatted sql`, with `--changeset <author>:<n>` and a `--rollback` line; `spring.liquibase.change-log: classpath:/db/changelog-master.xml`. The Next.js app gets no direct database access: its Drizzle client, schema, `db:*` scripts and DB integration harness are removed (or reduced to starting the container) in the implementation, and any UI reads through the engine later. Supersedes the Drizzle part of ADR-0021 (see ADR-0024). `pnpm db:reset` drops the whole volume, so the engine re-migrates on next start.
-- Money is stored as **`bigint` haléře** (CZK × 100). Ratios are integer percentages.
+- Money is stored as **`double precision` CZK**, as the source CSV delivers it (ADR-0036). Ratios are whole percentages.
 - Data access with plain JDBC (`JdbcClient`) — the generated SQL is dynamic anyway; no JPA.
 - The engine is driven by CLI commands (Spring Boot application arguments), no REST in this slice.
 - Suppression is modelled as a replacing rule whose condition is `false`, so it goes through the same checks and approval path as any other replacement.
@@ -84,7 +84,7 @@ That loop is the differentiator for the pitch. This slice builds steps 2 and 4 a
 Command: `import`. Reads `data/raw/CNB/clients.csv`, `data/raw/CNB/transactions.csv`, `data/raw/cnb-fx/rok-2026.txt`.
 
 - CSVs: semicolon-separated, UTF-8 with BOM, dates `DD.MM.YYYY`, decimal point. FX file: `DD.MM.YYYY|rate|…`, decimal comma, quantity per currency in the header (`100 HUF`, `100 INR`, `100 ISK`, `100 JPY`, `100 KRW`, `100 TRY`; divide by it).
-- Conversion: use the last fixing **on or before** the transaction date. `amount = round_half_up(volume × rate / quantity × 100)` in haléře. Keep original volume, currency and the rate used.
+- Conversion: use the last fixing **on or before** the transaction date. `amount = round_half_up(volume × rate / quantity, 2)` in CZK. Keep original volume, currency and the rate used.
 - `ts` = date + time as `timestamp without time zone` (the data has local times and no zone).
 - `direction`: `incoming payment` → `in`, `outgoing payment` → `out`, `remittance` → `unknown` (remittances always have an empty payer account).
 - Client fields carried into the rule vocabulary: country, contract date, channel, `pep` (Y/N → bool), type, expected monthly volume, expected count, Q2 volume, Q2 count, Q2 max transaction, risk (`low`/`medium`/`high`), and computed `q2_days` = calendar days from the later of the contract date and 1 April 2026 to 30 June 2026, inclusive (91 for older clients; 30 for a 1 June contract). Note the data spells one type `enterpreneur`; keep it as delivered.
@@ -95,7 +95,7 @@ Command: `import`. Reads `data/raw/CNB/clients.csv`, `data/raw/CNB/transactions.
 Data:
 
 - `client` — one row per client, typed columns as above.
-- `transaction` — id, client_id, ts, amount (haléře), original volume and currency, fx rate, payer/payee country, payer/payee account, type, direction. Index `(client_id, ts)`.
+- `transaction` — id, client_id, ts, amount (CZK), original volume and currency, fx rate, payer/payee country, payer/payee account, type, direction. Index `(client_id, ts)`.
 - `fx_rate` — date, currency, quantity, rate.
 - `reference_list` — list name (`high_risk`), code, valid_for, source. Loaded from the reference JSON.
 
@@ -119,10 +119,10 @@ A rule is a CEL `condition` evaluated once per **grain row**, plus named **varia
 
 **Vocabulary** (declared with concrete types for the CEL compiler and the verifier):
 
-- `tx` — the grain's transaction (grains `transaction` and `client_anchor`): `amount` (int, haléře), `ts`, `direction` (string), `payer_country`, `payee_country`, `payer_account`, `payee_account`, `type`, `currency`.
+- `tx` — the grain's transaction (grains `transaction` and `client_anchor`): `amount` (double, CZK), `ts`, `direction` (string), `payer_country`, `payee_country`, `payer_account`, `payee_account`, `type`, `currency`.
 - `client` — `country`, `pep` (bool), `type`, `channel`, `risk`, `expected_monthly_volume`, `q2_volume`, `q2_tx_count`, `q2_max_tx`, `q2_days`, `contract_date`.
 - `day` — for grain `client_day`: the calendar date.
-- `p` — resolved parameters (ints).
+- `p` — resolved parameters (doubles; an amount is CZK, a ratio a whole percentage).
 - `lists` — reference lists, e.g. `lists.high_risk` (list of strings).
 - each variable by name (`int` for `sum`/`max`/`min`/`count`, `list(string)` for `set`).
 
@@ -140,12 +140,12 @@ A rule is a CEL `condition` evaluated once per **grain row**, plus named **varia
 
 | key | type | grain                                        | condition                                                                                                                                            | params                              |
 | --- | ---- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| A1  | A    | client_day                                   | `day_volume * 100 > p.projected_pct * client.expected_monthly_volume`                                                                                | projected_pct 25                    |
-| A2  | A    | client_day                                   | `client.q2_tx_count > 0 && day_volume * client.q2_days > p.avg_multiple * client.q2_volume`                                                          | avg_multiple 3                      |
+| A1  | A    | client_day                                   | `day_volume * 100.0 > p.projected_pct * client.expected_monthly_volume`                                                                                | projected_pct 25                    |
+| A2  | A    | client_day                                   | `client.q2_tx_count > 0 && day_volume * double(client.q2_days) > p.avg_multiple * client.q2_volume`                                                          | avg_multiple 3                      |
 | A3  | A    | transaction                                  | `client.q2_tx_count > 0 && tx.amount > p.max_multiple * client.q2_max_tx`                                                                            | max_multiple 2                      |
-| B1  | B    | transaction                                  | `tx.amount > p.country_min && (tx.payer_country in lists.high_risk \|\| tx.payee_country in lists.high_risk \|\| client.country in lists.high_risk)` | country_min 1000000 (10,000 CZK)    |
-| B2  | B    | transaction                                  | `client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]`                                                                          | pep_min 10000000 (100,000 CZK)      |
-| C1  | C    | client_anchor, anchor `tx.direction == "in"` | `inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow`                                                                                   | min_inflow 10000000, forward_pct 80 |
+| B1  | B    | transaction                                  | `tx.amount > p.country_min && (tx.payer_country in lists.high_risk \|\| tx.payee_country in lists.high_risk \|\| client.country in lists.high_risk)` | country_min 10000 CZK               |
+| B2  | B    | transaction                                  | `client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]`                                                                          | pep_min 100000 CZK                  |
+| C1  | C    | client_anchor, anchor `tx.direction == "in"` | `inflow > p.min_inflow && outflow * 100.0 >= p.forward_pct * inflow`                                                                                   | min_inflow 100000 CZK, forward_pct 80 |
 
 Variables:
 

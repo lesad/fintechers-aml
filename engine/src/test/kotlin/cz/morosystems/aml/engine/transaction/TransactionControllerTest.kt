@@ -25,12 +25,12 @@ class TransactionControllerTest {
         client("K1", pep = true, risk = "high")
         client("K2", pep = false, risk = "low")
         client("K3", pep = false, risk = "medium")
-        tx("T1", "K1", "2026-07-03 10:00", 18_450_000, "out")
-        tx("T2", "K2", "2026-07-04 09:00", 5_000_000, "in")
-        tx("T3", "K3", "2026-07-05 12:00", 7_000_000, "in")
-        tx("T4", "K1", "2026-07-02 08:00", 100_000, "in")
-        tx("T5", "K2", "2026-07-06 08:00", 200_000, "in")
-        tx("T9", "K1", "2026-07-01 08:00", 50_000, "out")
+        tx("T1", "K1", "2026-07-03 10:00", 184_500.0, "out")
+        tx("T2", "K2", "2026-07-04 09:00", 50_000.0, "in")
+        tx("T3", "K3", "2026-07-05 12:00", 70_000.0, "in")
+        tx("T4", "K1", "2026-07-02 08:00", 1_000.0, "in")
+        tx("T5", "K2", "2026-07-06 08:00", 2_000.0, "in")
+        tx("T9", "K1", "2026-07-01 08:00", 500.0, "out")
 
         val old = run()
         alert(old, "C", "K3", "T3", "C1", "ESCALATE", 99) // an earlier run: must not show
@@ -52,7 +52,7 @@ class TransactionControllerTest {
         body.extractingPath("$.items[0].score").isEqualTo(90)
         body.extractingPath("$.items[0].rules[*].key").asArray().containsExactly("B2")
         body.extractingPath("$.items[0].rules[0].name").isEqualTo("PEP outgoing payment above the limit")
-        body.extractingPath("$.items[0].amountHalere").isEqualTo(18_450_000)
+        body.extractingPath("$.items[0].amount").isEqualTo(184_500.0)
         body.extractingPath("$.total").isEqualTo(4)
         body.extractingPath("$.countsByRating.High").isEqualTo(2)
         body.extractingPath("$.countsByRating.Medium").isEqualTo(1)
@@ -108,7 +108,7 @@ class TransactionControllerTest {
         body.extractingPath("$.alerts[0].triage.configVersion").isEqualTo("test-v1")
         body.extractingPath("$.alerts[0].hits[0].rule").isEqualTo("B2")
         body.extractingPath("$.alerts[0].hits[0].name").isEqualTo("PEP outgoing payment above the limit")
-        body.extractingPath("$.alerts[0].hits[0].evidence['tx.amount']").isEqualTo(18_450_000)
+        body.extractingPath("$.alerts[0].hits[0].evidence['tx.amount']").isEqualTo(184_500)
         body.extractingPath("$.history[*].id").asArray().containsExactly("T1", "T4", "T9")
         body.extractingPath("$.history[1].alertTypes").asArray().containsExactly("A")
         body.extractingPath("$.history[2].alertTypes").asArray().isEmpty()
@@ -139,19 +139,19 @@ class TransactionControllerTest {
             """
             insert into client (id, country, contract_date, channel, pep, type, expected_monthly_volume, expected_count,
                                 q2_volume, q2_tx_count, q2_max_tx, q2_days, risk)
-            values (?, 'CZ', '2019-03-14', 'in person', ?, 'legal entity', 40000000, 55, 162000000, 182, 6140000, 91, ?)
+            values (?, 'CZ', '2019-03-14', 'in person', ?, 'legal entity', 400000, 55, 1620000, 182, 61400, 91, ?)
             """,
         ).params(id, pep, risk).update()
     }
 
-    private fun tx(id: String, client: String, ts: String, amount: Long, direction: String) {
+    private fun tx(id: String, client: String, ts: String, amount: Double, direction: String) {
         jdbc.sql(
             """
             insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_country, payee_country,
                                      payer_account, payee_account, type, direction)
             values (?, ?, ?::timestamp, ?, ?, 'CZK', 1, 'CZ', 'AT', ?, 'AAT00116', 'outgoing payment', ?)
             """,
-        ).params(id, client, ts, amount, amount / 100.0, client, direction).update()
+        ).params(id, client, ts, amount, amount, client, direction).update()
     }
 
     private fun run(): Long =
@@ -163,7 +163,7 @@ class TransactionControllerTest {
         val hit = jdbc.sql(
             """
             insert into rule_hit (run_id, rule_id, client_id, grain_key, evidence)
-            values (?, (select id from rule where key = ? and version = 1), ?, ?, '{"tx.amount": 18450000}'::jsonb)
+            values (?, (select id from rule where key = ? and version = 1), ?, ?, '{"tx.amount": 184500}'::jsonb)
             returning id
             """,
         ).params(runId, rule, client, txId).query(Long::class.java).single()

@@ -43,12 +43,12 @@ class FxTableTest {
     }
 
     @Test
-    fun convertsToHalere() {
-        assertThat(toHalere(BigDecimal("1000.00"), BigDecimal("24.50"))).isEqualTo(2450000L)
+    fun convertsToCzk() {
+        assertThat(toCzk(BigDecimal("1000.00"), BigDecimal("24.50"))).isEqualTo(24500.0)
     }
 
     @Test
-    fun roundsHalfUp() {
-        assertThat(toHalere(BigDecimal("0.01"), BigDecimal("0.5"))).isEqualTo(1L)
+    fun roundsHalfUpToTheHeller() {
+        assertThat(toCzk(BigDecimal("0.015"), BigDecimal("1"))).isEqualTo(0.02)
     }
 }

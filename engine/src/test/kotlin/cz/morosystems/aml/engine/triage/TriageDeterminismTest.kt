@@ -57,18 +57,18 @@ class TriageDeterminismTest {
             "asOf" to base.copy(asOf = base.asOf.plusDays(1)),
             "hits" to base.copy(hits = base.hits + hit("N1", "G9")),
             "hit rule version" to base.copy(hits = listOf(hit("W1", "G1").copy(ruleVersion = 2))),
-            "hit evidence" to base.copy(hits = listOf(hit("W1", "G1").copy(evidence = mapOf("amount" to 2L)))),
+            "hit evidence" to base.copy(hits = listOf(hit("W1", "G1").copy(evidence = mapOf("amount" to 2.0)))),
             "client risk" to base.copy(client = base.client.copy(risk = "high")),
             "client pep" to base.copy(client = base.client.copy(pep = true)),
             "client country" to base.copy(client = base.client.copy(country = "IR")),
             "client channel" to base.copy(client = base.client.copy(channel = "distant form")),
             "client contract date" to base.copy(client = base.client.copy(contractDate = LocalDate.of(2021, 1, 1))),
-            "client expected monthly volume" to base.copy(client = base.client.copy(expectedMonthlyVolume = 20_000_000L)),
-            "client q2 volume" to base.copy(client = base.client.copy(q2Volume = 40_000_000L)),
+            "client expected monthly volume" to base.copy(client = base.client.copy(expectedMonthlyVolume = 200_000.0)),
+            "client q2 volume" to base.copy(client = base.client.copy(q2Volume = 400_000.0)),
             "client q2 tx count" to base.copy(client = base.client.copy(q2TxCount = 31)),
             "client q2 days" to base.copy(client = base.client.copy(q2Days = 61)),
             "counterparty countries" to base.copy(counterpartyCountries = setOf("IR")),
-            "amount" to base.copy(amountMinor = 2_000_000),
+            "amount" to base.copy(amount = 20_000.0),
             "other alert types" to base.copy(otherAlertTypesOnClient = setOf("C")),
         )
         val hashes = mutations.mapValues { hashOf(it.value) }
@@ -78,7 +78,7 @@ class TriageDeterminismTest {
 
     @Test
     fun aNullFieldHashesDifferentlyFromAValue() {
-        assertThat(hashOf(baseline().copy(amountMinor = null))).isNotEqualTo(hashOf(baseline()))
+        assertThat(hashOf(baseline().copy(amount = null))).isNotEqualTo(hashOf(baseline()))
         assertThat(hashOf(baseline().copy(transactionId = null))).isNotEqualTo(hashOf(baseline()))
     }
 
@@ -110,15 +110,17 @@ class TriageDeterminismTest {
     }
 
     @Test
-    fun canonicalJsonRefusesFloatingPointBecauseMoneyIsNeverAFloat() {
-        assertThatThrownBy { CanonicalJson.render(1.5) }
-            .isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("floating point")
-        assertThatThrownBy { CanonicalJson.render(1.5f) }
-            .isInstanceOf(IllegalStateException::class.java)
-            .hasMessageContaining("floating point")
-        assertThatThrownBy { CanonicalJson.render(mapOf("amount" to 1.5)) }
-            .isInstanceOf(IllegalStateException::class.java)
+    fun canonicalJsonRendersAnAmountInOneDecimalFormWhateverItsSpelling() {
+        assertThat(CanonicalJson.render(1.5)).isEqualTo("1.5")
+        assertThat(CanonicalJson.render(1.5f)).isEqualTo("1.5")
+        assertThat(CanonicalJson.render(11_000_000.0)).isEqualTo("11000000")
+        assertThat(CanonicalJson.render(mapOf("amount" to 25.0))).isEqualTo(CanonicalJson.render(mapOf("amount" to 25L)))
+    }
+
+    @Test
+    fun canonicalJsonRefusesWhatIsNotAnAmount() {
+        assertThatThrownBy { CanonicalJson.render(Double.NaN) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { CanonicalJson.render(Double.POSITIVE_INFINITY) }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
@@ -128,7 +130,7 @@ class TriageDeterminismTest {
 
     private fun hashOf(input: TriageInput) = CanonicalJson.sha256(input.canonicalForm())
 
-    private fun hit(rule: String, grainKey: String) = TriagedHit(rule, 1, grainKey, mapOf("amount" to 1_000_000L))
+    private fun hit(rule: String, grainKey: String) = TriagedHit(rule, 1, grainKey, mapOf("amount" to 10_000.0))
 
     private fun baseline() = TriageInput(
         alertId = 1,
@@ -144,13 +146,13 @@ class TriageDeterminismTest {
             country = "CZ",
             channel = "in person",
             contractDate = LocalDate.of(2020, 1, 1),
-            expectedMonthlyVolume = 10_000_000L,
-            q2Volume = 30_000_000L,
+            expectedMonthlyVolume = 100_000.0,
+            q2Volume = 300_000.0,
             q2TxCount = 30,
             q2Days = 60,
         ),
         counterpartyCountries = emptySet(),
-        amountMinor = 1_000_000,
+        amount = 10_000.0,
         otherAlertTypesOnClient = emptySet(),
     )
 }

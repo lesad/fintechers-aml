@@ -1,11 +1,13 @@
 package cz.morosystems.aml.engine.cel
 
+import java.math.BigDecimal
+
 /** Builds the CEL activation from bare field names; the only place that knows the qualified-name layout. */
 object Activations {
     fun of(
         tx: Map<String, Any?>?,
         client: Map<String, Any?>,
-        params: Map<String, Long>,
+        params: Map<String, Double>,
         lists: Map<String, List<String>>,
         variables: Map<String, Any?>,
     ): Map<String, Any?> = buildMap {
@@ -17,10 +19,13 @@ object Activations {
     }
 
     // NOTE: CEL has no null for typed fields; an absent account or country (remittances) reads as "".
+    // CEL knows two numeric types, so a count widens to Long and every money column arrives as a Double.
     private fun celValue(value: Any?): Any = when (value) {
         null -> ""
         is Int -> value.toLong()
         is Short -> value.toLong()
+        is Float -> value.toDouble()
+        is BigDecimal -> value.toDouble()
         else -> value
     }
 }

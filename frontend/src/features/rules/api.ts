@@ -15,7 +15,7 @@ const variable = z.object({
 
 export const PARAM_UNITS = ["amount", "percent", "multiple", "count"] as const;
 
-/** An integer threshold; an `amount` is in haléře. */
+/** A numeric threshold; an `amount` is in CZK. */
 const param = z.object({ value: z.number(), unit: z.enum(PARAM_UNITS) });
 
 const ruleFields = {
@@ -84,6 +84,5 @@ export function groupByKey(versions: RuleVersion[]): { key: string; versions: Ru
   }));
 }
 
-/** haléře → "50,000 CZK" */
-export const formatCzk = (halere: number) =>
-  `${Math.round(halere / 100).toLocaleString("en-US")} CZK`;
+/** `50000` → "50,000 CZK" */
+export const formatCzk = (amount: number) => `${amount.toLocaleString("en-US")} CZK`;

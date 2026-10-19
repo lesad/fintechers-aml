@@ -52,7 +52,7 @@ class RuleControllerTest {
         val list = assertThat(mvc.get().uri("/api/rules")).hasStatusOk().bodyJson()
         list.extractingPath("$.length()").isEqualTo(7)
         list.extractingPath("$[4].key").isEqualTo("B2")
-        list.extractingPath("$[4].params.pep_min.value").isEqualTo(10_000_000)
+        list.extractingPath("$[4].params.pep_min.value").isEqualTo(100_000.0)
         list.extractingPath("$[4].params.pep_min.unit").isEqualTo("amount")
         list.extractingPath("$[0].params.projected_pct.unit").isEqualTo("percent")
         list.extractingPath("$[4].name").isEqualTo("PEP outgoing payment above the limit")
@@ -65,11 +65,11 @@ class RuleControllerTest {
 
     @Test
     fun savesADraftWithItsExplanation() {
-        val saved = assertThat(post(b2Body(pepMin = 5_000_000))).hasStatus(HttpStatus.CREATED).bodyJson()
+        val saved = assertThat(post(b2Body(pepMin = 50_000.0))).hasStatus(HttpStatus.CREATED).bodyJson()
         saved.extractingPath("$.version").isEqualTo(2)
         saved.extractingPath("$.status").isEqualTo("draft")
         saved.extractingPath("$.author").isEqualTo("J. Novák")
-        saved.extractingPath("$.params.pep_min").isEqualTo(mapOf("value" to 5_000_000, "unit" to "amount"))
+        saved.extractingPath("$.params.pep_min").isEqualTo(mapOf("value" to 50_000.0, "unit" to "amount"))
         saved.extractingPath("$.explanation").isEqualTo(LOWER_B2)
         saved.extractingPath("$.explanationModel").isEqualTo("eu.anthropic.claude-opus-4-5-20251101-v1:0")
     }
@@ -104,7 +104,7 @@ class RuleControllerTest {
 
     @Test
     fun rejectsAConditionUsingAMissingParameter() {
-        assertThat(post(b2Body().replace(""""pep_min": { "value": 5000000, "unit": "amount" }""", ""))).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(post(b2Body().replace(""""pep_min": { "value": 50000.0, "unit": "amount" }""", ""))).hasStatus(HttpStatus.BAD_REQUEST)
     }
 
     @Test
@@ -127,7 +127,7 @@ class RuleControllerTest {
 
     @Test
     fun rejectsAParameterWithoutAValue() {
-        assertThat(post(b2Body().replace(""""value": 5000000""", """"value": null""")))
+        assertThat(post(b2Body().replace(""""value": 50000.0""", """"value": null""")))
             .hasStatus(HttpStatus.BAD_REQUEST).bodyJson().extractingPath("$.detail").asString().contains("pep_min")
     }
 
@@ -168,7 +168,7 @@ class RuleControllerTest {
 
     private fun post(body: String) = mvc.post().uri("/api/rules").contentType(MediaType.APPLICATION_JSON).content(body)
 
-    private fun b2Body(pepMin: Long = 5_000_000, key: String = "B2", unit: String = "amount") = """
+    private fun b2Body(pepMin: Double = 50_000.0, key: String = "B2", unit: String = "amount") = """
         {
           "key": "$key", "alertType": "B", "layer": "company", "scopeSegmentId": null, "scopeClientId": null,
           "grain": "transaction", "anchor": null,
@@ -184,7 +184,7 @@ class RuleControllerTest {
             {
               "key": "C9", "alertType": "C", "layer": "company", "scopeSegmentId": null, "scopeClientId": null,
               "grain": "client_anchor", "anchor": "tx.direction == \"in\"",
-              "condition": "inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow",
+              "condition": "inflow > p.min_inflow && outflow * 100.0 >= p.forward_pct * inflow",
               "replacesKey": null,
               "variables": [
                 { "name": "inflow", "agg": "sum", "field": "amount", "filter": "tx.direction == \"in\"",
@@ -194,7 +194,7 @@ class RuleControllerTest {
                 { "name": "outflow", "agg": "sum", "field": "amount", "filter": "tx.direction == \"out\" && !(tx.payee_account in payers)",
                   "window": { "kind": "relative", "from": "PT0S", "to": "PT6H" } }
               ],
-              "params": { "min_inflow": { "value": 10000000, "unit": "amount" }, "forward_pct": { "value": 80, "unit": "percent" } },
+              "params": { "min_inflow": { "value": 100000, "unit": "amount" }, "forward_pct": { "value": 80, "unit": "percent" } },
               "author": "J. Novák"
             }
         """.trimIndent()

@@ -43,8 +43,8 @@ class TriageRepository(private val jdbc: JdbcClient) {
                     country = rs.getString("country"),
                     channel = rs.getString("channel"),
                     contractDate = (rs.getObject("contract_date") as Date?)?.toLocalDate(),
-                    expectedMonthlyVolume = rs.getObject("expected_monthly_volume") as Long?,
-                    q2Volume = rs.getObject("q2_volume") as Long?,
+                    expectedMonthlyVolume = rs.getObject("expected_monthly_volume") as Double?,
+                    q2Volume = rs.getObject("q2_volume") as Double?,
                     q2TxCount = rs.getObject("q2_tx_count") as Int?,
                     q2Days = rs.getObject("q2_days") as Int?,
                 )

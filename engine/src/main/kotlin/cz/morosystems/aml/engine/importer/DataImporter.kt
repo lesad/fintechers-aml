@@ -102,7 +102,7 @@ class DataImporter(private val jdbc: JdbcClient, private val props: EngineProper
             val type = r["type of transaction"]
             listOf(
                 id, clientId, LocalDateTime.of(date, LocalTime.parse(r["time"])),
-                toHalere(volume, rate), volume, currency, rate,
+                toCzk(volume, rate), volume, currency, rate,
                 r["country of payer"].ifEmpty { null }, r["country of payee"].ifEmpty { null },
                 r["account of payer"].ifEmpty { null }, r["account of payee"].ifEmpty { null },
                 type, Parsing.direction(type),

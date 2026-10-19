@@ -56,7 +56,7 @@ class RunServiceTest {
         val evidence = jdbc.sql(
             "select h.evidence::text from rule_hit h join rule r on r.id = h.rule_id where h.run_id = ? and r.key = 'C1'",
         ).param(runId).query(String::class.java).single()
-        assertThat(evidence).contains("\"inflow\": 11000000", "\"outflow\": 9000000", "\"payers\": [\"ACZ1\"]", "\"p.min_inflow\": 10000000", "\"p.forward_pct\": 80")
+        assertThat(evidence).contains("\"inflow\": 110000", "\"outflow\": 90000", "\"payers\": [\"ACZ1\"]", "\"p.min_inflow\": 100000", "\"p.forward_pct\": 80")
     }
 
     @Test
@@ -85,7 +85,7 @@ class RunServiceTest {
         jdbc.sql(
             """
             insert into rule (key, version, alert_type, layer, grain, condition, status, author)
-            values ('DIV0', 1, 'A', 'company', 'transaction', 'tx.amount / 0 > 1', 'active', 'test')
+            values ('DIV0', 1, 'A', 'company', 'transaction', 'client.q2_tx_count / 0 > 1', 'active', 'test')
             """,
         ).update()
         assertThatThrownBy { runs.run() }.hasMessageContaining("DIV0").hasMessageContaining("client K")
@@ -108,7 +108,7 @@ class RunServiceTest {
         jdbc.sql(
             """
             insert into client (id, country, pep, type, channel, risk, expected_monthly_volume, q2_volume, q2_tx_count, q2_max_tx, q2_days)
-            values (?, 'CZ', ?, 'legal entity', 'in person', 'low', 100000000000, 0, 0, 0, 91)
+            values (?, 'CZ', ?, 'legal entity', 'in person', 'low', 1000000000, 0, 0, 0, 91)
             """,
         ).params(id, pep).update()
     }
@@ -119,6 +119,6 @@ class RunServiceTest {
             insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_country, payee_country, payer_account, payee_account, type, direction)
             values (?, ?, ?::timestamp, ?, ?, 'CZK', 1, 'CZ', 'CZ', ?, ?, 'x', ?)
             """,
-        ).params(listOf(id, client, ts, amountCzk * 100, amountCzk, payer, payee, direction)).update()
+        ).params(listOf(id, client, ts, amountCzk, amountCzk, payer, payee, direction)).update()
     }
 }

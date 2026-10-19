@@ -24,8 +24,8 @@ data class ClientFacts(
     val country: String?,
     val channel: String?,
     val contractDate: LocalDate?,
-    val expectedMonthlyVolume: Long?,
-    val q2Volume: Long?,
+    val expectedMonthlyVolume: Double?,
+    val q2Volume: Double?,
     val q2TxCount: Int?,
     val q2Days: Int?,
 ) {
@@ -34,13 +34,13 @@ data class ClientFacts(
      * Such a client is not evidence of good behaviour — it is an absence of evidence, so it blocks an auto-close.
      */
     val unbaselined: Boolean
-        get() = (expectedMonthlyVolume ?: 0L) <= 0L || (q2Volume ?: 0L) <= 0L || (q2TxCount ?: 0) <= 0 || (q2Days ?: 0) <= 0
+        get() = (expectedMonthlyVolume ?: 0.0) <= 0.0 || (q2Volume ?: 0.0) <= 0.0 || (q2TxCount ?: 0) <= 0 || (q2Days ?: 0) <= 0
 
     /** Why the client is unbaselined, for the reason line. Empty when it is not. */
     val missingBaseline: List<String>
         get() = buildList {
-            if ((expectedMonthlyVolume ?: 0L) <= 0L) add("expected_monthly_volume")
-            if ((q2Volume ?: 0L) <= 0L) add("q2_volume")
+            if ((expectedMonthlyVolume ?: 0.0) <= 0.0) add("expected_monthly_volume")
+            if ((q2Volume ?: 0.0) <= 0.0) add("q2_volume")
             if ((q2TxCount ?: 0) <= 0) add("q2_tx_count")
             if ((q2Days ?: 0) <= 0) add("q2_days")
         }
@@ -51,7 +51,7 @@ data class ClientFacts(
  * happens inside the decision, so the same input always yields the same output.
  *
  * @param asOf the run period's end, the date relationship length is measured against. Never `now()`.
- * @param amountMinor the alert's amount in haléře (CZK x 100), or null when the alert is not transaction-bound.
+ * @param amount the alert's amount in CZK, or null when the alert is not transaction-bound.
  * @param otherAlertTypesOnClient alert types **other than this one** raised on the same client in the same run.
  */
 data class TriageInput(
@@ -63,7 +63,7 @@ data class TriageInput(
     val hits: List<TriagedHit>,
     val client: ClientFacts,
     val counterpartyCountries: Set<String>,
-    val amountMinor: Long?,
+    val amount: Double?,
     val otherAlertTypesOnClient: Set<String>,
 ) {
     /**
@@ -92,7 +92,7 @@ data class TriageInput(
             "q2Days" to client.q2Days,
         ),
         "counterpartyCountries" to counterpartyCountries,
-        "amountMinor" to amountMinor,
+        "amount" to amount,
         "otherAlertTypesOnClient" to otherAlertTypesOnClient,
     )
 }

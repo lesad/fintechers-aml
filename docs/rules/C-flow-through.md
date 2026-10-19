@@ -31,8 +31,8 @@ Version 1 is in `0004-seed-rules.sql`; version 2 (`0005-c1-remittances-as-outflo
 
 | Field              | Meaning                                                                 | Source       |
 | ------------------ | ----------------------------------------------------------------------- | ------------ |
-| `inflow`           | Inflow in the 24 h window, in haléře                                    | evidence     |
-| `outflow`          | Qualifying outflow in the 6 h after, in haléře                          | evidence     |
+| `inflow`           | Inflow in the 24 h window, in CZK                                       | evidence     |
+| `outflow`          | Qualifying outflow in the 6 h after, in CZK                             | evidence     |
 | `payers`           | Payer accounts in the window                                            | evidence     |
 | `p.*`              | The parameter values in force                                           | evidence     |
 | qualifying windows | Number of hits on the alert                                             | `alert_hit`  |

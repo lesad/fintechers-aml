@@ -4,9 +4,10 @@ import { useState } from "react";
 import { type CaseStatus, StatusLabel } from "@/components";
 import { cn } from "@/utils";
 
-import { czk, type TransactionDetail } from "./api";
 import { DISPOSITION_LABEL, formatAge, formatAmount, formatTs } from "./queue";
 import { TriageBreakdown } from "./TriageBreakdown";
+
+import type { TransactionDetail } from "./api";
 
 const eyebrow = "text-[10px] font-semibold tracking-[0.08em] text-fg-subtle uppercase";
 
@@ -95,7 +96,7 @@ export function DetailStrip({
       <div className={stripBlock()}>
         <span className={eyebrow}>Amount</span>
         <span className="text-lg leading-tight font-semibold whitespace-nowrap tabular-nums">
-          {formatAmount(czk(tx.amountHalere))}{" "}
+          {formatAmount(tx.amount)}{" "}
           <span className="text-[13px] font-medium text-fg-muted">CZK</span>
         </span>
         <span className="text-xs whitespace-nowrap text-fg-muted tabular-nums">

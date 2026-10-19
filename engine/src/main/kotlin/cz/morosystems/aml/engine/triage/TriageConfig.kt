@@ -6,8 +6,8 @@ import tools.jackson.databind.json.JsonMapper
 /** A score band. The first band whose [maxScore] the score does not exceed wins. */
 data class Band(val maxScore: Int, val disposition: Disposition)
 
-/** Points for an amount at or above [fromMinor] haléře. Bands are tried from the largest threshold down. */
-data class AmountBand(val fromMinor: Long, val points: Int)
+/** Points for an amount at or above [from] CZK. Bands are tried from the largest threshold down. */
+data class AmountBand(val from: Double, val points: Int)
 
 /**
  * Points for an alert carrying at least [fromHits] rule hits. Keyed per alert type because hit counts are not
@@ -76,8 +76,8 @@ data class TriageConfig(
         require(bands.last().maxScore >= MAX_SCORE) { "the last band must reach $MAX_SCORE, got ${bands.last().maxScore}" }
         require(unknownRuleScore in 0..MAX_SCORE) { "unknownRuleScore must be within 0..$MAX_SCORE" }
         require(baseScores.values.all { it in 0..MAX_SCORE }) { "every base score must be within 0..$MAX_SCORE" }
-        require(amountBands.zipWithNext().all { (a, b) -> a.fromMinor > b.fromMinor }) { "amount bands must be ordered by a strictly decreasing threshold" }
-        require(amountBands.all { it.fromMinor >= 0 }) { "amount thresholds must not be negative" }
+        require(amountBands.zipWithNext().all { (a, b) -> a.from > b.from }) { "amount bands must be ordered by a strictly decreasing threshold" }
+        require(amountBands.all { it.from >= 0 }) { "amount thresholds must not be negative" }
         require(intensityBands.values.all { bands -> bands.zipWithNext().all { (a, b) -> a.fromHits > b.fromHits } }) {
             "intensity bands must be ordered by a strictly decreasing hit count"
         }
@@ -120,7 +120,7 @@ data class TriageConfig(
                     perExtraAlertType = factors.required("perExtraAlertType").intValue(),
                     extraAlertTypeMax = factors.required("extraAlertTypeMax").intValue(),
                 ),
-                amountBands = root.required("amountBands").values().map { AmountBand(it.required("fromMinor").longValue(), it.required("points").intValue()) },
+                amountBands = root.required("amountBands").values().map { AmountBand(it.required("from").doubleValue(), it.required("points").intValue()) },
                 intensityBands = root.required("intensityBands").properties().associate { (alertType, node) ->
                     alertType to node.values().map { IntensityBand(it.required("fromHits").intValue(), it.required("points").intValue()) }
                 },

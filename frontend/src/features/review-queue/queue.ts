@@ -1,6 +1,6 @@
-import { czk, type Disposition, type FlaggedTransaction } from "./api";
 import { rulesSummary } from "./rules";
 
+import type { Disposition, FlaggedTransaction } from "./api";
 import type { AiRating, CaseStatus, RiskLevel } from "@/components";
 
 export type QueueItem = {
@@ -39,7 +39,7 @@ export function toQueueItem(f: FlaggedTransaction): QueueItem {
     ruleReason: rulesSummary(f.rules.map((r) => r.name)),
     // No model rates cases (ADR-0032); the AI part of the badge stays empty.
     ai: "none",
-    amount: czk(f.amountHalere),
+    amount: f.amount,
     date: formatTs(f.ts),
     // The engine has no case status yet; decisions live in the browser (useDecisions).
     status: "New",

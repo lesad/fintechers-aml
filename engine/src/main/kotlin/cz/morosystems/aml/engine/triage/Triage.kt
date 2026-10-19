@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.triage
 
+import cz.morosystems.aml.engine.plain
 import java.time.temporal.ChronoUnit
 
 /**
@@ -114,8 +115,8 @@ object Triage {
             reasons += Reason("STATIC_CAP", "rating, country and channel capped at ${f.staticCap} (summed to $static)", f.staticCap - static)
         }
 
-        val amount = input.amountMinor?.let { value -> config.amountBands.firstOrNull { value >= it.fromMinor }?.points } ?: 0
-        reasons += Reason("AMOUNT", input.amountMinor?.let { "largest amount ${it} haléře" } ?: "no amount on this alert", amount)
+        val amount = input.amount?.let { value -> config.amountBands.firstOrNull { value >= it.from }?.points } ?: 0
+        reasons += Reason("AMOUNT", input.amount?.let { "largest amount ${plain(it)} CZK" } ?: "no amount on this alert", amount)
 
         // Not a red flag in itself — an absence of evidence. It also blocks the auto-close, through its own floor.
         val unbaselined = if (input.client.unbaselined) f.unbaselinedClient else 0
@@ -161,8 +162,8 @@ object Triage {
     private fun missing(field: RequiredField, input: TriageInput): Boolean = when (field) {
         RequiredField.CLIENT_RISK -> input.client.risk.isNullOrBlank()
         RequiredField.CLIENT_COUNTRY -> input.client.country.isNullOrBlank()
-        RequiredField.CLIENT_EXPECTED_VOLUME -> (input.client.expectedMonthlyVolume ?: 0L) <= 0L
-        RequiredField.ALERT_AMOUNT -> input.amountMinor == null
+        RequiredField.CLIENT_EXPECTED_VOLUME -> (input.client.expectedMonthlyVolume ?: 0.0) <= 0.0
+        RequiredField.ALERT_AMOUNT -> input.amount == null
     }
 
     private fun matches(floor: Floor, input: TriageInput, config: TriageConfig, unknownRules: List<String>): Boolean =

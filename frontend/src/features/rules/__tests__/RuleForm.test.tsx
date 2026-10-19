@@ -16,7 +16,7 @@ describe("RuleForm", () => {
   it("pre-fills from a version and locks alert type, layer and replaces", () => {
     form();
     expect(screen.getByLabelText("Condition")).toHaveValue(B2.condition);
-    expect(screen.getByLabelText("Value of parameter 1")).toHaveValue("10000000");
+    expect(screen.getByLabelText("Value of parameter 1")).toHaveValue("100000");
     for (const field of ["Key", "Alert type", "Layer", "Replaces"]) {
       expect(screen.getByLabelText(field)).toHaveAttribute("readonly");
     }
@@ -43,7 +43,7 @@ describe("RuleForm", () => {
   it("shows the CZK reading next to an amount parameter only", () => {
     form();
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), {
-      target: { value: "5000000" },
+      target: { value: "50000" },
     });
     expect(screen.getByText("= 50,000 CZK")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Unit of parameter 1"), {
@@ -71,7 +71,9 @@ describe("RuleForm", () => {
     for (const value of ["", "50 000"]) {
       fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value } });
       fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
-      expect(await screen.findByText("Whole number of haléře or units")).toBeInTheDocument();
+      expect(
+        await screen.findByText("CZK or units, digits and an optional decimal point"),
+      ).toBeInTheDocument();
     }
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -114,7 +116,7 @@ describe("saving from the rules page", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "New version from v1" }));
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), {
-      target: { value: "5000000" },
+      target: { value: "50000" },
     });
   };
 
@@ -140,7 +142,7 @@ describe("saving from the rules page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(detail);
-    expect(screen.getByLabelText("Value of parameter 1")).toHaveValue("5000000");
+    expect(screen.getByLabelText("Value of parameter 1")).toHaveValue("50000");
   });
 
   it("the author sent is the current user", async () => {
@@ -151,7 +153,7 @@ describe("saving from the rules page", () => {
     expect(calls[0]?.body).toMatchObject({
       key: "B2",
       author: "J. Novák",
-      params: { pep_min: { value: 5_000_000, unit: "amount" } },
+      params: { pep_min: { value: 50_000, unit: "amount" } },
     });
   });
 });

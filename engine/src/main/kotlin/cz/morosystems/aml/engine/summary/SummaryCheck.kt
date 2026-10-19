@@ -29,7 +29,7 @@ fun checkSummary(sentences: List<Sentence>, known: Set<String>): List<Sentence> 
 }
 
 /**
- * The model does no arithmetic: every number it writes must appear in [input], as is or as haléře shown in CZK (÷ 100).
+ * The model does no arithmetic: every number it writes must appear in [input] as is. Amounts are CZK there already.
  * Digits inside identifiers (TX000000651, K005146) are not numbers.
  */
 fun checkNumbers(sentences: List<Sentence>, input: Any?): List<Sentence> {
@@ -40,9 +40,9 @@ fun checkNumbers(sentences: List<Sentence>, input: Any?): List<Sentence> {
     return sentences
 }
 
-/** The numbers in [text] that appear in [input] neither as is nor as haléře shown in CZK (÷ 100). */
+/** The numbers in [text] that do not appear in [input]. */
 fun numbersNotIn(text: String, input: Any?): List<String> {
-    val known = numbersIn(input).flatMap { listOf(it, it.movePointLeft(2)) }
+    val known = numbersIn(input)
     return NUMBER.findAll(text).map { it.value }.filterNot { n -> known.any { it.compareTo(BigDecimal(n.replace(",", ""))) == 0 } }.toList()
 }
 

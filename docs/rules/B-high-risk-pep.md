@@ -30,7 +30,7 @@ The list is data: swapping it (for example the 2024 FATF grey list with ZA and T
 
 | Field                 | Meaning                                                      | Source       |
 | --------------------- | ------------------------------------------------------------ | ------------ |
-| `tx.amount`           | The payment, in haléře                                       | evidence     |
+| `tx.amount`           | The payment, in CZK                                          | evidence     |
 | `p.*`                 | The parameter values in force                                | evidence     |
 | rules hit             | `B1`, `B2` or both                                           | `alert_hit`  |
 | matched parties       | Which of payer, payee and client country is listed, and the code | second layer |

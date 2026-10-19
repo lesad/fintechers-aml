@@ -8,7 +8,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 
 /**
- * Band edges, exactly. The config here scores nothing but the amount, through one band per haléř that pays out its
+ * Band edges, exactly. The config here scores nothing but the amount, through one band per CZK that pays out its
  * own threshold, so a decision can be dialled to any integer score and the band boundaries asserted on both sides.
  */
 class TriageBandsTest {
@@ -62,10 +62,10 @@ class TriageBandsTest {
 
     companion object {
         /**
-         * One amount band per haléř from 200 down to 0, each worth exactly its own threshold, so passing `score`
-         * haléře as the alert amount scores exactly `score`. Nothing else scores and nothing floors.
+         * One amount band per CZK from 200 down to 0, each worth exactly its own threshold, so passing `score`
+         * CZK as the alert amount scores exactly `score`. Nothing else scores and nothing floors.
          */
-        private val DIAL = (200 downTo 0).map { AmountBand(it.toLong(), it) }
+        private val DIAL = (200 downTo 0).map { AmountBand(it.toDouble(), it) }
 
         /** Scores nothing but the dialled amount and floors nothing, so the score is set directly. */
         val CONFIG = TriageConfig(
@@ -127,7 +127,7 @@ class TriageBandsTest {
             // factor pays out, so the score stays dialled by the amount alone.
             client = ClientFacts("K1", null, null, null, null, null, null, null, null, null),
             counterpartyCountries = emptySet(),
-            amountMinor = score.toLong(),
+            amount = score.toDouble(),
             otherAlertTypesOnClient = emptySet(),
         )
     }

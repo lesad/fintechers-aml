@@ -23,7 +23,7 @@ describe("conditionTokens", () => {
   });
 
   it("keeps every character, whitespace included", () => {
-    const src = "outflow * 100 >= p.forward_pct * inflow";
+    const src = "outflow * 100.0 >= p.forward_pct * inflow";
     expect(
       conditionTokens(src, new Set())
         .map((t) => t.text)
@@ -34,7 +34,7 @@ describe("conditionTokens", () => {
 
 describe("paramParts", () => {
   it("shows an amount in CZK, a percentage, a multiple and a count by unit", () => {
-    expect(paramParts({ value: 10_000_000, unit: "amount" })).toEqual({
+    expect(paramParts({ value: 100_000, unit: "amount" })).toEqual({
       value: "100,000",
       unit: "CZK",
     });

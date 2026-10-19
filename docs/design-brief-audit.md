@@ -28,7 +28,7 @@ Not needed now: export, filters, search, editing anything.
 
 ## The data available
 
-Synthetic data; nothing is real. Amounts are stored in **haléře** (1 CZK = 100 haléřů) and shown in CZK.
+Synthetic data; nothing is real. Amounts are stored and shown in **CZK**.
 
 ### Client (table `client`)
 

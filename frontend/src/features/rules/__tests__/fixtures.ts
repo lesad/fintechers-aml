@@ -1,7 +1,7 @@
 import type { RuleVariable, RuleVersion } from "../api";
 
 const b2Condition = 'client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]';
-const c1Condition = "inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow";
+const c1Condition = "inflow > p.min_inflow && outflow * 100.0 >= p.forward_pct * inflow";
 
 const base = {
   status: "active" as const,
@@ -49,7 +49,7 @@ export const A1: RuleVersion = {
   name: "Daily volume above the projected share of expected monthly volume",
   alertType: "A",
   grain: "client_day",
-  condition: "day_volume * 100 > p.projected_pct * client.expected_monthly_volume",
+  condition: "day_volume * 100.0 > p.projected_pct * client.expected_monthly_volume",
   variables: [
     {
       name: "day_volume",
@@ -73,7 +73,7 @@ export const B2: RuleVersion = {
   alertType: "B",
   grain: "transaction",
   condition: b2Condition,
-  params: { pep_min: { value: 10_000_000, unit: "amount" } },
+  params: { pep_min: { value: 100_000, unit: "amount" } },
   explanation:
     "Flags outgoing or unknown-direction transactions of more than 100,000 CZK when the client is a politically exposed person.",
 };
@@ -91,7 +91,7 @@ export const C1_V2: RuleVersion = {
   variables: c1Variables('tx.direction in ["out", "unknown"] && !(tx.payee_account in payers)'),
   params: {
     forward_pct: { value: 80, unit: "percent" },
-    min_inflow: { value: 10_000_000, unit: "amount" },
+    min_inflow: { value: 100_000, unit: "amount" },
   },
   explanation:
     "Flags when the client receives more than 100,000 CZK in incoming payments within 24 hours, and then forwards at least 80% of that amount within 6 hours.",
@@ -111,7 +111,7 @@ export const C1_V1: RuleVersion = {
   variables: c1Variables('tx.direction == "out" && !(tx.payee_account in payers)'),
   params: {
     forward_pct: { value: 80, unit: "percent" },
-    min_inflow: { value: 10_000_000, unit: "amount" },
+    min_inflow: { value: 100_000, unit: "amount" },
   },
   explanation: null,
   explanationModel: null,
@@ -126,7 +126,7 @@ export const B2_V2: RuleVersion = {
   status: "draft",
   author: "J. Novák",
   createdAt: "2026-10-19T21:30:00+02:00",
-  params: { pep_min: { value: 5_000_000, unit: "amount" } },
+  params: { pep_min: { value: 50_000, unit: "amount" } },
   explanation:
     "Flags outgoing or unknown-direction transactions of more than 50,000 CZK when the client is a politically exposed person.",
 };

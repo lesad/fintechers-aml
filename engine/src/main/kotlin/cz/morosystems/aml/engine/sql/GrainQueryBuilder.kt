@@ -74,9 +74,10 @@ class GrainQueryBuilder(private val filters: FilterCompiler) {
     private fun aggregate(variable: VariableDefinition): String {
         val field = "tx.${variable.field}"
         return when (variable.agg) {
-            Agg.SUM -> "coalesce(sum($field), 0)::bigint"
-            Agg.MAX -> "coalesce(max($field), 0)"
-            Agg.MIN -> "coalesce(min($field), 0)"
+            // Money is CZK as a double; an aggregate over it is one too, so CEL sees the same type the rule declares.
+            Agg.SUM -> "coalesce(sum($field), 0)::double precision"
+            Agg.MAX -> "coalesce(max($field), 0)::double precision"
+            Agg.MIN -> "coalesce(min($field), 0)::double precision"
             Agg.COUNT -> "count(*)"
             Agg.SET -> "coalesce(array_agg(distinct $field) filter (where nullif($field::text, '') is not null), '{}')"
         }

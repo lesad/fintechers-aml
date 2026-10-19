@@ -41,7 +41,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 id = rs.getString("id"),
                 clientId = rs.getString("client_id"),
                 ts = rs.getObject("ts", LocalDateTime::class.java),
-                amountHalere = rs.getLong("amount"),
+                amount = rs.getDouble("amount"),
                 volume = rs.getBigDecimal("volume"),
                 currency = rs.getString("currency"),
                 direction = rs.getString("direction"),
@@ -75,7 +75,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 id = rs.getString("id"),
                 clientId = rs.getString("client_id"),
                 ts = rs.getObject("ts", LocalDateTime::class.java),
-                amountHalere = rs.getLong("amount"),
+                amount = rs.getDouble("amount"),
                 volume = rs.getBigDecimal("volume"),
                 currency = rs.getString("currency"),
                 fxRate = rs.getBigDecimal("fx_rate"),
@@ -103,11 +103,11 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 pep = rs.getBoolean("pep"),
                 type = rs.getString("type"),
                 risk = rs.getString("risk"),
-                expectedMonthlyHalere = rs.getLong("expected_monthly_volume"),
+                expectedMonthly = rs.getDouble("expected_monthly_volume"),
                 expectedCount = rs.getInt("expected_count"),
-                q2VolumeHalere = rs.getLong("q2_volume"),
+                q2Volume = rs.getDouble("q2_volume"),
                 q2TxCount = rs.getInt("q2_tx_count"),
-                q2MaxTxHalere = rs.getLong("q2_max_tx"),
+                q2MaxTx = rs.getDouble("q2_max_tx"),
                 q2Days = rs.getInt("q2_days"),
             )
         }.single()
@@ -181,7 +181,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 direction = rs.getString("direction"),
                 counterpartyAccount = rs.getString("account")?.ifBlank { null },
                 counterpartyCountry = rs.getString("country"),
-                amountHalere = rs.getLong("amount"),
+                amount = rs.getDouble("amount"),
                 alertTypes = rs.strings("alert_types"),
             )
         }.list()

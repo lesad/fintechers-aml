@@ -21,12 +21,12 @@ class RuleCompilerTest {
         VariableDefinition(3, "outflow", Agg.SUM, "amount", """tx.direction == "out" && !(tx.payee_account in payers)""", Window.Relative(Duration.ZERO, Duration.ofHours(6))),
     )
 
-    private val a1 = rule("A1", Grain.CLIENT_DAY, "day_volume * 100 > p.projected_pct * client.expected_monthly_volume", variables = listOf(dayVolume))
-    private val a2 = rule("A2", Grain.CLIENT_DAY, "client.q2_tx_count > 0 && day_volume * client.q2_days > p.avg_multiple * client.q2_volume", variables = listOf(dayVolume))
+    private val a1 = rule("A1", Grain.CLIENT_DAY, "day_volume * 100.0 > p.projected_pct * client.expected_monthly_volume", variables = listOf(dayVolume))
+    private val a2 = rule("A2", Grain.CLIENT_DAY, "client.q2_tx_count > 0 && day_volume * double(client.q2_days) > p.avg_multiple * client.q2_volume", variables = listOf(dayVolume))
     private val a3 = rule("A3", Grain.TRANSACTION, "client.q2_tx_count > 0 && tx.amount > p.max_multiple * client.q2_max_tx")
     private val b1 = rule("B1", Grain.TRANSACTION, "tx.amount > p.country_min && (tx.payer_country in lists.high_risk || tx.payee_country in lists.high_risk || client.country in lists.high_risk)")
     private val b2 = rule("B2", Grain.TRANSACTION, """client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]""")
-    private val c1 = rule("C1", Grain.CLIENT_ANCHOR, "inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow", anchor = """tx.direction == "in"""", variables = c1Variables)
+    private val c1 = rule("C1", Grain.CLIENT_ANCHOR, "inflow > p.min_inflow && outflow * 100.0 >= p.forward_pct * inflow", anchor = """tx.direction == "in"""", variables = c1Variables)
 
     private val seedParams = mapOf(
         "A1" to setOf("projected_pct"),
@@ -46,15 +46,15 @@ class RuleCompilerTest {
     fun a1FiresAboveQuarterOfExpectedMonthly() {
         val compiled = compiler.compile(a1, seedParams.getValue("A1"))
         val client = mapOf<String, Any?>("expected_monthly_volume" to czk(100_000))
-        assertThat(compiled.evaluate(activation(client = client, params = mapOf("projected_pct" to 25L), variables = mapOf("day_volume" to czk(30_000))))).isTrue()
-        assertThat(compiled.evaluate(activation(client = client, params = mapOf("projected_pct" to 25L), variables = mapOf("day_volume" to czk(25_000))))).isFalse()
+        assertThat(compiled.evaluate(activation(client = client, params = mapOf("projected_pct" to 25.0), variables = mapOf("day_volume" to czk(30_000))))).isTrue()
+        assertThat(compiled.evaluate(activation(client = client, params = mapOf("projected_pct" to 25.0), variables = mapOf("day_volume" to czk(25_000))))).isFalse()
     }
 
     @Test
     fun a2UsesProratedQ2Baseline() {
         val compiled = compiler.compile(a2, seedParams.getValue("A2"))
         val client = mapOf<String, Any?>("q2_tx_count" to 40L, "q2_days" to 30L, "q2_volume" to czk(300_000))
-        assertThat(compiled.evaluate(activation(client = client, params = mapOf("avg_multiple" to 3L), variables = mapOf("day_volume" to czk(31_000))))).isTrue()
+        assertThat(compiled.evaluate(activation(client = client, params = mapOf("avg_multiple" to 3.0), variables = mapOf("day_volume" to czk(31_000))))).isTrue()
     }
 
     @Test
@@ -80,7 +80,7 @@ class RuleCompilerTest {
     @Test
     fun c1FiresAtEightyPercentForwarded() {
         val compiled = compiler.compile(c1, seedParams.getValue("C1"))
-        val params = mapOf("min_inflow" to czk(100_000), "forward_pct" to 80L)
+        val params = mapOf("min_inflow" to czk(100_000), "forward_pct" to 80.0)
         fun fires(inflow: Long, outflow: Long) =
             compiled.evaluate(activation(params = params, variables = mapOf("inflow" to czk(inflow), "outflow" to czk(outflow), "payers" to listOf("ACZ1"))))
         assertThat(fires(110_000, 90_000)).isTrue()
@@ -108,16 +108,17 @@ class RuleCompilerTest {
 
     @Test
     fun compilesSegmentPredicateOverClient() {
-        val predicate = compiler.compileClientPredicate("client.q2_volume > 100")
-        assertThat(predicate.evaluate(Activations.of(null, mapOf("q2_volume" to 101L), emptyMap(), emptyMap(), emptyMap()))).isTrue()
+        val predicate = compiler.compileClientPredicate("client.q2_volume > 100.0")
+        assertThat(predicate.evaluate(Activations.of(null, mapOf("q2_volume" to 101.0), emptyMap(), emptyMap(), emptyMap()))).isTrue()
     }
 
-    private fun czk(amount: Long) = amount * 100
+    /** The test writes whole CZK; the engine carries CZK as a double. */
+    private fun czk(amount: Long) = amount.toDouble()
 
     private fun activation(
         tx: Map<String, Any?>? = null,
         client: Map<String, Any?> = emptyMap(),
-        params: Map<String, Long> = emptyMap(),
+        params: Map<String, Double> = emptyMap(),
         lists: Map<String, List<String>> = emptyMap(),
         variables: Map<String, Any?> = emptyMap(),
     ) = Activations.of(tx, client, params, lists, variables)

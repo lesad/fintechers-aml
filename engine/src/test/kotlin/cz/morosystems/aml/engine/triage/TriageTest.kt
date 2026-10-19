@@ -21,7 +21,7 @@ class TriageTest {
     @Test
     fun reasonsReconstructTheScore() {
         val decision = Triage.decide(
-            input(risk = "high", country = "IR", channel = "distant form", hits = listOf(hit("M1"), hit("N1")), amountMinor = 30_000_000),
+            input(risk = "high", country = "IR", channel = "distant form", hits = listOf(hit("M1"), hit("N1")), amount = 300_000.0),
             CONFIG,
         )
         assertThat(decision.reasons.sumOf { it.points }).isEqualTo(decision.score)
@@ -29,7 +29,7 @@ class TriageTest {
 
     @Test
     fun reasonsReconstructTheScoreWhenTheRawScoreWasClamped() {
-        val decision = Triage.decide(input(hits = listOf(hit("BIG")), risk = "high", pep = true, country = "IR", amountMinor = 200_000_000), CONFIG)
+        val decision = Triage.decide(input(hits = listOf(hit("BIG")), risk = "high", pep = true, country = "IR", amount = 2_000_000.0), CONFIG)
         assertThat(decision.score).isEqualTo(100)
         assertThat(decision.reasons.sumOf { it.points }).isEqualTo(decision.score)
         assertThat(decision.reasons.map { it.code }).contains("SCORE_CLAMPED")
@@ -172,7 +172,7 @@ class TriageTest {
                 perExtraAlertType = 10,
                 extraAlertTypeMax = 20,
             ),
-            amountBands = listOf(AmountBand(100_000_000, 15), AmountBand(25_000_000, 8), AmountBand(5_000_000, 3)),
+            amountBands = listOf(AmountBand(1_000_000.0, 15), AmountBand(250_000.0, 8), AmountBand(50_000.0, 3)),
             intensityBands = mapOf(
                 "A" to listOf(IntensityBand(60, 10), IntensityBand(45, 5)),
                 "C" to listOf(IntensityBand(3, 10), IntensityBand(2, 5)),
@@ -213,7 +213,7 @@ class TriageTest {
             case("several distinct rules add up past the band edge", input(hits = listOf(hit("M1"), hit("N1"), hit("W1"))), Disposition.REVIEW_LOW),
             case("intensity lifts a type C alert that fired three times", input(alertType = "C", hits = listOf(hit("M1", "G1"), hit("M1", "G2"), hit("M1", "G3"))), Disposition.REVIEW_LOW),
             case("the same three hits on a type with no intensity band do not", input(alertType = "D", hits = listOf(hit("M1", "G1"), hit("M1", "G2"), hit("M1", "G3"))), Disposition.AUTO_CLOSE),
-            case("a large amount lifts an otherwise quiet alert", input(hits = listOf(hit("M1")), amountMinor = 100_000_000), Disposition.REVIEW_LOW),
+            case("a large amount lifts an otherwise quiet alert", input(hits = listOf(hit("M1")), amount = 1_000_000.0), Disposition.REVIEW_LOW),
             case("other alert types on the same client add up", input(hits = listOf(hit("M1")), otherAlertTypesOnClient = setOf("B", "C")), Disposition.REVIEW_LOW),
             case("a brand new relationship scores on tenure", input(hits = listOf(hit("M1")), contractDate = ASOF.minusDays(10)), Disposition.REVIEW_LOW),
         )
@@ -235,12 +235,12 @@ class TriageTest {
             country: String? = "CZ",
             channel: String? = "in person",
             contractDate: LocalDate? = LocalDate.of(2020, 1, 1),
-            expectedMonthlyVolume: Long? = 10_000_000L,
-            q2Volume: Long? = 30_000_000L,
+            expectedMonthlyVolume: Double? = 100_000.0,
+            q2Volume: Double? = 300_000.0,
             q2TxCount: Int? = 30,
             q2Days: Int? = 60,
             counterpartyCountries: Set<String> = emptySet(),
-            amountMinor: Long? = 1_000_000,
+            amount: Double? = 10_000.0,
             otherAlertTypesOnClient: Set<String> = emptySet(),
         ) = TriageInput(
             alertId = 1,
@@ -262,7 +262,7 @@ class TriageTest {
                 q2Days,
             ),
             counterpartyCountries = counterpartyCountries,
-            amountMinor = amountMinor,
+            amount = amount,
             otherAlertTypesOnClient = otherAlertTypesOnClient,
         )
     }

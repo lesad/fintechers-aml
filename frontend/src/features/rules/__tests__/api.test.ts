@@ -73,7 +73,7 @@ describe("groupByKey", () => {
 });
 
 describe("formatCzk", () => {
-  it("formats haléře as whole CZK", () => {
-    expect(formatCzk(5_000_000)).toBe("50,000 CZK");
+  it("formats an amount as CZK", () => {
+    expect(formatCzk(50_000)).toBe("50,000 CZK");
   });
 });

@@ -11,9 +11,9 @@ object Parsing {
     private val QUARTER_START = LocalDate.of(2026, 4, 1)
     private val QUARTER_END = LocalDate.of(2026, 6, 30)
 
-    /** Decimal-point CZK to haléře; an empty cell is 0. */
-    fun czk(text: String): Long =
-        if (text.isBlank()) 0L else BigDecimal(text.trim()).movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
+    /** Decimal-point CZK as the source writes it, to the heller; an empty cell is 0. */
+    fun czk(text: String): Double =
+        if (text.isBlank()) 0.0 else BigDecimal(text.trim()).setScale(2, RoundingMode.HALF_UP).toDouble()
 
     fun date(text: String): LocalDate = LocalDate.parse(text.trim(), DATE)
 

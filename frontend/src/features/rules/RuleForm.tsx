@@ -148,7 +148,7 @@ function toNewRule(values: FormValues, from: RuleVersion | null, author: string)
   };
 }
 
-const WHOLE = "Whole number of haléře or units";
+const NUMBER = "CZK or units, digits and an optional decimal point";
 
 type FieldsProps = { control: Control<FormValues>; register: UseFormRegister<FormValues> };
 
@@ -179,11 +179,11 @@ function ParamFields({ control, register }: FieldsProps) {
             />
             <input
               {...register(`params.${i}.value`, {
-                required: WHOLE,
-                pattern: { value: /^\d+$/, message: WHOLE },
+                required: NUMBER,
+                pattern: { value: /^\d+(\.\d+)?$/, message: NUMBER },
               })}
               aria-label={`Value of parameter ${i + 1}`}
-              inputMode="numeric"
+              inputMode="decimal"
               className={input({ mono: true })}
             />
             <Select
@@ -259,13 +259,13 @@ function VariableFields({ control, register }: FieldsProps) {
           <input
             {...register(`variables.${i}.from`)}
             aria-label={`Window start of variable ${i + 1} in hours`}
-            inputMode="numeric"
+            inputMode="decimal"
             className={input({ mono: true, width: "hours" })}
           />
           <input
             {...register(`variables.${i}.to`)}
             aria-label={`Window end of variable ${i + 1} in hours`}
-            inputMode="numeric"
+            inputMode="decimal"
             className={input({ mono: true, width: "hours" })}
           />
           <button

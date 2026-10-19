@@ -36,7 +36,7 @@ class TriageService(private val repository: TriageRepository) {
                 client = clients[alert.clientId]
                     ?: ClientFacts(alert.clientId, null, null, null, null, null, null, null, null, null),
                 counterpartyCountries = countries[alert.id].orEmpty(),
-                amountMinor = amountMinor(alert),
+                amount = amount(alert),
                 otherAlertTypesOnClient = typesByClient[alert.clientId].orEmpty() - alert.alertType,
             )
             Triage.decide(input, config)
@@ -45,9 +45,9 @@ class TriageService(private val repository: TriageRepository) {
         return decisions
     }
 
-    /** The largest amount the alert's hits evidence, in haléře: a transaction amount, else a day's volume. */
-    private fun amountMinor(alert: TriageAlert): Long? =
+    /** The largest amount the alert's hits evidence, in CZK: a transaction amount, else a day's volume. */
+    private fun amount(alert: TriageAlert): Double? =
         alert.hits.mapNotNull { hit ->
-            (hit.evidence["tx.amount"] ?: hit.evidence["day_volume"]).let { it as? Number }?.toLong()
+            (hit.evidence["tx.amount"] ?: hit.evidence["day_volume"]).let { it as? Number }?.toDouble()
         }.maxOrNull()
 }

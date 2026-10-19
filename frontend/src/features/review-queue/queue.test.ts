@@ -8,7 +8,7 @@ const flagged: FlaggedTransaction = {
   id: "TX000123456",
   clientId: "K003797",
   ts: "2026-07-17T15:58:12",
-  amountHalere: 18_450_000,
+  amount: 184_500,
   volume: 7352,
   currency: "EUR",
   direction: "out",

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // The engine's /api/transactions contract (engine/.../transaction/TransactionModel.kt).
-// Amounts arrive in haléře; everything else is parsed here, so the UI never trusts a raw shape.
+// Amounts arrive in CZK; everything else is parsed here, so the UI never trusts a raw shape.
 
 const rating = z.enum(["High", "Medium", "Low"]);
 const direction = z.enum(["in", "out", "unknown"]);
@@ -18,7 +18,7 @@ const flagged = z.object({
   id: z.string(),
   clientId: z.string(),
   ts: z.string(),
-  amountHalere: z.number(),
+  amount: z.number(),
   volume: z.number(),
   currency: z.string(),
   direction,
@@ -51,7 +51,7 @@ const detail = z.object({
     id: z.string(),
     clientId: z.string(),
     ts: z.string(),
-    amountHalere: z.number(),
+    amount: z.number(),
     volume: z.number(),
     currency: z.string(),
     fxRate: z.number(),
@@ -70,11 +70,11 @@ const detail = z.object({
     pep: z.boolean(),
     type: z.string().nullable(),
     risk: z.string().nullable(),
-    expectedMonthlyHalere: z.number(),
+    expectedMonthly: z.number(),
     expectedCount: z.number(),
-    q2VolumeHalere: z.number(),
+    q2Volume: z.number(),
     q2TxCount: z.number(),
-    q2MaxTxHalere: z.number(),
+    q2MaxTx: z.number(),
     q2Days: z.number(),
   }),
   rating: rating.nullable(),
@@ -105,7 +105,7 @@ const detail = z.object({
       direction,
       counterpartyAccount: z.string().nullable(),
       counterpartyCountry: z.string().nullable(),
-      amountHalere: z.number(),
+      amount: z.number(),
       alertTypes: z.array(z.string()),
     }),
   ),
@@ -142,6 +142,3 @@ export function fetchFlagged(
 export function fetchDetail(id: string, signal?: AbortSignal): Promise<TransactionDetail> {
   return get(`/api/transactions/${encodeURIComponent(id)}`, detail, signal);
 }
-
-/** haléře → CZK */
-export const czk = (halere: number) => halere / 100;

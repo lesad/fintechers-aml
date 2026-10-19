@@ -5,6 +5,7 @@ import cz.morosystems.aml.engine.cel.Activations
 import cz.morosystems.aml.engine.cel.CompiledRule
 import cz.morosystems.aml.engine.cel.RuleCompiler
 import cz.morosystems.aml.engine.cel.Vocabulary
+import cz.morosystems.aml.engine.plainDecimal
 import cz.morosystems.aml.engine.rules.Agg
 import cz.morosystems.aml.engine.rules.Grain
 import cz.morosystems.aml.engine.rules.RuleDefinition
@@ -102,7 +103,8 @@ class RunService(
                     throw IllegalStateException("rule ${rule.key}, client $clientId, ${rule.grain.name.lowercase()} ${rs.getString("grain_key")}: ${e.message}", e)
                 }
                 if (fired) {
-                    val evidence = variables + params.mapKeys { "p.${it.key}" } + (tx?.let { mapOf("tx.amount" to it["amount"]) } ?: emptyMap())
+                    val evidence = (variables + params.mapKeys { "p.${it.key}" } + (tx?.let { mapOf("tx.amount" to it["amount"]) } ?: emptyMap()))
+                        .mapValues { plainNumber(it.value) }
                     hits += Hit(0, rule.id, rule.key, rule.version, rule.alertType, clientId, rs.getString("grain_key"), rule.grain, evidence)
                 }
             }
@@ -110,8 +112,15 @@ class RunService(
         return hits
     }
 
-    private fun column(rs: ResultSet, name: String, agg: Agg): Any? =
-        if (agg == Agg.SET) (rs.getArray(name).array as Array<*>).map { it as String } else rs.getLong(name)
+    private fun column(rs: ResultSet, name: String, agg: Agg): Any? = when (agg) {
+        Agg.SET -> (rs.getArray(name).array as Array<*>).map { it as String }
+        Agg.COUNT -> rs.getLong(name)
+        else -> rs.getDouble(name)
+    }
+
+    // A Double writes itself as 1.1E7 in JSON. Evidence is read by people and quoted by the summary model, so an
+    // amount is stored as a plain decimal instead.
+    private fun plainNumber(value: Any?): Any? = if (value is Double) plainDecimal(value) else value
 
     private fun assignIds(hits: List<Hit>): List<Hit> {
         if (hits.isEmpty()) return hits

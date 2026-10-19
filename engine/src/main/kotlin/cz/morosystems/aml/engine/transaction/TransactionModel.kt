@@ -5,14 +5,14 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 
-// All amounts are in haléře (1 CZK = 100 haléřů), as stored.
+// All amounts are in CZK, as stored.
 
 /** A transaction the latest finished run raised at least one alert on: one row of the review queue. */
 data class FlaggedTransaction(
     val id: String,
     val clientId: String,
     val ts: LocalDateTime,
-    val amountHalere: Long,
+    val amount: Double,
     /** The amount in its original currency. */
     val volume: BigDecimal,
     val currency: String,
@@ -49,7 +49,7 @@ data class Transaction(
     val id: String,
     val clientId: String,
     val ts: LocalDateTime,
-    val amountHalere: Long,
+    val amount: Double,
     val volume: BigDecimal,
     val currency: String,
     val fxRate: BigDecimal,
@@ -69,11 +69,11 @@ data class Client(
     val pep: Boolean,
     val type: String?,
     val risk: String?,
-    val expectedMonthlyHalere: Long,
+    val expectedMonthly: Double,
     val expectedCount: Int,
-    val q2VolumeHalere: Long,
+    val q2Volume: Double,
     val q2TxCount: Int,
-    val q2MaxTxHalere: Long,
+    val q2MaxTx: Double,
     val q2Days: Int,
 )
 
@@ -108,7 +108,7 @@ data class HistoryTransaction(
     val direction: String,
     val counterpartyAccount: String?,
     val counterpartyCountry: String?,
-    val amountHalere: Long,
+    val amount: Double,
     val alertTypes: List<String>,
 )
 

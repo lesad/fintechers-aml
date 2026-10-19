@@ -1,10 +1,10 @@
 package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.bedrock.Bedrock
+import cz.morosystems.aml.engine.plain
 import cz.morosystems.aml.engine.summary.numbersNotIn
 import java.security.MessageDigest
 import java.time.Duration
-import java.util.Locale
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.core.io.ClassPathResource
@@ -69,10 +69,10 @@ internal fun explanationPrompt(rule: RuleDefinition, segmentName: String?): Stri
     }
     rule.params.toSortedMap().forEach { (name, p) ->
         val reading = when (p.unit) {
-            ParamUnit.AMOUNT -> "${p.value} haléře (${String.format(Locale.US, "%,d", p.value / 100)} CZK)"
-            ParamUnit.PERCENT -> "${p.value} percent"
-            ParamUnit.MULTIPLE -> "${p.value} times"
-            ParamUnit.COUNT -> "${p.value}"
+            ParamUnit.AMOUNT -> "${plain(p.value)} CZK"
+            ParamUnit.PERCENT -> "${plain(p.value)} percent"
+            ParamUnit.MULTIPLE -> "${plain(p.value)} times"
+            ParamUnit.COUNT -> plain(p.value)
         }
         add("Parameter p.$name = $reading")
     }

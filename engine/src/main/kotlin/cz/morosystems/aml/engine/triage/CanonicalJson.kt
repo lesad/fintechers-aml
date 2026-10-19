@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.triage
 
+import cz.morosystems.aml.engine.plain
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.security.MessageDigest
@@ -9,8 +10,10 @@ import java.time.LocalDate
  * Canonical JSON, written by hand because the hash is only worth anything if the byte order is pinned:
  * object keys sorted, sets sorted by their rendered form, no insignificant whitespace, no library field order.
  *
- * Floating point is **rejected**, not rendered. Money in this engine is a `Long` of haléře; a `Double` reaching
- * this point means an amount took a lossy detour, and failing loudly is better than hashing a rounding error.
+ * Money in this engine is CZK as a `Double`, so floating point is rendered — but through [plain], never through
+ * `toString()`: one decimal form per value, no exponent, no trailing `.0`, so `25.0` and `25` hash alike and a
+ * rounding difference cannot hide behind a different spelling. NaN and the infinities are rejected: neither is
+ * an amount, and both would otherwise hash as text.
  */
 object CanonicalJson {
     fun render(value: Any?): String = StringBuilder().also { write(value, it) }.toString()
@@ -35,7 +38,8 @@ object CanonicalJson {
             is Set<*> -> writeSorted(value, out)
             is Collection<*> -> writeList(value, out)
             is Array<*> -> writeList(value.asList(), out)
-            is Double, is Float -> error("floating point must not reach the input hash: $value")
+            is Double -> out.append(plain(value))
+            is Float -> out.append(plain(value.toDouble()))
             else -> error("not canonically serialisable: ${value::class.qualifiedName}")
         }
     }

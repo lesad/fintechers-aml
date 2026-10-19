@@ -7,13 +7,13 @@ import java.time.LocalDate
 
 class ParsingTest {
     @Test
-    fun convertsCzkToHalere() {
-        assertThat(Parsing.czk("1234.56")).isEqualTo(123456L)
+    fun readsCzkToTheHeller() {
+        assertThat(Parsing.czk("1234.56")).isEqualTo(1234.56)
     }
 
     @Test
     fun emptyCzkIsZero() {
-        assertThat(Parsing.czk("")).isEqualTo(0L)
+        assertThat(Parsing.czk("")).isEqualTo(0.0)
     }
 
     @Test

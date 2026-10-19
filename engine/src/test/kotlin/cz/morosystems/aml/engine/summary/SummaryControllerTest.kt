@@ -56,7 +56,7 @@ class SummaryControllerTest {
         val run = jdbc.sql("insert into run (kind, started_at, finished_at) values ('production', now(), now()) returning id").query(Long::class.java).single()
         val rule = jdbc.sql("select id from rule where key = 'C1' order by version desc limit 1").query(Long::class.java).single()
         hitId = jdbc.sql("insert into rule_hit (run_id, rule_id, client_id, grain_key, evidence) values (?, ?, 'K2', 'T2', ?::jsonb) returning id")
-            .params(run, rule, """{"inflow": 11000000, "outflow": 9000000, "p.min_inflow": 10000000}""").query(Long::class.java).single()
+            .params(run, rule, """{"inflow": 110000, "outflow": 90000, "p.min_inflow": 100000}""").query(Long::class.java).single()
         alertId = jdbc.sql("insert into alert (run_id, alert_type, client_id, transaction_id) values (?, 'C', 'K2', 'T2') returning id")
             .params(run).query(Long::class.java).single()
         jdbc.sql("insert into alert_hit (alert_id, hit_id) values (?, ?)").params(alertId, hitId).update()
@@ -73,7 +73,7 @@ class SummaryControllerTest {
         created.extractingPath("$.text").isEqualTo("C1 fired: CZK 110,000 in, CZK 90,000 out.")
         created.extractingPath("$.sentences[0].refs[0]").isEqualTo("rule:C1")
         created.extractingPath("$.modelId").isEqualTo("fake-model")
-        assertThat(bedrock.prompt).contains("\"ref\":\"rule:C1\"", "\"hits\":1", "\"inflow\":11000000", "\"condition\":")
+        assertThat(bedrock.prompt).contains("\"ref\":\"rule:C1\"", "\"hits\":1", "\"inflow\":110000", "\"condition\":")
             .contains("\"ref\":\"triage:decision\"", "\"disposition\":\"REVIEW_HIGH\"", "\"ref\":\"triage:CLIENT_RISK\"")
 
         assertThat(mvc.get().uri("/api/alerts/$alertId/summary")).hasStatusOk()

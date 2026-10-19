@@ -15,11 +15,11 @@ const client: DetailClient = {
   pep: false,
   type: "individual",
   risk: "low",
-  expectedMonthlyHalere: 40_000_000,
+  expectedMonthly: 400_000,
   expectedCount: 50,
-  q2VolumeHalere: 150_000_000,
+  q2Volume: 1_500_000,
   q2TxCount: 120,
-  q2MaxTxHalere: 6_140_000,
+  q2MaxTx: 61_400,
   q2Days: 91,
 };
 
@@ -43,7 +43,7 @@ describe("ClientCard", () => {
   });
 
   it("without Q2 history shows only what was expected", () => {
-    render(<ClientCard client={{ ...client, q2VolumeHalere: 0, q2TxCount: 0 }} />);
+    render(<ClientCard client={{ ...client, q2Volume: 0, q2TxCount: 0 }} />);
     const count = screen.getByRole("group", { name: "Transactions, Q2 2026" });
     expect(count).toHaveTextContent("No Q2 history");
     expect(count).not.toHaveTextContent("Real");

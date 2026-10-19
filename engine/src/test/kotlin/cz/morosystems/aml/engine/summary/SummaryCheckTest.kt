@@ -38,13 +38,13 @@ class SummaryCheckTest {
     }
 
     private val input = listOf(
-        mapOf("ref" to "hit:1", "data" to mapOf("evidence" to mapOf("inflow" to 27776629, "p.forward_pct" to 80), "grainKey" to "TX000000651")),
+        mapOf("ref" to "hit:1", "data" to mapOf("evidence" to mapOf("inflow" to 277766.29, "p.forward_pct" to 80), "grainKey" to "TX000000651")),
         mapOf("ref" to "triage:RELATIONSHIP_LENGTH", "data" to mapOf("points" to 5, "description" to "client for 175 days")),
     )
 
     @Test
-    fun acceptsNumbersFromTheInputAndHalerShownInCzk() {
-        val ok = listOf(Sentence("TX000000651 for K005146: CZK 277,766.29 in, 80% forwarded, client for 175 days, 5 points, 27776629 haléře.", listOf("hit:1")))
+    fun acceptsNumbersFromTheInputWithThousandsSeparators() {
+        val ok = listOf(Sentence("TX000000651 for K005146: CZK 277,766.29 in, 80% forwarded, client for 175 days, 5 points.", listOf("hit:1")))
         assertThat(checkNumbers(ok, input)).isEqualTo(ok)
     }
 

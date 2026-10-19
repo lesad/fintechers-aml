@@ -9,7 +9,7 @@ import dev.cel.common.types.SimpleType
 object Vocabulary {
     val tx: Map<String, CelType> = mapOf(
         "id" to SimpleType.STRING,
-        "amount" to SimpleType.INT,
+        "amount" to SimpleType.DOUBLE,
         "direction" to SimpleType.STRING,
         "payer_country" to SimpleType.STRING,
         "payee_country" to SimpleType.STRING,
@@ -26,14 +26,23 @@ object Vocabulary {
         "type" to SimpleType.STRING,
         "channel" to SimpleType.STRING,
         "risk" to SimpleType.STRING,
-        "expected_monthly_volume" to SimpleType.INT,
-        "q2_volume" to SimpleType.INT,
+        "expected_monthly_volume" to SimpleType.DOUBLE,
+        "q2_volume" to SimpleType.DOUBLE,
         "q2_tx_count" to SimpleType.INT,
-        "q2_max_tx" to SimpleType.INT,
+        "q2_max_tx" to SimpleType.DOUBLE,
         "q2_days" to SimpleType.INT,
     )
 
     val lists: Map<String, CelType> = mapOf("high_risk" to ListType.create(SimpleType.STRING))
 
-    fun typeOf(agg: Agg): CelType = if (agg == Agg.SET) ListType.create(SimpleType.STRING) else SimpleType.INT
+    /**
+     * The type a rule variable takes in CEL. Money is a double, so every aggregate over it is one; a count is
+     * still whole. CEL has no mixed int/double arithmetic, so a condition that multiplies a count by an amount
+     * converts the count with `double(...)`.
+     */
+    fun typeOf(agg: Agg): CelType = when (agg) {
+        Agg.SET -> ListType.create(SimpleType.STRING)
+        Agg.COUNT -> SimpleType.INT
+        else -> SimpleType.DOUBLE
+    }
 }

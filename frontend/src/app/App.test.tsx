@@ -9,7 +9,7 @@ const row = (id: string, rating: string, rules: string[], clientId = "K1") => ({
   id,
   clientId,
   ts: "2026-07-17T15:58:00",
-  amountHalere: 18_450_000,
+  amount: 184_500,
   volume: 7352,
   currency: "EUR",
   direction: "out",
@@ -27,7 +27,7 @@ const detail = {
     id: "TX1",
     clientId: "K1",
     ts: "2026-07-17T15:58:00",
-    amountHalere: 18_450_000,
+    amount: 184_500,
     volume: 7352,
     currency: "EUR",
     fxRate: 25.095,
@@ -46,11 +46,11 @@ const detail = {
     pep: true,
     type: "legal entity",
     risk: "high",
-    expectedMonthlyHalere: 40_000_000,
+    expectedMonthly: 400_000,
     expectedCount: 55,
-    q2VolumeHalere: 162_000_000,
+    q2Volume: 1_620_000,
     q2TxCount: 182,
-    q2MaxTxHalere: 6_140_000,
+    q2MaxTx: 61_400,
     q2Days: 91,
   },
   rating: "High",
@@ -77,7 +77,7 @@ const detail = {
           name: "PEP outgoing payment above the limit",
           version: 1,
           grainKey: "TX1",
-          evidence: { "tx.amount": 18_450_000, "p.pep_min": 10_000_000 },
+          evidence: { "tx.amount": 184_500, "p.pep_min": 100_000 },
         },
       ],
     },
@@ -89,7 +89,7 @@ const detail = {
       direction: "out",
       counterpartyAccount: "AAT00116",
       counterpartyCountry: "AT",
-      amountHalere: 18_450_000,
+      amount: 184_500,
       alertTypes: ["B"],
     },
   ],
@@ -191,7 +191,7 @@ describe("App", () => {
     fireEvent.click(await screen.findByText("TX1"));
 
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
-    expect(await screen.findByText("p.pep_min 10000000")).toBeInTheDocument();
+    expect(await screen.findByText("p.pep_min 100000")).toBeInTheDocument();
     expect(screen.getByText("95", { selector: "b" })).toBeInTheDocument();
     expect(screen.queryByText("client is a PEP")).not.toBeInTheDocument();
 

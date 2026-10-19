@@ -46,7 +46,7 @@ class RuleRepositoryTest {
     @Test
     fun loadsParamsPerVersion() {
         val c1 = repository.activeRules().single { it.key == "C1" }
-        assertThat(c1.params).isEqualTo(mapOf("min_inflow" to Param(10_000_000, ParamUnit.AMOUNT), "forward_pct" to Param(80, ParamUnit.PERCENT)))
+        assertThat(c1.params).isEqualTo(mapOf("min_inflow" to Param(100_000.0, ParamUnit.AMOUNT), "forward_pct" to Param(80.0, ParamUnit.PERCENT)))
     }
 
     @Test
@@ -55,17 +55,17 @@ class RuleRepositoryTest {
         assertThat(versions.map { "${it.rule.key} v${it.rule.version}" })
             .containsExactly("A1 v1", "A2 v1", "A3 v1", "B1 v1", "B2 v1", "C1 v2", "C1 v1")
         assertThat(versions.last().status).isEqualTo("retired")
-        assertThat(versions.last().rule.params).containsEntry("forward_pct", Param(80, ParamUnit.PERCENT))
+        assertThat(versions.last().rule.params).containsEntry("forward_pct", Param(80.0, ParamUnit.PERCENT))
         assertThat(versions.map { it.explanation }).containsOnlyNulls()
     }
 
     @Test
     fun insertsADraftAsTheNextVersion() {
-        val id = repository.insertDraft(newB2(pepMin = 5_000_000))
+        val id = repository.insertDraft(newB2(pepMin = 50_000.0))
         val saved = repository.find(id)!!
         assertThat(saved.rule.version).isEqualTo(2)
         assertThat(saved.status).isEqualTo("draft")
-        assertThat(saved.rule.params).isEqualTo(mapOf("pep_min" to Param(5_000_000, ParamUnit.AMOUNT)))
+        assertThat(saved.rule.params).isEqualTo(mapOf("pep_min" to Param(50_000.0, ParamUnit.AMOUNT)))
         assertThat(saved.author).isEqualTo("J. Novák")
         assertThat(repository.find(repository.insertDraft(newB2()))!!.rule.version).isEqualTo(3)
         assertThat(repository.latestOf("B2")!!.version).isEqualTo(3)

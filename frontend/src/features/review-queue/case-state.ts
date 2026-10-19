@@ -1,7 +1,7 @@
-import { czk, type HistoryTransaction, type TransactionDetail } from "./api";
 import { formatTs } from "./queue";
 import { ruleThresholds } from "./rules";
 
+import type { HistoryTransaction, TransactionDetail } from "./api";
 import type { Decision } from "./decisions";
 import type { FlowTx } from "./MoneyFlow";
 
@@ -11,7 +11,7 @@ const toFlow = (h: HistoryTransaction): FlowTx => ({
   dir: h.direction === "in" ? "Incoming" : h.direction === "out" ? "Outgoing" : "Remittance",
   counterparty: h.counterpartyAccount ?? "—",
   country: h.counterpartyCountry ?? "—",
-  amount: czk(h.amountHalere),
+  amount: h.amount,
 });
 
 /**

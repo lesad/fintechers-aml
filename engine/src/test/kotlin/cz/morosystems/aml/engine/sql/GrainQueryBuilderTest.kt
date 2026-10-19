@@ -62,7 +62,7 @@ class GrainQueryBuilderTest {
         tx("T2", "K1", "2026-07-14 23:30", 50_000, "in", payer = "ACZ2")
         tx("T3", "K1", "2026-07-15 01:00", 90_000, "out", payee = "ACZ1")
 
-        assertThat(run(c1).single { it["grain_key"] == "T2" }["outflow"]).isEqualTo(0L)
+        assertThat(run(c1).single { it["grain_key"] == "T2" }["outflow"]).isEqualTo(0.0)
     }
 
     @Test
@@ -73,7 +73,7 @@ class GrainQueryBuilderTest {
         tx("T4", "K2", "2026-07-14 16:01", 90_000, "out", payee = "ACZ9")
 
         val outflow = run(c1).associate { it["grain_key"] to it["outflow"] }
-        assertThat(outflow).isEqualTo(mapOf("T1" to czk(90_000), "T3" to 0L))
+        assertThat(outflow).isEqualTo(mapOf("T1" to czk(90_000), "T3" to 0.0))
     }
 
     @Test
@@ -128,7 +128,8 @@ class GrainQueryBuilderTest {
         assertThatThrownBy { builder.build(unknown, Period.JULY_2026, null) }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
-    private fun czk(amount: Long) = amount * 100
+    /** The test writes whole CZK; a stored amount and every aggregate over it are CZK doubles. */
+    private fun czk(amount: Long) = amount.toDouble()
 
     private fun run(rule: RuleDefinition, clientIds: Set<String>? = null): List<Map<String, Any?>> {
         val query = builder.build(rule, Period.JULY_2026, clientIds)

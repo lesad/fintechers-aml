@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test
 class RuleResolverTest {
     private val resolver = RuleResolver(RuleCompiler())
 
-    private val k1 = mapOf<String, Any?>("id" to "K1", "q2_volume" to 500L)
-    private val k2 = mapOf<String, Any?>("id" to "K2", "q2_volume" to 200L)
-    private val k3 = mapOf<String, Any?>("id" to "K3", "q2_volume" to 50L)
+    private val k1 = mapOf<String, Any?>("id" to "K1", "q2_volume" to 500.0)
+    private val k2 = mapOf<String, Any?>("id" to "K2", "q2_volume" to 200.0)
+    private val k3 = mapOf<String, Any?>("id" to "K3", "q2_volume" to 50.0)
     private val clients = listOf(k1, k2, k3)
-    private val big = Segment(1, "big", "client.q2_volume > 100")
-    private val huge = Segment(2, "huge", "client.q2_volume > 400")
+    private val big = Segment(1, "big", "client.q2_volume > 100.0")
+    private val huge = Segment(2, "huge", "client.q2_volume > 400.0")
 
     private val velocity = rule("V1", Layer.COMPANY)
 
@@ -48,12 +48,12 @@ class RuleResolverTest {
 
     @Test
     fun segmentReplacementBringsItsOwnParameters() {
-        val company = rule("V1", Layer.COMPANY, params = mapOf("limit" to Param(10, ParamUnit.COUNT)))
-        val stricter = rule("S1", Layer.SEGMENT, scopeSegmentId = 2, replacesKey = "V1", params = mapOf("limit" to Param(7, ParamUnit.COUNT)))
+        val company = rule("V1", Layer.COMPANY, params = mapOf("limit" to Param(10.0, ParamUnit.COUNT)))
+        val stricter = rule("S1", Layer.SEGMENT, scopeSegmentId = 2, replacesKey = "V1", params = mapOf("limit" to Param(7.0, ParamUnit.COUNT)))
         val resolved = resolver.resolve(listOf(company, stricter), listOf(huge), clients)
         assertThat(resolved.clientsByRule[stricter]).containsExactly("K1")
         assertThat(resolved.clientsByRule[company]).containsExactlyInAnyOrder("K2", "K3")
-        assertThat(stricter.params).isEqualTo(mapOf("limit" to Param(7, ParamUnit.COUNT)))
+        assertThat(stricter.params).isEqualTo(mapOf("limit" to Param(7.0, ParamUnit.COUNT)))
     }
 
     @Test

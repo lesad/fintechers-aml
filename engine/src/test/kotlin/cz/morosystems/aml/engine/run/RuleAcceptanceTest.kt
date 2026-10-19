@@ -207,7 +207,7 @@ class RuleAcceptanceTest {
             insert into client (id, country, pep, type, channel, risk, expected_monthly_volume, q2_volume, q2_tx_count, q2_max_tx, q2_days)
             values (?, 'CZ', ?, 'legal entity', 'in person', 'low', ?, ?, ?, ?, ?)
             """,
-        ).params(id, pep, expectedMonthly * 100, q2Volume * 100, q2Count, q2Max * 100, q2Days).update()
+        ).params(id, pep, expectedMonthly, q2Volume, q2Count, q2Max, q2Days).update()
     }
 
     private fun tx(
@@ -225,6 +225,6 @@ class RuleAcceptanceTest {
             insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_country, payee_country, payer_account, payee_account, type, direction)
             values (?, ?, ?::timestamp, ?, ?, 'CZK', 1, 'CZ', ?, ?, ?, 'x', ?)
             """,
-        ).params(listOf(id, client, ts, amountCzk * 100, amountCzk, payeeCountry, payer, payee, direction)).update()
+        ).params(listOf(id, client, ts, amountCzk, amountCzk, payeeCountry, payer, payee, direction)).update()
     }
 }

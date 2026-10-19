@@ -37,7 +37,7 @@ Every type A rule's evidence carries its grain key, the amount it tested (`day_v
 
 | Field                  | Meaning                                                                          | Source       |
 | ---------------------- | -------------------------------------------------------------------------------- | ------------ |
-| `day_volume`, `tx.amount` | The tested amount, in haléře                                                  | evidence     |
+| `day_volume`, `tx.amount` | The tested amount, in CZK                                                     | evidence     |
 | `p.*`                  | The parameter values in force                                                    | evidence     |
 | rules hit, hit count   | Distinct rule keys and number of hits on the alert                               | `alert_hit`  |
 | `count_gap`            | July count over the prorated Q2 monthly count                                    | second layer |

@@ -6,7 +6,7 @@ Write one or two plain English sentences that start with "Flags" and say what th
 - Keep every real condition: an "or" stays an "or", "out or unknown" stays "out or unknown". Every list or field in an "or" stays named, even if two seem to overlap.
 - ">" is "more than", ">=" is "at least". Never swap them.
 - Use only the numbers given. Never compute new numbers.
-- Each parameter states its unit. Amounts are in haléře; state them in CZK using the CZK figure provided. Percentages, multiples and counts stay as given.
+- Each parameter states its unit. Amounts are in CZK; state them as given. Percentages, multiples and counts stay as given too.
 - No code, no variable or parameter names, no advice, no preamble.
 
 What the names mean:

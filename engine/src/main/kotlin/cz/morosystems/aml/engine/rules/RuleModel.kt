@@ -9,10 +9,10 @@ enum class Agg { SUM, MAX, MIN, COUNT, SET }
 
 enum class Layer { COMPANY, SEGMENT, CLIENT }
 
-/** What a parameter's value counts: [AMOUNT] is haléře (CZK × 100), the others are plain numbers. */
+/** What a parameter's value counts: [AMOUNT] is CZK (ADR-0037), the others are plain numbers. */
 enum class ParamUnit { AMOUNT, PERCENT, MULTIPLE, COUNT }
 
-data class Param(val value: Long, val unit: ParamUnit)
+data class Param(val value: Double, val unit: ParamUnit)
 
 sealed interface Window {
     data object Day : Window

@@ -16,19 +16,19 @@ describe("ruleThresholds", () => {
   it("takes each rule's parameters from its first hit, verbatim", () => {
     expect(
       ruleThresholds([
-        hit("C1", { inflow: 27_776_629, "p.min_inflow": 10_000_000, "p.forward_pct": 80 }),
+        hit("C1", { inflow: 277_766.29, "p.min_inflow": 100_000, "p.forward_pct": 80 }),
         hit("C1", { "p.forward_pct": 99 }),
-        hit("B2", { "tx.amount": 18_450_000, "p.pep_min": 10_000_000 }),
+        hit("B2", { "tx.amount": 184_500, "p.pep_min": 100_000 }),
       ]),
     ).toEqual([
       {
         rule: "C1",
         params: [
-          ["p.min_inflow", "10000000"],
+          ["p.min_inflow", "100000"],
           ["p.forward_pct", "80"],
         ],
       },
-      { rule: "B2", params: [["p.pep_min", "10000000"]] },
+      { rule: "B2", params: [["p.pep_min", "100000"]] },
     ]);
   });
 });

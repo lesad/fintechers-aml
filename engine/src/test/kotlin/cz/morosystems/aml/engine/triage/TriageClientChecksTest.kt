@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
  * when the declared volume that baseline rests on is simply absent.
  *
  * The config is built on [TriageTest.CONFIG] and switched on one factor at a time, so each assertion is about the
- * factor it names and nothing else. All of it is integer arithmetic over haléře — no float ever enters.
+ * factor it names and nothing else. Amounts are CZK doubles; the scoring itself is whole-number arithmetic.
  */
 class TriageClientChecksTest {
     private val base = TriageTest.CONFIG
@@ -20,8 +20,8 @@ class TriageClientChecksTest {
     @Test
     fun aClientMissingAnyBaselineFieldIsUnbaselinedAndScoresTheFactor() {
         val missing = mapOf(
-            "expected_monthly_volume" to TriageTest.input(expectedMonthlyVolume = 0),
-            "q2_volume" to TriageTest.input(q2Volume = 0),
+            "expected_monthly_volume" to TriageTest.input(expectedMonthlyVolume = 0.0),
+            "q2_volume" to TriageTest.input(q2Volume = 0.0),
             "q2_tx_count" to TriageTest.input(q2TxCount = 0),
             "q2_days" to TriageTest.input(q2Days = 0),
         )
@@ -46,7 +46,7 @@ class TriageClientChecksTest {
 
     @Test
     fun theReasonNamesEveryMissingBaselineFieldInOrder() {
-        val input = TriageTest.input(expectedMonthlyVolume = null, q2Volume = 0, q2TxCount = null, q2Days = 0)
+        val input = TriageTest.input(expectedMonthlyVolume = null, q2Volume = 0.0, q2TxCount = null, q2Days = 0)
         assertThat(input.client.missingBaseline).containsExactly("expected_monthly_volume", "q2_volume", "q2_tx_count", "q2_days")
         assertThat(reasonOf(Triage.decide(input, baselineScored), "CLIENT_UNBASELINED").description)
             .contains("expected_monthly_volume", "q2_volume", "q2_tx_count", "q2_days")
@@ -71,7 +71,7 @@ class TriageClientChecksTest {
         val closeable = Triage.decide(TriageTest.input(hits = listOf(TriageTest.hit("W1"))), floored)
         assertThat(closeable.disposition).describedAs("the same alert on a baselined client").isEqualTo(Disposition.AUTO_CLOSE)
 
-        val unbaselined = Triage.decide(TriageTest.input(hits = listOf(TriageTest.hit("W1")), q2Volume = 0), floored)
+        val unbaselined = Triage.decide(TriageTest.input(hits = listOf(TriageTest.hit("W1")), q2Volume = 0.0), floored)
         assertThat(unbaselined.score).describedAs("the floor moves the disposition, not the score").isEqualTo(closeable.score)
         assertThat(unbaselined.disposition).isEqualTo(Disposition.REVIEW_LOW)
         assertThat(unbaselined.reasons.map { it.code }).contains("FLOOR_CLIENT_UNBASELINED")
@@ -90,7 +90,7 @@ class TriageClientChecksTest {
 
     @Test
     fun anAbsentDeclaredVolumeIsTreatedAsMissingDataAndForcesAReview() {
-        listOf(0L, null).forEach { declared ->
+        listOf(0.0, null).forEach { declared ->
             val decision = Triage.decide(TriageTest.input(expectedMonthlyVolume = declared), volumeRequired)
             assertThat(decision.disposition).describedAs("declared $declared").isGreaterThanOrEqualTo(Disposition.REVIEW_MEDIUM)
             assertThat(decision.reasons.filter { it.code == "DATA_MISSING" }.map { it.description })
@@ -101,7 +101,7 @@ class TriageClientChecksTest {
 
     @Test
     fun aDeclaredVolumeAboveZeroIsNotMissingData() {
-        val decision = Triage.decide(TriageTest.input(expectedMonthlyVolume = 1), volumeRequired)
+        val decision = Triage.decide(TriageTest.input(expectedMonthlyVolume = 1.0), volumeRequired)
         assertThat(decision.reasons.filter { it.code == "DATA_MISSING" }.map { it.description })
             .noneMatch { it.contains(RequiredField.CLIENT_EXPECTED_VOLUME.key) }
     }
@@ -111,7 +111,7 @@ class TriageClientChecksTest {
     @Test
     fun theReasonsStillReconstructTheScoreWithTheClientFactorScoring() {
         val decision = Triage.decide(
-            TriageTest.input(hits = listOf(TriageTest.hit("N1")), amountMinor = 30_000_000, q2Volume = 0),
+            TriageTest.input(hits = listOf(TriageTest.hit("N1")), amount = 300_000.0, q2Volume = 0.0),
             baselineScored,
         )
         assertThat(reasonOf(decision, "CLIENT_UNBASELINED").points).isEqualTo(10)

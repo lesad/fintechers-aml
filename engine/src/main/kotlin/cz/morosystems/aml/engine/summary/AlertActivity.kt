@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.summary
 
+import cz.morosystems.aml.engine.plainDecimal
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import tools.jackson.databind.json.JsonMapper
@@ -61,7 +62,8 @@ internal fun ruleActivity(rule: String, hits: List<RuleHitRow>): Activity {
     val fields = hits.flatMap { it.evidence.keys }.map { it.toString() }.distinct().sorted()
     val evidence = fields.associateWith { field ->
         val values = hits.map { it.evidence[field] }.distinct()
-        val numbers = values.filterIsInstance<Number>().map { it.toLong() }
+        // Amounts are CZK doubles; min and max go through BigDecimal so the aggregate keeps the stored digits.
+        val numbers = values.filterIsInstance<Number>().map { plainDecimal(it) }
         when {
             values.size == 1 -> values.single()
             numbers.size == values.size -> mapOf("min" to numbers.min(), "max" to numbers.max())

@@ -31,25 +31,25 @@ class RuleExplainerTest {
     private val b2 = RuleDefinition(
         1, "B2", 1, "B", Layer.COMPANY, null, null, Grain.TRANSACTION, null,
         """client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]""", null, emptyList(),
-        mapOf("pep_min" to Param(10_000_000, ParamUnit.AMOUNT)),
+        mapOf("pep_min" to Param(100_000.0, ParamUnit.AMOUNT)),
     )
 
     private val c1 = RuleDefinition(
         7, "C1", 2, "C", Layer.COMPANY, null, null, Grain.CLIENT_ANCHOR, """tx.direction == "in"""",
-        "inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow", null,
+        "inflow > p.min_inflow && outflow * 100.0 >= p.forward_pct * inflow", null,
         listOf(
             VariableDefinition(1, "inflow", Agg.SUM, "amount", """tx.direction == "in"""", Window.Relative(Duration.ofHours(-24), Duration.ZERO)),
             VariableDefinition(2, "payers", Agg.SET, "payer_account", """tx.direction == "in"""", Window.Relative(Duration.ofHours(-24), Duration.ZERO)),
             VariableDefinition(3, "outflow", Agg.SUM, "amount", """tx.direction in ["out", "unknown"] && !(tx.payee_account in payers)""", Window.Relative(Duration.ZERO, Duration.ofHours(6))),
         ),
-        mapOf("min_inflow" to Param(10_000_000, ParamUnit.AMOUNT), "forward_pct" to Param(80, ParamUnit.PERCENT)),
+        mapOf("min_inflow" to Param(100_000.0, ParamUnit.AMOUNT), "forward_pct" to Param(80.0, ParamUnit.PERCENT)),
     )
 
     @Test
     fun promptSpellsComparisonsAndParameterUnits() {
         val prompt = explanationPrompt(b2, null)
         assertThat(prompt).contains("tx.amount IS MORE THAN p.pep_min")
-        assertThat(prompt).contains("Parameter p.pep_min = 10000000 haléře (100,000 CZK)")
+        assertThat(prompt).contains("Parameter p.pep_min = 100000 CZK")
         assertThat(prompt).contains("Rule B2 v1, alert type B, company-wide.")
     }
 
@@ -57,7 +57,7 @@ class RuleExplainerTest {
     fun promptDescribesVariablesAndWindows() {
         val prompt = explanationPrompt(c1, null)
         assertThat(prompt).contains("""Anchor transactions: tx.direction == "in"""")
-        assertThat(prompt).contains("outflow * 100 IS AT LEAST p.forward_pct * inflow")
+        assertThat(prompt).contains("outflow * 100.0 IS AT LEAST p.forward_pct * inflow")
         assertThat(prompt).contains("Parameter p.forward_pct = 80 percent")
         assertThat(prompt).contains(
             """Variable inflow = sum of amount over transactions where tx.direction == "in", window: 24 hours before the anchor transaction, up to it""",
@@ -96,7 +96,7 @@ class RuleExplainerTest {
 
     @Test
     fun rejectsANumberOnlyTheSystemPromptHas() {
-        val a3 = b2.copy(key = "A3", alertType = "A", condition = "client.q2_tx_count > 0 && tx.amount > p.max_multiple * client.q2_max_tx", params = mapOf("max_multiple" to Param(2, ParamUnit.MULTIPLE)))
+        val a3 = b2.copy(key = "A3", alertType = "A", condition = "client.q2_tx_count > 0 && tx.amount > p.max_multiple * client.q2_max_tx", params = mapOf("max_multiple" to Param(2.0, ParamUnit.MULTIPLE)))
         bedrock.reply = "Flags a transaction whose amount is more than 3 times the client's largest single transaction in Q2."
         assertThat(explainer.explain(a3)).isNull()
     }

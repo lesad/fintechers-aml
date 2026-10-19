@@ -8,7 +8,7 @@ import java.time.format.DateTimeParseException
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class WindowJson(val kind: String, val from: String? = null, val to: String? = null)
 
-data class ParamJson(val value: Long?, val unit: String?)
+data class ParamJson(val value: Double?, val unit: String?)
 
 data class VariableJson(val name: String, val agg: String, val field: String, val filter: String, val window: WindowJson)
 
@@ -94,7 +94,7 @@ fun RuleBody.toNewRule() = NewRule(
     },
     params = params.mapValues { (name, p) ->
         Param(
-            p?.value ?: throw InvalidRuleException("parameter $name needs a whole-number value"),
+            p?.value ?: throw InvalidRuleException("parameter $name needs a numeric value"),
             enumOf<ParamUnit>("unit", p.unit ?: throw InvalidRuleException("parameter $name needs a unit: amount, percent, multiple or count")),
         )
     },

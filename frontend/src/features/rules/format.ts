@@ -7,9 +7,9 @@ const unitSuffix: Record<RuleParam["unit"], string> = {
   count: "",
 };
 
-/** A parameter's display value and unit: an amount in whole CZK, the rest as stored. */
+/** A parameter's display value and unit: an amount is CZK already (ADR-0037), the rest as stored. */
 export const paramParts = ({ value, unit }: RuleParam) => ({
-  value: (unit === "amount" ? Math.round(value / 100) : value).toLocaleString("en-US"),
+  value: value.toLocaleString("en-US"),
   unit: unitSuffix[unit],
 });
 

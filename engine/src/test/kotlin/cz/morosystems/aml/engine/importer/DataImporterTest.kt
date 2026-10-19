@@ -47,9 +47,9 @@ class DataImporterTest(
         importFrom(fixtures)
         val row = jdbc.sql("select amount, volume, currency, fx_rate, direction, ts from transaction where id = 'T000001'")
             .query { rs, _ ->
-                listOf(rs.getLong("amount"), rs.getBigDecimal("volume"), rs.getString("currency"), rs.getBigDecimal("fx_rate"), rs.getString("direction"), rs.getTimestamp("ts").toLocalDateTime())
+                listOf(rs.getDouble("amount"), rs.getBigDecimal("volume"), rs.getString("currency"), rs.getBigDecimal("fx_rate"), rs.getString("direction"), rs.getTimestamp("ts").toLocalDateTime())
             }.single()
-        assertThat(row[0]).isEqualTo(2435000L)
+        assertThat(row[0]).isEqualTo(24350.0)
         assertThat(row[1] as java.math.BigDecimal).isEqualByComparingTo("1000.00")
         assertThat(row[2]).isEqualTo("EUR")
         assertThat(row[3] as java.math.BigDecimal).isEqualByComparingTo("24.35")
@@ -60,8 +60,8 @@ class DataImporterTest(
     @Test
     fun usesFridayFixingForSaturdayTransaction() {
         importFrom(fixtures)
-        val amount = jdbc.sql("select amount from transaction where id = 'T000003'").query(Long::class.java).single()
-        assertThat(amount).isEqualTo(220000L)
+        val amount = jdbc.sql("select amount from transaction where id = 'T000003'").query(Double::class.java).single()
+        assertThat(amount).isEqualTo(2200.0)
     }
 
     @Test
@@ -72,12 +72,12 @@ class DataImporterTest(
     }
 
     @Test
-    fun clientsFieldsAreTypedAndInHalere() {
+    fun clientsFieldsAreTypedAndInCzk() {
         importFrom(fixtures)
         val row = jdbc.sql("select pep, channel, type, expected_monthly_volume, q2_volume, q2_days, risk from client where id = 'K000002'")
-            .query { rs, _ -> listOf(rs.getBoolean(1), rs.getString(2), rs.getString(3), rs.getLong(4), rs.getLong(5), rs.getInt(6), rs.getString(7)) }
+            .query { rs, _ -> listOf(rs.getBoolean(1), rs.getString(2), rs.getString(3), rs.getDouble(4), rs.getDouble(5), rs.getInt(6), rs.getString(7)) }
             .single()
-        assertThat(row).containsExactly(true, "distant form", "legal entity", 100000000L, 25000000L, 21, "high")
+        assertThat(row).containsExactly(true, "distant form", "legal entity", 1000000.0, 250000.0, 21, "high")
     }
 
     @Test

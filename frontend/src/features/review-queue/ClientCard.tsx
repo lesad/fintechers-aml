@@ -2,9 +2,9 @@ import { cva } from "class-variance-authority";
 
 import { Card, RiskBadge, type RiskLevel } from "@/components";
 
-import { czk, type DetailClient } from "./api";
+import type { DetailClient } from "./api";
 
-const money = (halere: number) => Math.round(czk(halere)).toLocaleString("en-US");
+const money = (amount: number) => Math.round(amount).toLocaleString("en-US");
 const count = (n: number) => n.toLocaleString("en-US");
 
 const pep = cva("", { variants: { pep: { true: "font-bold" } } });
@@ -42,8 +42,8 @@ export function ClientCard({ client }: { client: DetailClient }) {
       </div>
       <Comparison
         title="Volume, Q2 2026"
-        expected={client.expectedMonthlyHalere * 3}
-        real={hasQ2 ? client.q2VolumeHalere : null}
+        expected={client.expectedMonthly * 3}
+        real={hasQ2 ? client.q2Volume : null}
         format={money}
       />
       <Comparison

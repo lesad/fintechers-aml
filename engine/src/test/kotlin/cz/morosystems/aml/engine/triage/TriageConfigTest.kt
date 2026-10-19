@@ -36,7 +36,7 @@ class TriageConfigTest {
 
     @Test
     fun theShippedConfigOrdersAmountBandsFromTheLargestThresholdDown() {
-        assertThat(shipped.amountBands.zipWithNext().all { (a, b) -> a.fromMinor > b.fromMinor }).isTrue()
+        assertThat(shipped.amountBands.zipWithNext().all { (a, b) -> a.from > b.from }).isTrue()
         shipped.intensityBands.forEach { (alertType, bands) ->
             assertThat(bands.zipWithNext().all { (a, b) -> a.fromHits > b.fromHits }).describedAs(alertType).isTrue()
         }
@@ -100,10 +100,10 @@ class TriageConfigTest {
 
     @Test
     fun amountBandsThatDoNotStrictlyDecreaseAreRejected() {
-        assertThatThrownBy { valid().copy(amountBands = listOf(AmountBand(100, 1), AmountBand(200, 2))) }
+        assertThatThrownBy { valid().copy(amountBands = listOf(AmountBand(100.0, 1), AmountBand(200.0, 2))) }
             .isInstanceOf(IllegalArgumentException::class.java)
             .hasMessageContaining("strictly decreasing")
-        assertThatThrownBy { valid().copy(amountBands = listOf(AmountBand(200, 2), AmountBand(200, 1))) }
+        assertThatThrownBy { valid().copy(amountBands = listOf(AmountBand(200.0, 2), AmountBand(200.0, 1))) }
             .isInstanceOf(IllegalArgumentException::class.java)
     }
 
@@ -181,7 +181,7 @@ class TriageConfigTest {
             perExtraAlertType = 10,
             extraAlertTypeMax = 20,
         ),
-        amountBands = listOf(AmountBand(100_000_000, 15), AmountBand(25_000_000, 8)),
+        amountBands = listOf(AmountBand(1_000_000.0, 15), AmountBand(250_000.0, 8)),
         intensityBands = mapOf("A" to listOf(IntensityBand(60, 10), IntensityBand(45, 5))),
         pepImpliedByRules = setOf("W1"),
         bands = listOf(Band(24, Disposition.AUTO_CLOSE), Band(100, Disposition.ESCALATE)),

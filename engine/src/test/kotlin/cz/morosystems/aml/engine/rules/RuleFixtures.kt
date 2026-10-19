@@ -11,7 +11,7 @@ fun JdbcClient.resetRules() {
     sql("update rule set explanation = null, explanation_model = null, explanation_prompt_hash = null").update()
 }
 
-fun newB2(pepMin: Long = 5_000_000, key: String = "B2") = NewRule(
+fun newB2(pepMin: Double = 50_000.0, key: String = "B2") = NewRule(
     key = key,
     alertType = "B",
     layer = Layer.COMPANY,
@@ -34,13 +34,13 @@ fun newC1(key: String = "C9") = NewRule(
     scopeClientId = null,
     grain = Grain.CLIENT_ANCHOR,
     anchor = """tx.direction == "in"""",
-    condition = "inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow",
+    condition = "inflow > p.min_inflow && outflow * 100.0 >= p.forward_pct * inflow",
     replacesKey = null,
     variables = listOf(
         VariableDefinition(1, "inflow", Agg.SUM, "amount", """tx.direction == "in"""", Window.Relative(Duration.ofHours(-24), Duration.ZERO)),
         VariableDefinition(2, "payers", Agg.SET, "payer_account", """tx.direction == "in"""", Window.Relative(Duration.ofHours(-24), Duration.ZERO)),
         VariableDefinition(3, "outflow", Agg.SUM, "amount", """tx.direction in ["out", "unknown"] && !(tx.payee_account in payers)""", Window.Relative(Duration.ZERO, Duration.ofHours(6))),
     ),
-    params = mapOf("min_inflow" to Param(10_000_000, ParamUnit.AMOUNT), "forward_pct" to Param(80, ParamUnit.PERCENT)),
+    params = mapOf("min_inflow" to Param(100_000.0, ParamUnit.AMOUNT), "forward_pct" to Param(80.0, ParamUnit.PERCENT)),
     author = "J. Novák",
 )

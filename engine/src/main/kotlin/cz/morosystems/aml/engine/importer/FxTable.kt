@@ -37,6 +37,6 @@ class FxTable private constructor(val fixings: List<Fixing>) {
     }
 }
 
-/** Haléře for [volume] at [ratePerUnit] CZK per unit. */
-fun toHalere(volume: BigDecimal, ratePerUnit: BigDecimal): Long =
-    volume.multiply(ratePerUnit).movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
+/** CZK for [volume] at [ratePerUnit] CZK per unit, rounded to the heller. */
+fun toCzk(volume: BigDecimal, ratePerUnit: BigDecimal): Double =
+    volume.multiply(ratePerUnit).setScale(2, RoundingMode.HALF_UP).toDouble()

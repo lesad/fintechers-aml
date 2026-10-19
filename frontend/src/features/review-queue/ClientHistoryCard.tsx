@@ -2,9 +2,9 @@ import { cva } from "class-variance-authority";
 
 import { Card, type Column, StatusLabel, Table } from "@/components";
 
-import { czk, type HistoryTransaction } from "./api";
 import { formatAmount, formatTs } from "./queue";
 
+import type { HistoryTransaction } from "./api";
 import type { Decision } from "./decisions";
 
 type ClientHistoryCardProps = {
@@ -64,7 +64,7 @@ export function ClientHistoryCard({
       width: 140,
       align: "right",
       className: "tabular-nums",
-      cell: (h) => formatAmount(czk(h.amountHalere)),
+      cell: (h) => formatAmount(h.amount),
     },
     {
       key: "alerts",
