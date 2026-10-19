@@ -14,4 +14,5 @@
     <include file="db/migrations/0008-triage.sql" />
     <include file="db/migrations/0009-alert-summary.sql" />
     <include file="db/migrations/0010-params-on-version.sql" />
+    <include file="db/migrations/0011-rule-explanation.sql" />
 </databaseChangeLog>
