@@ -2,7 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": [
     "src/app/main.tsx",
-    "scripts/**/*.ts",
     "vite.config.ts",
     "src/core/test/setup.ts",
     "src/features/*/index.ts",
@@ -17,7 +16,7 @@
     "circular-dependencies": "error"
   },
   "health": {
-    "ignore": ["*.config.ts", "scripts/**", "src/core/test/**"]
+    "ignore": ["*.config.ts", "src/core/test/**"]
   },
   "ignoreDependencies": [
     "@base-ui/react",

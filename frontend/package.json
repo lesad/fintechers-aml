@@ -22,9 +22,9 @@
     "check:health": "fallow health",
     "check:fallow": "fallow",
     "check:fallow:fix": "fallow fix --dry-run",
-    "data:pull": "bash scripts/pull-data.sh",
-    "setup:agentic": "tsx scripts/setup-skills.ts",
-    "freeze": "bash scripts/freeze.sh"
+    "data:pull": "bash ../scripts/pull-data.sh",
+    "setup:agentic": "cd .. && tsx scripts/setup-skills.ts",
+    "freeze": "bash ../scripts/freeze.sh"
   },
   "dependencies": {
     "@base-ui/react": "1.4.1",

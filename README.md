@@ -8,7 +8,7 @@ Before the event, this repo held only a generic Next.js app template (`agentic-n
 
 ## Getting started for the hackathon
 
-1. `pnpm install`
+1. `cd frontend && pnpm install`. The web app lives in `frontend/`, the rules engine in `engine/`; run every `pnpm` command below from `frontend/`.
 2. Set up the team AWS account once with `aws configure sso` (answers in `docs/challenge/aws-participant-guide.md`) and name the profile `hackathon`, with `region = eu-central-1`. Switch to it in your shell: `export AWS_PROFILE=hackathon` (fish: `set -gx AWS_PROFILE hackathon`).
 3. Sign in: `aws sso login --profile hackathon` (sessions last 12 hours).
 4. `pnpm data:pull` fetches the ČNB AML data, the MostlyRight file and the ČNB FX fixings into `data/raw/` (git-ignored).
@@ -22,6 +22,7 @@ The sections below come from the template and describe its tooling.
 ## 30-second start
 
 ```bash
+cd frontend
 pnpm install
 pnpm dev                            # http://localhost:5173
 ```
@@ -55,6 +56,8 @@ No environment file and no database: the app is a client-only SPA. Persistence a
 - **No demo CRUD** — skeleton only. Project skills generate examples on demand.
 
 ## Scripts
+
+Run from `frontend/`.
 
 | Command              | What it does                                   |
 | -------------------- | ---------------------------------------------- |

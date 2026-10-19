@@ -30,6 +30,9 @@ if [ ! -t 0 ]; then
   fi
 fi
 
+# The frontend and its pnpm scripts live in frontend/ (ADR-0029).
+cd "$(git rev-parse --show-toplevel)/frontend"
+
 echo "→ typecheck"
 pnpm typecheck
 

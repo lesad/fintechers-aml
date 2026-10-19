@@ -12,6 +12,7 @@ This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FI
 
 ## Stack
 
+- **The frontend lives in `frontend/`** (ADR-0029), next to the Kotlin engine in `engine/`. Every `pnpm` command and every `src/…`, `vite.config.ts`, `tsconfig.json`, `.oxlintrc.json` and `.fallowrc.json` path in this file is relative to `frontend/`; `docs/`, `reference/`, `scripts/`, `.github/` and `.claude/` stay at the repo root.
 - **Vite 8 + React 19 — a client-only SPA. There is no server, no router, no database here** (ADR-0025). `index.html` → `src/app/main.tsx` → `src/app/App.tsx`.
 - TypeScript strict, `noUncheckedIndexedAccess` on
 - Tailwind v4 (CSS-first via `@theme`, through `@tailwindcss/vite`)

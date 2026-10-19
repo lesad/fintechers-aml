@@ -2,6 +2,10 @@
 
 > **Intended use:** an append-only log of architecture decisions. Add a new ADR whenever a non-obvious call is made. **Never edit an accepted ADR** — supersede it with a new one and annotate the old (`Superseded by ADR-NNNN`). Newest first. Keep entries short: the decision, its status, and _why_.
 
+### ADR-0029 — The frontend moves into `frontend/`, next to `engine/`
+
+**Accepted.** The Vite SPA and its whole Node toolchain live in `frontend/`: `src/`, `public/`, `index.html`, `vite.config.ts`, `tsconfig.json`, `package.json`, the pnpm lockfile, workspace file and npm config, and the oxlint, oxfmt and fallow configs. The repo root keeps what serves the whole repo: `docs/`, `reference/`, `data/`, `scripts/` (called from `frontend/package.json` as `../scripts/…`), `.github/`, `.claude/`, `CLAUDE.md` and `README.md`. CI runs the `check` and `build` jobs and fallow in `frontend/`; the pre-commit hook `cd`s there. _Why:_ the repo now holds two apps, the Kotlin engine in `engine/` (ADR-0024) and the web app; giving each its own folder keeps their tooling apart and the root readable. _Trade-off:_ oxfmt refuses paths outside its working directory, so the markdown in `docs/`, `README.md` and `CLAUDE.md` is no longer format-checked. Supersedes the root layout described in ADR-0025.
+
 ### ADR-0027 — No regulatory rule layer; every monitoring rule is the institution's own
 
 **Accepted.** The rules engine has three layers: company, client segment and client. The regulatory layer from ADR-0024 is dropped, and with it the "regulatory floor" proof. FINREG's rules A, B and C are seeded as company rules. Every rule can be added, changed, suppressed or replaced at its layer, through the checks and an approval. The cel-java verifier stays, as an informative change summary (what a change newly catches and no longer catches) rather than a gate. _Why:_ the team found that in practice monitoring scenarios and thresholds are each institution's own risk-based decision, so a hard-coded regulatory layer would model something that does not exist. Design: `docs/engine/rules-engine-design.md`.

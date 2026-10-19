@@ -25,6 +25,7 @@
 
 ### Changed
 
+- The frontend moved into `frontend/` (ADR-0029): run `pnpm` commands there. CI, the pre-commit hook and the data, freeze and skills scripts follow.
 - `docs/challenge/`: the decision notes record the no-deployment decision and the Kotlin-backend proposal; stale Vercel, Supabase and Playwright lines are gone; the lane overview is folded into the README; links to the context repo now point at GitLab.
 - Renamed the app to `fintechers-aml`, removed the guestbook example, added the "Built during the hackathon" README section.
 - Migrations and seed moved from `supabase/` to `db/migrations` and `db/seed.sql`. `pnpm db:reset` recreates the container, migrates and seeds; `pnpm db:migrate` exits cleanly while there are no migrations.
