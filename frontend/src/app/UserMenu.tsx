@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import { Select } from "@/components";
+import { Popover, Select } from "@/components";
 
 import type { User } from "@/user";
 
@@ -26,11 +26,13 @@ export function UserMenu({
   onUser: (user: User) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const avatar = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="relative flex items-center gap-2">
       <span className="text-xs text-indigo-20">{user?.name}</span>
       <button
+        ref={avatar}
         type="button"
         aria-label="Switch user"
         aria-expanded={open}
@@ -40,7 +42,7 @@ export function UserMenu({
         {user ? initials(user.name) : "?"}
       </button>
       {open && (
-        <div className="absolute top-full right-0 z-20 mt-2 flex w-56 flex-col gap-1.5 rounded-md bg-bg p-3 text-fg shadow-card">
+        <Popover anchor={avatar} onClose={() => setOpen(false)} className="w-56">
           <label htmlFor="user-switch" className="text-[11px] text-fg-subtle">
             Signed in as
           </label>
@@ -59,7 +61,7 @@ export function UserMenu({
               </option>
             ))}
           </Select>
-        </div>
+        </Popover>
       )}
     </div>
   );

@@ -14,6 +14,7 @@
 
 ### Added
 
+- The queue lists reported cases last: they are resolved, so the manager's escalated cases come first whatever their score.
 - Users instead of a role switch: `app_user` (name, role `REVIEWER` or `MANAGER`; migration 0018 seeds one of each) and `GET /api/users`. Clicking the avatar in the header opens a select to switch user; the choice is kept in localStorage (`aml.user`), the name in the header and on decisions and rules comes from it, and its role decides the queue. Every call to the engine sends `X-User-Id`; a status change requires it and stores it in `alert.status_by`.
 - Triage sends an `ESCALATE` verdict straight to the manager: saving it moves the alert from `NEW` to `ESCALATED` (a status a person set stays). Migration 0017 does the same for alerts triaged before.
 - The client's transactions in the detail start with five before and five after the open one, with "Show 5 older" / "Show 5 newer" buttons, loaded from the new `GET /api/transactions/{id}/history?direction=older|newer`. The detail no longer carries the whole history: it sends that day's transactions (`day`, for the money flow) and `historyCount`.

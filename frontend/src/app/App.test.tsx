@@ -248,6 +248,20 @@ describe("App", () => {
     );
   });
 
+  it("closes the user panel on a click elsewhere or Escape, not on the avatar's own click", async () => {
+    render(<App />);
+    const avatar = screen.getByRole("button", { name: "Switch user" });
+    fireEvent.click(avatar);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("combobox", { name: "Signed in as" })).not.toBeInTheDocument();
+
+    fireEvent.pointerDown(avatar);
+    fireEvent.click(avatar);
+    expect(screen.getByRole("combobox", { name: "Signed in as" })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("combobox", { name: "Signed in as" })).not.toBeInTheDocument();
+  });
+
   it("remembers the chosen user across a reload", async () => {
     const { unmount } = render(<App />);
     await switchUser("M. Svobodová");

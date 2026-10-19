@@ -9,6 +9,7 @@ export {
 } from "./RatingBadge";
 export { LoadMore } from "./LoadMore";
 export { Modal } from "./Modal";
+export { Popover } from "./Popover";
 export { Select } from "./Select";
 export { type CaseStatus, StatusLabel } from "./StatusLabel";
 export { type Column, Table } from "./Table";
