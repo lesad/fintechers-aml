@@ -65,10 +65,10 @@ const ACTION_LABEL: Record<CaseEvent["action"], string> = {
 const logEntry = cva("flex flex-col gap-1 rounded-md border px-3 py-2.5", {
   variants: {
     action: {
-      ASSIGNED: "border-indigo",
-      REASSIGNED: "border-indigo",
-      NEW: "border-indigo",
-      ESCALATED: "border-indigo",
+      ASSIGNED: "border-border",
+      REASSIGNED: "border-border",
+      NEW: "border-border",
+      ESCALATED: "border-border",
       FALSE_POSITIVE: "border-low-bg bg-low-bg",
       REPORTED: "border-high-bg bg-high-bg",
     },
