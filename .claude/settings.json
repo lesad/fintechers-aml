@@ -4,7 +4,6 @@
       "Bash(pnpm *)",
       "Bash(npx *)",
       "Bash(docker compose *)",
-      "Bash(drizzle-kit *)",
       "Bash(oxlint *)",
       "Bash(oxfmt *)",
       "Bash(fallow *)",

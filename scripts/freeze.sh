@@ -11,8 +11,7 @@ usage() {
 Usage: scripts/freeze.sh [--undo]
 
 Tags origin/main as ${TAG} and pushes the tag, then locks main: the ruleset
-gains an "update" rule and loses the admin bypass, so nothing merges, auto-merge
-included.
+gains an "update" rule and loses the admin bypass, so nobody can push to main.
 
   --undo      restore the ruleset from .github/rulesets/main.json (the tag stays)
   -h, --help  show this help

@@ -3,10 +3,6 @@
     "fallow": {
       "command": "npx",
       "args": ["-y", "fallow-mcp"]
-    },
-    "vercel": {
-      "type": "http",
-      "url": "https://mcp.vercel.com"
     }
   }
 }
