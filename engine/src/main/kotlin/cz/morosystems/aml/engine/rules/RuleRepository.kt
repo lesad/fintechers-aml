@@ -95,6 +95,16 @@ class RuleRepository(private val jdbc: JdbcClient) {
             """,
         ).param(id).update() > 0
 
+    /** Deletes the draft [id] with its variables and parameters; false when [id] is not a draft. A draft never ran, so it has no hits. */
+    @Transactional
+    fun deleteDraft(id: Long): Boolean {
+        val draft = jdbc.sql("select id from rule where id = ? and status = 'draft' for update").param(id).query(Long::class.java).optional().isPresent
+        if (!draft) return false
+        jdbc.sql("delete from rule_variable where rule_id = ?").param(id).update()
+        jdbc.sql("delete from rule_param where rule_id = ?").param(id).update()
+        return jdbc.sql("delete from rule where id = ? and status = 'draft'").param(id).update() > 0
+    }
+
     /** Sends the pending version [id] back to `draft` with no assignee; false when [id] is not pending. */
     fun reject(id: Long): Boolean =
         jdbc.sql("update rule set status = 'draft', assignee_id = null where id = ? and status = 'pending'").param(id).update() > 0

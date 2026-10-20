@@ -1,11 +1,12 @@
 package cz.morosystems.aml.engine.suggestion
 
+import cz.morosystems.aml.engine.ai.READY
 import cz.morosystems.aml.engine.alert.AlertRepository
+import cz.morosystems.aml.engine.assessment.AssessmentService
 import cz.morosystems.aml.engine.rules.RuleRepository
 import cz.morosystems.aml.engine.run.ClientRepository
 import cz.morosystems.aml.engine.summary.AlertActivity
 import cz.morosystems.aml.engine.summary.AlertNotFoundException
-import cz.morosystems.aml.engine.summary.SummaryService
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import tools.jackson.databind.json.JsonMapper
@@ -17,7 +18,7 @@ class SuggestionRepository(
     private val activity: AlertActivity,
     private val rules: RuleRepository,
     private val clients: ClientRepository,
-    private val summaries: SummaryService,
+    private val assessments: AssessmentService,
 ) {
     private val json = JsonMapper()
 
@@ -35,7 +36,7 @@ class SuggestionRepository(
             latest = (hitKeys + hitKeys.map { clientKey(it, alert.clientId) }).mapNotNull { key -> rules.latestOf(key)?.let { key to it } }.toMap(),
             values = rules.fieldValues(),
             triage = triage(alertId),
-            summary = summaries.latestText(alertId),
+            assessment = assessment(alertId),
             existingRules = rules.allVersions().filter { it.status != "retired" },
         )
     }
@@ -44,6 +45,21 @@ class SuggestionRepository(
         jdbc.sql("select disposition, score, reasons::text from alert_triage where alert_id = ?").param(alertId).query { rs, _ ->
             mapOf("disposition" to rs.getString(1), "score" to rs.getInt(2), "reasons" to json.readValue(rs.getString(3), List::class.java))
         }.optional().orElse(null)
+
+    /** The latest ready AI Rating: its summary as one paragraph, verdict, rating and open questions; null when none is ready. */
+    private fun assessment(alertId: Long): Map<String, Any?>? {
+        val body = assessments.latest(alertId)?.takeIf { it.status == READY }?.body as? Map<*, *> ?: return null
+        fun texts(list: Any?, key: String? = null) = (list as? List<*>).orEmpty().mapNotNull { item ->
+            val sentence = if (key == null) item else (item as? Map<*, *>)?.get(key)
+            (sentence as? Map<*, *>)?.get("text") as? String
+        }
+        return mapOf(
+            "rating" to body["rating"],
+            "verdict" to body["verdict"],
+            "summary" to texts(body["summary"]).joinToString(" "),
+            "openQuestions" to texts(body["openPoints"], "question"),
+        )
+    }
 
     private fun hitKeys(alertId: Long): Set<String> =
         jdbc.sql(

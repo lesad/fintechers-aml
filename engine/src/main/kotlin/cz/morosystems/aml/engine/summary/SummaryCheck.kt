@@ -1,6 +1,7 @@
 package cz.morosystems.aml.engine.summary
 
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 class InvalidSummaryException(message: String) : RuntimeException(message)
 
@@ -42,10 +43,17 @@ fun checkNumbers(sentences: List<Sentence>, input: Any?, extra: Collection<Numbe
     return sentences
 }
 
-/** The numbers in [text] that appear neither in [input] nor in [extra]. */
-fun numbersNotIn(text: String, input: Any?, extra: Collection<Number> = emptyList()): List<String> {
+/**
+ * The numbers in [text] that appear neither in [input] nor in [extra]. With [wholeRounding], a whole number also
+ * matches an input number that rounds to it (`1,032,539` for `1032539.3`): rounded, not made up (ADR-0047).
+ */
+fun numbersNotIn(text: String, input: Any?, extra: Collection<Number> = emptyList(), wholeRounding: Boolean = false): List<String> {
     val known = numbersIn(input) + extra.map { BigDecimal(it.toString()) }
-    return NUMBER.findAll(text).map { it.value }.filterNot { n -> known.any { it.compareTo(BigDecimal(n.replace(",", ""))) == 0 } }.toList()
+    val rounded = if (wholeRounding) known.map { it.setScale(0, RoundingMode.HALF_UP) } else emptyList()
+    return NUMBER.findAll(text).map { it.value }.filterNot { n ->
+        val quoted = BigDecimal(n.replace(",", ""))
+        known.any { it.compareTo(quoted) == 0 } || (quoted.scale() <= 0 && rounded.any { it.compareTo(quoted) == 0 })
+    }.toList()
 }
 
 private fun numbersIn(value: Any?): List<BigDecimal> = when (value) {

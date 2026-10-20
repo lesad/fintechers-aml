@@ -6,6 +6,20 @@
 
 ### Changed
 
+- The AI Rating shows the newest stored result whatever prompt made it, in `GET /api/alerts/{id}/assessment` and the queue's `aiRating` (ADR-0045). A new one is generated only when none exists or through "Regenerate" on the card. The model may return no open points.
+- The AI Rating card shows the summary as one paragraph with its refs after it, and the open points behind a "Show open points (n)" toggle. The queue's rating badge carries an attached "AI ↑" or "AI ↓" pill in the AI level's colour when the AI rating differs from the rule rating, and a plain "AI" when they match; the card uses the same arrow wording.
+- The rule suggestion reads the alert's latest ready AI Rating (ref `assessment`) instead of the summary text, which nothing generated any more.
+
+- A number in the AI Rating that the input does not hold no longer rejects the result (ADR-0046). The result stays ready with `body.warnings`, and the card marks that text as unverified. Numbers from the prompt itself count as known, and the summary may have up to six items.
+
+- The AI Rating's number check accepts an input amount rounded to a whole number (`1,032,539` for `1032539.3`); a number nothing in the input rounds to is still marked (ADR-0047).
+
+- A draft rule version can be deleted (`DELETE /api/rules/{id}`; 400 for any other status). The rule page offers Edit, Send for approval and Delete on a draft, and "New version" only on an active or retired version.
+
+### Removed
+
+- `GET` and `POST /api/alerts/{id}/summary`, `SummaryService` and `prompts/alert-summary.md` (ADR-0045). Stored `summary` rows stay.
+
 - `POST /api/alerts/{id}/summary` returns the `AiResult` envelope with 200 and a `status` (`ready`, `rejected` or `failed`) instead of a `Summary` or a 502. `GET` returns 404 for the summaries migrated by 0020 until a new one is generated, and rule suggestions get no summary text until then.
 
 - Every triage reason that lists rules names them from the `rule` table instead of printing bare keys: `RULE_BASE`, `RULE_UNKNOWN`, `AUTO_CLOSE_BLOCKED` and the suppressed `CLIENT_PEP` now read "base score for Daily volume above the projected share of expected monthly volume (A1), … and Single transaction above a multiple of the Q2 maximum (A3)". The names come from `rule.name` (migration `0010`), latest version of a key wins — no new migration and no new column — and triage loads them into the config at runtime beside the alert type names. A rule the table has no name for, an unrecognised key especially, keeps its bare key. Presentation only: no score, band or disposition changes.

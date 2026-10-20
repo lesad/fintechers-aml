@@ -99,10 +99,10 @@ class AssessmentControllerTest {
     }
 
     @Test
-    fun aResultFromAnotherPromptReadsAsNotRun() {
+    fun aResultFromAnotherPromptIsStillTheLatest() {
         jdbc.sql("insert into ai_result (alert_id, kind, status, body, model_id, prompt_hash, input_hash) values (?, 'assessment', 'ready', '{}'::jsonb, 'm', 'old', 'i')")
             .param(alertId).update()
-        assertThat(mvc.get().uri("/api/alerts/$alertId/assessment")).hasStatus(HttpStatus.NOT_FOUND)
+        assertThat(mvc.get().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.promptHash").isEqualTo("old")
     }
 
     @Test
@@ -119,7 +119,6 @@ class AssessmentControllerTest {
 
         assertThat(mvc.get().uri("/api/alerts/$alertId/assessment")).hasStatusOk()
             .bodyJson().extractingPath("$.body.openPoints[0].wouldSettle").isEqualTo("Invoices for the outgoing payments.")
-        assertThat(mvc.get().uri("/api/alerts/$alertId/summary")).hasStatus(HttpStatus.NOT_FOUND)
     }
 
     @Test
@@ -157,9 +156,18 @@ class AssessmentControllerTest {
     }
 
     @Test
-    fun rejectsANumberNotInTheInput() {
+    fun aNumberNotInTheInputIsAWarning() {
         bedrock.reply = reply(summaryText = "About CZK 100,001 moved through.")
-        assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.error").asString().contains("100,001")
+        val result = assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson()
+        result.extractingPath("$.status").isEqualTo("ready")
+        result.extractingPath("$.body.warnings[0].at").isEqualTo("summary[0]")
+        result.extractingPath("$.body.warnings[0].message").asString().contains("100,001")
+    }
+
+    @Test
+    fun aNumberFromThePromptIsKnown() {
+        bedrock.reply = reply(summaryText = "Most of it left within 24 hours.")
+        assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.body.warnings").asArray().isEmpty()
     }
 
     @Test
@@ -175,15 +183,17 @@ class AssessmentControllerTest {
     }
 
     @Test
-    fun rejectsFourSummarySentences() {
-        bedrock.reply = reply(sentences = 4)
-        assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.error").asString().contains("summary has 4 items")
+    fun acceptsSixSummarySentencesAndRejectsSeven() {
+        bedrock.reply = reply(sentences = 6)
+        assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("ready")
+        bedrock.reply = reply(sentences = 7)
+        assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.error").asString().contains("summary has 7 items")
     }
 
     @Test
-    fun rejectsANumberInAnOpenPoint() {
+    fun aNumberInAnOpenPointIsAWarning() {
         bedrock.reply = reply(normal = "A payslip over CZK 120,000.")
-        assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.error").asString().contains("120,000")
+        assertThat(mvc.post().uri("/api/alerts/$alertId/assessment")).hasStatusOk().bodyJson().extractingPath("$.body.warnings[0].at").isEqualTo("openPoints[0].normal")
     }
 
     @Test

@@ -96,8 +96,8 @@ data class SuggestionContext(
     val values: Map<String, List<String>> = emptyMap(),
     /** The alert's triage as stored: disposition, score and reasons; null before triage ran. */
     val triage: Map<String, Any?>? = null,
-    /** The alert's stored AI summary text, if one was generated. */
-    val summary: String? = null,
+    /** The alert's latest ready AI Rating (rating, verdict, summary, open questions); null when none is ready. */
+    val assessment: Map<String, Any?>? = null,
     /** Every rule version that is not retired, drafts included, so the model can see a change already exists. */
     val existingRules: List<RuleVersion> = emptyList(),
 )
@@ -111,7 +111,7 @@ const val CLIENT_REF = "client"
 
 const val TRIAGE_REF = "triage"
 
-const val SUMMARY_REF = "summary"
+const val ASSESSMENT_REF = "assessment"
 
 fun clientKey(key: String, clientId: String) = "$key-$clientId"
 

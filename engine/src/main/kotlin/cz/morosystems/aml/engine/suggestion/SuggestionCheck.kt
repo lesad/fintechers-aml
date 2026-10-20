@@ -50,7 +50,7 @@ class SuggestionChecker(
             "rule_version" -> Unit
             else -> invalid("unknown kind '$kind'")
         }
-        if (kind == "none") return Checked(Suggestion(kind, explain(reply, input, context, emptyList()), null, null, null), null)
+        if (kind == "none") return Checked(Suggestion(kind, explain(reply, input, context, durationNumbers(input)), null, null, null), null)
 
         val key = reply["ruleKey"] as? String
         if (key == null || key !in context.hitKeys) invalid("rule '$key' did not hit this alert")
@@ -97,8 +97,9 @@ class SuggestionChecker(
         val resolved = resolve(context.rules.filterNot { it == retires } + definition, context)
         checkTakesEffect(resolved.clientsByRule, definition, base, retires, current.clientsByRule, clientId)
 
-        val explanation = explain(reply, input, context, proposed.map { it.second.value })
-        val ruleExplanation = ruleExplanation(reply["ruleExplanation"], input, proposed.map { it.second.value })
+        val known = proposed.map { it.second.value } + durationNumbers(listOf(input, reply))
+        val explanation = explain(reply, input, context, known)
+        val ruleExplanation = ruleExplanation(reply["ruleExplanation"], input, known)
         val suggestion = Suggestion(kind, explanation, suggestedRule(definition, nameOf(definition, earlier, context)), base.params.json(), retires?.let { RuleRef(it.key, it.version) }, ruleExplanation)
         return Checked(suggestion, Draft(definition, base, retires, resolved.clientsByRule[definition].orEmpty()))
     }
@@ -179,7 +180,7 @@ class SuggestionChecker(
     private fun explain(reply: Map<*, *>, input: Map<*, *>, context: SuggestionContext, values: List<Double>): List<Sentence> =
         try {
             val known = context.activity.map { it.ref }.toSet() + REASON + CLIENT_REF + context.existingRules.map { it.ref() } +
-                listOfNotNull(TRIAGE_REF.takeIf { context.triage != null }, SUMMARY_REF.takeIf { context.summary != null })
+                listOfNotNull(TRIAGE_REF.takeIf { context.triage != null }, ASSESSMENT_REF.takeIf { context.assessment != null })
             checkNumbers(checkSummary(sentencesOf(reply["explanation"]), known, maxSentences = 2, requiredRef = REASON, noun = "explanation"), input, values)
         } catch (e: InvalidSummaryException) {
             invalid(e.message ?: "invalid explanation")
@@ -256,7 +257,20 @@ class SuggestionChecker(
 
     private fun invalid(message: String): Nothing = throw InvalidSuggestionException(message)
 
+    /**
+     * The hours and minutes of every ISO-8601 window in [source] (`-PT24H`, `PT6H`), which text quotes as "6 hours": the
+     * number check cannot see a digit inside `PT6H`, so these join the known numbers.
+     */
+    private fun durationNumbers(source: Any?): List<Double> = when (source) {
+        is String -> DURATION.findAll(source).mapNotNull { runCatching { Duration.parse(it.value).abs() }.getOrNull() }
+            .flatMap { listOf(it.toHours().toDouble(), it.toMinutes().toDouble(), it.toDays().toDouble()) }.toList()
+        is Map<*, *> -> source.values.flatMap(::durationNumbers)
+        is Iterable<*> -> source.flatMap(::durationNumbers)
+        else -> emptyList()
+    }
+
     private companion object {
+        val DURATION = Regex("""(?<![A-Za-z])-?P(?=\d|T\d)(?:\d+D)?(?:T(?:\d+[HMS])+)?""")
         const val REASON = "reason"
         const val MAX_RULE_EXPLANATION = 500
         val COMPARED = Regex("""\b((?:tx|client)\.\w+)\s*[!=]=\s*"([^"]*)"""")

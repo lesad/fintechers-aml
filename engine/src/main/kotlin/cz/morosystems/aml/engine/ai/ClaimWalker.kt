@@ -4,22 +4,26 @@ import cz.morosystems.aml.engine.summary.Sentence
 import cz.morosystems.aml.engine.summary.numbersNotIn
 
 /**
- * The checks every AI body passes (ADR-0034, ADR-0043): each claim cites at least one ref, only refs from the alert's
- * activity, and every number in model text appears in [input]. The output is refused, never repaired.
+ * A check a ready result failed without being refused, e.g. a number the input does not hold. `at` is where, e.g.
+ * `summary[0]`; `numbers` are the offending numbers exactly as the text writes them, so the UI can mark just those.
  */
-fun checkClaims(body: AiBody, known: Set<String>, input: Any?) {
+data class AiWarning(val at: String, val message: String, val numbers: List<String> = emptyList())
+
+/**
+ * The checks every AI body passes (ADR-0034, ADR-0043, ADR-0046): each claim cites at least one ref and only refs from
+ * the alert's activity, or the output is refused. A number in model text that [input] does not hold, even rounded to
+ * a whole number (ADR-0047), is a warning: the
+ * result stays ready and the reviewer sees the sentence marked.
+ */
+fun checkClaims(body: AiBody, known: Set<String>, input: Any?): List<AiWarning> {
     body.claims().forEach { (at, claim) ->
         if (claim.refs.isEmpty()) throw InvalidAiOutputException("$at cites nothing")
         val unknown = claim.refs.filterNot { it in known }
         if (unknown.isNotEmpty()) throw InvalidAiOutputException("$at cites unknown refs $unknown")
-        checkNumbers(at, claim.text, input)
     }
-    body.texts().forEach { (at, text) -> checkNumbers(at, text, input) }
-}
-
-private fun checkNumbers(at: String, text: String, input: Any?) {
-    val unknown = numbersNotIn(text, input)
-    if (unknown.isNotEmpty()) throw InvalidAiOutputException("$at has numbers not in the input: $unknown")
+    return (body.claims().mapValues { it.value.text } + body.texts()).mapNotNull { (at, text) ->
+        numbersNotIn(text, input, wholeRounding = true).takeIf { it.isNotEmpty() }?.let { AiWarning(at, "numbers not in the input: $it", it) }
+    }
 }
 
 /** Reads a required, non-blank string field of a model object. */

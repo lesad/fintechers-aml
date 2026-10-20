@@ -1,7 +1,7 @@
 package cz.morosystems.aml.engine.ai
 
 import cz.morosystems.aml.engine.summary.Sentence
-import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
@@ -16,7 +16,7 @@ class ClaimWalkerTest {
 
     @Test
     fun acceptsKnownRefsAndInputNumbers() {
-        assertThatCode { checkClaims(body(Sentence("CZK 110,000 came in.", listOf("rule:C1"))), known, input) }.doesNotThrowAnyException()
+        assertThat(checkClaims(body(Sentence("CZK 110,000 came in.", listOf("rule:C1"))), known, input)).isEmpty()
     }
 
     @Test
@@ -30,9 +30,23 @@ class ClaimWalkerTest {
     }
 
     @Test
-    fun checksNumbersInTextsThatCiteNothing() {
-        assertThatThrownBy { checkClaims(body(Sentence("x", listOf("rule:C1")), "A payslip over CZK 120,000."), known, input) }
-            .isInstanceOf(InvalidAiOutputException::class.java).hasMessageContaining("x[0].wouldConfirm").hasMessageContaining("120,000")
+    fun acceptsAnInputNumberRoundedToAWholeNumber() {
+        val input = mapOf("activity" to listOf(mapOf("ref" to "rule:C1", "data" to mapOf("amount" to 1032539.3, "max" to 39918.96))))
+        assertThat(checkClaims(body(Sentence("CZK 1,032,539 is far above CZK 39,919.", listOf("rule:C1"))), known, input)).isEmpty()
+    }
+
+    @Test
+    fun aRoundedDecimalIsStillAWarning() {
+        val input = mapOf("activity" to listOf(mapOf("ref" to "rule:C1", "data" to mapOf("max" to 39918.96))))
+        assertThat(checkClaims(body(Sentence("CZK 39,919.0 at most.", listOf("rule:C1"))), known, input)).hasSize(1)
+    }
+
+    @Test
+    fun warnsOfANumberNotInTheInput() {
+        assertThat(checkClaims(body(Sentence("CZK 99,000 came in.", listOf("rule:C1")), "A payslip over CZK 120,000."), known, input)).containsExactly(
+            AiWarning("x[0]", "numbers not in the input: [99,000]", listOf("99,000")),
+            AiWarning("x[0].wouldConfirm", "numbers not in the input: [120,000]", listOf("120,000")),
+        )
     }
 
     @Test

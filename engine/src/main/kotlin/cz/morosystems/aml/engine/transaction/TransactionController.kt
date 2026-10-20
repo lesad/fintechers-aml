@@ -28,6 +28,7 @@ class TransactionController(private val transactions: TransactionRepository, pri
         @RequestParam(required = false) rating: String?,
         @RequestParam(required = false) status: List<String>?,
         @RequestParam(required = false) assignee: Long?,
+        @RequestParam(defaultValue = "false") ai: Boolean,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "50") size: Int,
     ): TransactionPage {
@@ -35,7 +36,7 @@ class TransactionController(private val transactions: TransactionRepository, pri
         if (rating != null && rating !in RATINGS) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "rating is one of $RATINGS")
         val statuses = status.orEmpty()
         if (!STATUSES.containsAll(statuses)) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $STATUSES")
-        return transactions.flagged(q, rating, statuses, assignee, page, size)
+        return transactions.flagged(q, rating, statuses, assignee, page, size, ai)
     }
 
     /** One transaction with its client, its alerts and their evidence, and the client's other transactions. */

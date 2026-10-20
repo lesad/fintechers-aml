@@ -28,8 +28,8 @@ Answer with four parts:
    - `own_accounts`: money moved between the client's own accounts.
    - `seasonal_business`: a spike that fits the client's business cycle.
    - `unclear`: the facts do not point to any of these.
-3. `summary`: two or three short sentences. First the facts the rules and the score do not show (counterparty history, shared accounts, timing, baseline), then what you make of them. When the rating and the verdict pull apart, say why.
-4. `openPoints`: one to three questions the facts leave open. Each has the `question`, what points to suspicion (`suspicious`), the normal explanation (`normal`), what would settle it (`wouldSettle`) and whom to ask (`askWho`): `client`, `account_manager` or `analyst` (something the analyst can look up).
+3. `summary`: one short paragraph of one to three sentences, each its own item with its refs; the reviewer reads them as one paragraph. First the facts the rules and the score do not show (counterparty history, shared accounts, timing, baseline), then what you make of them. When the rating and the verdict pull apart, say why.
+4. `openPoints`: up to three questions the facts leave open; none when the facts settle it. Each has the `question`, what points to suspicion (`suspicious`), the normal explanation (`normal`), what would settle it (`wouldSettle`) and whom to ask (`askWho`): `client`, `account_manager` or `analyst` (something the analyst can look up).
 
 Rules for every sentence:
 

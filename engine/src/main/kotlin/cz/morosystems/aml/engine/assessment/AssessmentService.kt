@@ -72,8 +72,8 @@ class AssessmentService(private val generator: AiGenerator) {
             AssessmentBody(
                 rating = enumOf(reply, "rating", "assessment", RATINGS),
                 verdict = enumOf(reply, "verdict", "assessment", VERDICTS),
-                summary = objectsOf(reply["summary"], "summary", 1..3).mapIndexed { i, s -> claimOf(s, "summary[$i]") },
-                openPoints = objectsOf(reply["openPoints"], "openPoints", 1..3).mapIndexed { i, p ->
+                summary = objectsOf(reply["summary"], "summary", 1..6).mapIndexed { i, s -> claimOf(s, "summary[$i]") },
+                openPoints = objectsOf(reply["openPoints"], "openPoints", 0..3).mapIndexed { i, p ->
                     val at = "openPoints[$i]"
                     OpenPoint(
                         question = claimOf(p["question"], "$at.question"),

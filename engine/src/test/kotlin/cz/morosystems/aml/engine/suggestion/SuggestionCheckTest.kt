@@ -254,8 +254,16 @@ class SuggestionCheckTest {
     }
 
     @Test
-    fun rejectsTheSummaryRefWhenThereIsNoSummary() =
-        assertRejected(reply(explanation = listOf(mapOf("text" to "As summarised.", "refs" to listOf("reason", "summary")))), "summary")
+    fun aRuleExplanationMayQuoteAWindowInHours() {
+        val text = "Flags a day for this client only when its volume within 6 hours is well above the declared monthly volume."
+        assertRejected(reply(ruleExplanation = text), "[6]")
+        val withWindow = input + ("windowTo" to "PT6H")
+        assertThat(checker.check(reply(ruleExplanation = text), withWindow, context).suggestion.ruleExplanation).contains("6 hours")
+    }
+
+    @Test
+    fun rejectsTheAssessmentRefWhenThereIsNoAssessment() =
+        assertRejected(reply(explanation = listOf(mapOf("text" to "As assessed.", "refs" to listOf("reason", "assessment")))), "assessment")
 
     @Test
     fun rejectsATextValueTheFieldNeverTakes() =

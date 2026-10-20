@@ -6,6 +6,7 @@ import cz.morosystems.aml.engine.user.UserRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -46,6 +47,13 @@ class RuleController(private val rules: RuleService, private val users: UserRepo
         rules.update(id, body.toNewRule())?.toJson() ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "rule version $id not found")
 
     /** Sends a draft for approval to a manager; 400 when the version is not a draft. */
+    /** Deletes a draft; 400 for any other status, 404 when there is no such version. */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun delete(@PathVariable id: Long) {
+        if (!rules.delete(id)) throw notFound(id)
+    }
+
     @PostMapping("/{id}/submit")
     fun submit(@PathVariable id: Long): RuleVersionJson = (rules.submit(id) ?: throw notFound(id)).toJson()
 

@@ -93,6 +93,18 @@ class RuleService(
         return transition(id, "pending", "rejected", rules::reject)
     }
 
+    /**
+     * Deletes the draft [id]. A version sent for approval or already decided stays, for audit.
+     *
+     * @return false when there is no version [id]
+     * @throws InvalidRuleException when [id] is not a draft
+     */
+    fun delete(id: Long): Boolean {
+        val existing = rules.find(id) ?: return false
+        if (!rules.deleteDraft(id)) throw InvalidRuleException("only a draft can be deleted; ${existing.rule.key} v${existing.rule.version} is ${existing.status}")
+        return true
+    }
+
     private fun transition(id: Long, from: String, verb: String, change: (Long) -> Boolean): RuleVersion? {
         val existing = rules.find(id) ?: return null
         if (!change(id)) throw InvalidRuleException("only a $from version can be $verb; ${existing.rule.key} v${existing.rule.version} is ${existing.status}")

@@ -1,6 +1,5 @@
 package cz.morosystems.aml.engine.transaction
 
-import cz.morosystems.aml.engine.ai.promptHash
 import cz.morosystems.aml.engine.assessment.AssessmentService
 import cz.morosystems.aml.engine.user.AppUser
 import java.sql.ResultSet
@@ -88,18 +87,22 @@ class TransactionRepository(private val jdbc: JdbcClient) {
      * The review queue: transactions the latest finished run alerted on and triage did not close on its own,
      * reported last, then most severe disposition first, then highest score. `statuses` keeps a transaction whose
      * case status is one of them; empty keeps all. [assignee] keeps only that user's cases, in the counts too;
-     * null keeps all.
+     * null keeps all. [ai] keeps only transactions with a ready AI Rating on one of their alerts (a temporary demo switch).
      */
-    fun flagged(query: String?, rating: String?, statuses: List<String>, assignee: Long?, page: Int, size: Int): TransactionPage {
+    fun flagged(query: String?, rating: String?, statuses: List<String>, assignee: Long?, page: Int, size: Int, ai: Boolean = false): TransactionPage {
         val mine = "(:assignee = 0 or q.assignee_id = :assignee)"
         val filter = """
             where $mine
               and (:q = '' or q.id ilike :like or t.client_id ilike :like)
               and (:rating = '' or q.rating = :rating)
               and (:statuses = '' or q.status = any(string_to_array(:statuses, ',')))
+              and (not :ai or exists (
+                  select 1 from alert a join ai_result r on r.alert_id = a.id
+                  where a.transaction_id = q.id and a.run_id = ($LATEST_RUN) and r.kind = 'assessment' and r.status = 'ready'
+              ))
         """
         val q = query?.trim().orEmpty()
-        val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty(), "statuses" to statuses.joinToString(","), "assignee" to (assignee ?: 0L))
+        val params = mapOf("q" to q, "like" to "%$q%", "rating" to rating.orEmpty(), "statuses" to statuses.joinToString(","), "assignee" to (assignee ?: 0L), "ai" to ai)
 
         val items = jdbc.sql(
             """
@@ -142,7 +145,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
         return TransactionPage(items, page, size, total, RATINGS.associateWith { counts[it] ?: 0L })
     }
 
-    /** The AI Rating per transaction: that of its most severe alert, when its newest result under the prompt of that alert's disposition is ready. */
+    /** The AI Rating per transaction: that of its most severe alert, when its newest result is ready, whatever prompt made it (ADR-0045). */
     private fun aiRatings(ids: List<String>): Map<String, String?> =
         jdbc.sql(
             """
@@ -151,14 +154,13 @@ class TransactionRepository(private val jdbc: JdbcClient) {
             join alert_triage tr on tr.alert_id = a.id
             left join lateral (
                 select status, body from ai_result
-                where alert_id = a.id and kind = ? and prompt_hash = (?::jsonb ->> tr.disposition) order by id desc limit 1
+                where alert_id = a.id and kind = ? order by id desc limit 1
             ) r on true
             where a.run_id = ($LATEST_RUN) and a.transaction_id = any(?)
             order by a.transaction_id, array_position(?::text[], tr.disposition) desc, a.id
             """,
         ).params(
-            AssessmentService.KIND.name, json.writeValueAsString(DISPOSITIONS.associateWith { AssessmentService.KIND.promptHash(it) }),
-            ids.toTypedArray(), DISPOSITIONS.toTypedArray(),
+            AssessmentService.KIND.name, ids.toTypedArray(), DISPOSITIONS.toTypedArray(),
         ).query { rs, _ ->
             rs.getString("transaction_id") to rs.getString("rating")?.takeIf { rs.getString("status") == "ready" }?.replaceFirstChar(Char::uppercase)
         }.list().toMap()

@@ -69,7 +69,7 @@ class SuggestionService(
             "rules" to rules,
             "client" to mapOf("ref" to CLIENT_REF, "kind" to "client", "data" to context.clients.firstOrNull { it["id"] == clientId }),
             "triage" to context.triage?.let { mapOf("ref" to TRIAGE_REF, "kind" to "triage", "data" to it) },
-            "summary" to context.summary?.let { mapOf("ref" to SUMMARY_REF, "kind" to "ai_summary", "data" to mapOf("text" to it)) },
+            "assessment" to context.assessment?.let { mapOf("ref" to ASSESSMENT_REF, "kind" to "ai_assessment", "data" to it) },
             "existingRules" to context.existingRules.map { v ->
                 mapOf(
                     "ref" to v.ref(), "key" to v.rule.key, "version" to v.rule.version, "status" to v.status,

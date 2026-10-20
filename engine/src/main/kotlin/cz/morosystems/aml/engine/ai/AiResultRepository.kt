@@ -29,10 +29,10 @@ class AiResultRepository(private val jdbc: JdbcClient) {
         ).params(listOf(alertId, kind, status, body?.let(json::writeValueAsString), error, modelId, promptHash, inputHash))
             .query(row).single()
 
-    /** The newest result of the kind made by one of these prompts; a result from an older prompt reads as not run. */
-    fun latest(alertId: Long, kind: String, promptHashes: Set<String>): AiResult? =
-        jdbc.sql("select $COLUMNS from ai_result where alert_id = ? and kind = ? and prompt_hash = any(?) order by id desc limit 1")
-            .params(alertId, kind, promptHashes.toTypedArray()).query(row).optional().orElse(null)
+    /** The newest result of the kind, whatever prompt made it. */
+    fun latest(alertId: Long, kind: String): AiResult? =
+        jdbc.sql("select $COLUMNS from ai_result where alert_id = ? and kind = ? order by id desc limit 1")
+            .params(alertId, kind).query(row).optional().orElse(null)
 
     private val row = RowMapper { rs, _ ->
         AiResult(

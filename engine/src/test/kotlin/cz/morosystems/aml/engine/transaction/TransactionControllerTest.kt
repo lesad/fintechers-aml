@@ -72,23 +72,25 @@ class TransactionControllerTest {
     }
 
     @Test
+    fun theAiSwitchKeepsOnlyRowsWithAReadyRating() {
+        assertThat(mvc.get().uri("/api/transactions?ai=true")).hasStatusOk().bodyJson().extractingPath("$.total").isEqualTo(0)
+        aiResult(alertOf("T1", "ESCALATE"))
+        val body = assertThat(mvc.get().uri("/api/transactions?ai=true")).hasStatusOk().bodyJson()
+        body.extractingPath("$.total").isEqualTo(1)
+        body.extractingPath("$.items[0].id").isEqualTo("T1")
+    }
+
+    @Test
     fun aRowWithoutAResultHasNoAiRating() {
         assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
             .extractingPath("$.items[0].aiRating").isNull()
     }
 
     @Test
-    fun aResultOfAnOldPromptIsIgnored() {
+    fun aResultOfAnOldPromptStillCounts() {
         aiResult(alertOf("T1", "ESCALATE"), promptHash = "old")
         assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
-            .extractingPath("$.items[0].aiRating").isNull()
-    }
-
-    @Test
-    fun aResultUnderAnotherDispositionsPromptIsIgnored() {
-        aiResult(alertOf("T1", "ESCALATE"), promptHash = AssessmentService.KIND.promptHash("AUTO_CLOSE"))
-        assertThat(mvc.get().uri("/api/transactions")).hasStatusOk().bodyJson()
-            .extractingPath("$.items[0].aiRating").isNull()
+            .extractingPath("$.items[0].aiRating").isEqualTo("High")
     }
 
     @Test

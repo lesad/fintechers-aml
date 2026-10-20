@@ -26,7 +26,8 @@ class AiGenerator(
 ) {
     private val json = JsonMapper()
 
-    fun latest(alertId: Long, kind: AiKind<*>): AiResult? = results.latest(alertId, kind.name, setOf(kind.promptHash(alerts.disposition(alertId))))
+    /** The newest stored result of the kind, whatever prompt made it (ADR-0045); a new one is generated only on request. */
+    fun latest(alertId: Long, kind: AiKind<*>): AiResult? = results.latest(alertId, kind.name)
 
     fun generate(alertId: Long, kind: AiKind<*>): AiResult {
         val alert = alerts.find(alertId) ?: throw AlertNotFoundException(alertId)
@@ -35,7 +36,7 @@ class AiGenerator(
         val disposition = items.firstOrNull { it.ref == "triage:decision" }?.data?.get("disposition") as String?
         val system = kind.system(disposition)
         val promptHash = kind.promptHash(disposition)
-        fun store(status: String, body: AiBody?, error: String?) =
+        fun store(status: String, body: Any?, error: String?) =
             results.save(alertId, kind.name, status, body, error, bedrock.modelId, promptHash, sha256(input))
 
         val reply = try {
@@ -45,9 +46,10 @@ class AiGenerator(
         } catch (e: SdkException) {
             return store(FAILED, null, e.message)
         }
-        val body = try {
-            kind.parse(json.readValue(reply, Map::class.java)).also {
-                checkClaims(it, items.map { item -> item.ref }.toSet(), json.readValue(input, Map::class.java))
+        val (body, warnings) = try {
+            kind.parse(json.readValue(reply, Map::class.java)).let {
+                // The prompt rides along so a number it states itself ("within 24 hours") counts as known.
+                it to checkClaims(it, items.map { item -> item.ref }.toSet(), listOf(json.readValue(input, Map::class.java), system))
             }
         } catch (e: JacksonException) {
             return store(REJECTED, null, "reply is not JSON: ${e.originalMessage}")
@@ -56,6 +58,6 @@ class AiGenerator(
         } catch (e: InvalidSummaryException) {
             return store(REJECTED, null, e.message)
         }
-        return store(READY, body, null)
+        return store(READY, json.convertValue(body, Map::class.java) + ("warnings" to warnings), null)
     }
 }

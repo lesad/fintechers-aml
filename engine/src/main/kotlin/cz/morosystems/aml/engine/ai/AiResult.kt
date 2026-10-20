@@ -1,7 +1,6 @@
 package cz.morosystems.aml.engine.ai
 
 import cz.morosystems.aml.engine.summary.Sentence
-import cz.morosystems.aml.engine.transaction.TransactionRepository
 import java.security.MessageDigest
 import java.time.OffsetDateTime
 import org.springframework.core.io.ClassPathResource
@@ -61,9 +60,6 @@ class AiKind<B : AiBody>(
 fun AiKind<*>.system(disposition: String?): String = text(disposition)
 
 fun AiKind<*>.promptHash(disposition: String?): String = sha256(system(disposition) + schema)
-
-/** The hashes of every prompt this kind can send, so a stored result can be told current from stale. */
-fun AiKind<*>.promptHashes(): Set<String> = (TransactionRepository.DISPOSITIONS + null).map { promptHash(it) }.toSet()
 
 internal fun sha256(text: String) =
     MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }

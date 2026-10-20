@@ -244,6 +244,24 @@ class RuleControllerTest {
     }
 
     @Test
+    fun aDraftCanBeDeleted() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        val id = idOf("B2", 2)
+        assertThat(mvc.delete().uri("/api/rules/$id")).hasStatus(HttpStatus.NO_CONTENT)
+        assertThat(mvc.get().uri("/api/rules/$id")).hasStatus(HttpStatus.NOT_FOUND)
+        assertThat(mvc.delete().uri("/api/rules/$id")).hasStatus(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun onlyADraftCanBeDeleted() {
+        assertThat(mvc.delete().uri("/api/rules/${idOf("B2", 1)}")).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("only a draft can be deleted")
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
+        assertThat(mvc.delete().uri("/api/rules/${idOf("B2", 2)}")).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
     fun sendingAVersionThatIsNoDraftIs400() {
         assertThat(action(idOf("B2", 1), "submit")).hasStatus(HttpStatus.BAD_REQUEST)
             .bodyJson().extractingPath("$.detail").asString().contains("only a draft")

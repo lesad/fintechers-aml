@@ -5,6 +5,8 @@ import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import tools.jackson.databind.json.JsonMapper
 
+class AlertNotFoundException(alertId: Long) : RuntimeException("alert $alertId not found")
+
 /** One thing that happened on an alert. `ref` is unique across sources, and is what a summary sentence cites. */
 data class Activity(val ref: String, val kind: String, val data: Map<String, Any?>)
 

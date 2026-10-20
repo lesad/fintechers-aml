@@ -24,9 +24,6 @@ class AlertRepository(private val jdbc: JdbcClient) {
 
     fun find(id: Long): Alert? = jdbc.sql("$SELECT where a.id = ? group by a.id").param(id).query(row).optional().orElse(null)
 
-    fun disposition(alertId: Long): String? =
-        jdbc.sql("select disposition from alert_triage where alert_id = ?").param(alertId).query(String::class.java).optional().orElse(null)
-
     private val row = RowMapper { rs, _ ->
         Alert(
             id = rs.getLong("id"),
