@@ -6,6 +6,7 @@
 
 ### Changed
 
+- The AI Rating is about half as long. Its summary is the headline: the first sentence says what the activity looks like and the fact that decides it, and later sentences add only what the reviewer does not already see. It no longer quotes the client's profile, the Q2 baseline figures and ratios, or the rule evidence. Each fact appears once across the summary and the open points, and an open point is left out when the analyst can answer it in the app (such as what another alert shows). The summary has no fixed sentence count. The escalation focus no longer asks for every fact a report needs; the FAÚ report draft carries those.
 - The review queue generates the AI rating of its first five open cases (New or Escalated) on first load, when they have none yet; the badge shows a spinner while it runs. It runs the same per-alert assessment as opening the detail, once per page load.
 - The queue's AI pill takes the AI level's colour also when it matches the rule rating (a red "AI" next to a High), instead of purple.
 - **A rule change needs a reason (ADR-0053).** A version that changes an earlier one needs a "Why this change" in the rule form; `POST` and `PUT /api/rules` refuse it without `changeReason` (400). A first version needs none. The reason shows on the version and in the rules export; a draft from an AI suggestion carries the false-positive reason behind it. The user menu also widens to fit the longer role names.

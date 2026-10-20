@@ -1,3 +1,3 @@
 Focus: escalation.
 
-The engine escalates this alert. Lay out the facts a report needs: who, what, when and how, from the input only. The open points are the questions for the client.
+The engine escalates this alert. Name the typology and the fact that makes it one; the report draft carries the rest. The open points are the questions for the client.
