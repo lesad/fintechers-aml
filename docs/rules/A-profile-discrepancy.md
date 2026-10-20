@@ -8,6 +8,10 @@ Type A carries the volume (5,493 alerts on July, every client) and triage is 40%
 
 > Daily volume in July 2026 is greater than 25% of the projected monthly volume, or greater than 3x the average daily volume in Q2 2026; or a single transaction is greater than 2x the maximum transaction in Q2 2026. Clients inactive in Q2 2026 are compared to projected volumes only.
 
+Purpose, FINREG kickoff slide 'Red flag identification ruleset', 2026-10-19:
+
+> Most alerts, highest false-positive share — tests triage against the client profile
+
 ## 1. Seed rules (engine)
 
 Migration `0004-seed-rules.sql`, author `finreg-brief`.

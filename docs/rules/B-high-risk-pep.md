@@ -8,6 +8,10 @@ Every type B alert goes to a person, so triage is a guardrail and the work is in
 
 > A transaction above CZK 10,000 where the payer, payee or client country is on the EU or FATF high-risk jurisdictions list; or an outgoing transaction of a Politically Exposed Person above CZK 100,000 (where direction is unclear, any transaction).
 
+Purpose, FINREG kickoff slide 'Red flag identification ruleset', 2026-10-19:
+
+> Few alerts, high severity — tests prioritisation and escalation to the right level
+
 ## 1. Seed rules (engine)
 
 Migration `0004-seed-rules.sql`, author `finreg-brief`. A transaction that trips both rules is one alert with both hits.

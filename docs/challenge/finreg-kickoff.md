@@ -15,6 +15,18 @@ FINREG's control loop is Risk, Detect, Review, Escalate, Audit. The slide marks 
 - **See the whole story.** Look for patterns across the client, not isolated transactions; several flags on the same client raise priority.
 - **Justify every rule and align it with internal risk scoring.**
 
+## Ruleset slide
+
+The slide "Red flag identification ruleset" gives each rule a purpose (verbatim):
+
+| Rule | Purpose |
+| --- | --- |
+| A, client profile discrepancy | Most alerts, highest false-positive share — tests triage against the client profile |
+| B, high-risk jurisdiction or PEP | Few alerts, high severity — tests prioritisation and escalation to the right level |
+| C, flow-through account | Typical mule pattern — tests intraday flows and combining risk factors |
+
+Its footer: "Should you identify further red flags, include them as well. Recommendation: use AI for decision-making and ruleset navigation, not for analysing every row of data."
+
 ## Ruleset maintenance
 
 The deck lists three duties beyond single-alert triage. They map to features we can show:

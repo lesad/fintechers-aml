@@ -8,6 +8,10 @@ Every type C alert goes to a person at priority 80 or more. On July the seed rul
 
 > Within 24 hours the client receives incoming payments above CZK 100,000 and within 6 hours sends out at least 80% of that amount to another account (not the payer's account). Include any further red flags you identify.
 
+Purpose, FINREG kickoff slide 'Red flag identification ruleset', 2026-10-19:
+
+> Typical mule pattern — tests intraday flows and combining risk factors
+
 ## 1. Seed rules (engine)
 
 | Rule | Grain                                   | Tests                                                                                       |
