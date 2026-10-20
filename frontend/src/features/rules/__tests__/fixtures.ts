@@ -14,6 +14,9 @@ const base = {
   author: "finreg-brief",
   createdAt: "2026-10-19T10:00:00+02:00",
   explanationModel: "eu.anthropic.claude-opus-4-5-20251101-v1:0",
+  assignee: null,
+  approver: null,
+  approvedAt: null,
 };
 
 const c1Variables = (outflowFilter: string): RuleVariable[] => [

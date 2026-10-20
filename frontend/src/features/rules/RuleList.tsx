@@ -81,7 +81,7 @@ type RuleRowProps = { group: Group; selected: boolean; onSelect: () => void };
 
 function RuleRow({ group, selected, onSelect }: RuleRowProps) {
   const active = group.versions.find((v) => v.status === "active");
-  const draft = group.versions.find((v) => v.status === "draft");
+  const draft = group.versions.find((v) => v.status === "draft" || v.status === "pending");
   return (
     <button type="button" aria-current={selected} onClick={onSelect} className={row({ selected })}>
       <span className="font-mono text-[13px] font-bold">{group.key}</span>
@@ -91,7 +91,7 @@ function RuleRow({ group, selected, onSelect }: RuleRowProps) {
         <span>{active ? `v${active.version} active` : "no active version"}</span>
         {draft && (
           <span className="rounded-[3px] border border-draft-line bg-sel px-1.5 text-[11px] font-semibold text-draft-fg">
-            draft v{draft.version}
+            {draft.status} v{draft.version}
           </span>
         )}
       </span>

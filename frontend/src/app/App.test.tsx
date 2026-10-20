@@ -285,6 +285,9 @@ beforeEach(() => {
           createdAt: "2026-10-20T10:00:00Z",
           explanation: null,
           explanationModel: null,
+          assignee: null,
+          approver: null,
+          approvedAt: null,
         });
       }
       if (url.pathname.endsWith("/history")) return json(history(url));

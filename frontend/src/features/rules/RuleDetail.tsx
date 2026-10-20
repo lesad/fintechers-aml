@@ -1,10 +1,11 @@
 import { cva } from "class-variance-authority";
+import { useState } from "react";
 
 import { ConditionCode, ConditionLegend } from "@/components";
 
+import { changeRuleStatus, type RuleVersion } from "./api";
 import { grainLabel, paramParts, paramText, scopeLabel, shortDate, windowShort } from "./format";
 
-import type { RuleVersion } from "./api";
 import type { ReactNode } from "react";
 
 type RuleDetailProps = {
@@ -14,6 +15,9 @@ type RuleDetailProps = {
   onSelectVersion: (id: number) => void;
   onNewVersion: () => void;
   onEditDraft: () => void;
+  /** Only a manager approves or rejects a pending version. */
+  manager: boolean;
+  onStatusChanged: (changed: RuleVersion) => void;
 };
 
 const dot = cva("inline-block size-1.5 flex-none rounded-full", {
@@ -21,6 +25,7 @@ const dot = cva("inline-block size-1.5 flex-none rounded-full", {
     status: {
       active: "bg-low-dot",
       draft: "bg-draft-dot",
+      pending: "bg-indigo",
       approved: "bg-indigo-60",
       retired: "bg-retired-dot",
     },
@@ -40,35 +45,31 @@ const tab = cva(
 );
 
 const h2 = "text-[13px] font-semibold";
+const primary =
+  "h-7 rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
+const secondary =
+  "h-7 rounded border border-indigo bg-bg px-3 text-[13px] font-semibold text-indigo hover:bg-indigo hover:text-white disabled:cursor-not-allowed";
 
 const byline = (v: RuleVersion) => {
   const by = v.author ?? "unknown";
   if (v.status === "draft") return `Drafted by ${by}, ${shortDate(v.createdAt)}`;
+  if (v.status === "pending") return `Drafted by ${by}, ${shortDate(v.createdAt)}`;
+  if (v.status === "active" && v.approver && v.approvedAt)
+    return `Active since ${shortDate(v.approvedAt)} · by ${by} · approved by ${v.approver}`;
   if (v.status === "active") return `Active since ${shortDate(v.createdAt)} · by ${by}`;
   return `Created ${shortDate(v.createdAt)} · by ${by}`;
 };
 
-export function RuleDetail({
-  version: v,
-  siblings,
-  onSelectVersion,
-  onNewVersion,
-  onEditDraft,
-}: RuleDetailProps) {
+export function RuleDetail(props: RuleDetailProps) {
+  const { version: v, siblings } = props;
   const active = siblings.find((s) => s.status === "active");
   return (
     <section
       aria-label={`${v.key} v${v.version}`}
       className="flex max-w-[1040px] flex-col gap-4 px-6 pt-4 pb-8"
     >
-      <Header
-        version={v}
-        siblings={siblings}
-        onSelectVersion={onSelectVersion}
-        onNewVersion={onNewVersion}
-        onEditDraft={onEditDraft}
-      />
-      {v.status === "draft" && <DraftNote draft={v} active={active} />}
+      <Header {...props} />
+      {(v.status === "draft" || v.status === "pending") && <DraftNote draft={v} active={active} />}
       {v.status === "retired" && (
         <div className="rounded-md border border-border bg-bg-sub px-3 py-2 text-fg-muted">
           Retired. Kept for audit of cases flagged while it was active.
@@ -99,6 +100,8 @@ function Header({
   onSelectVersion,
   onNewVersion,
   onEditDraft,
+  manager,
+  onStatusChanged,
 }: RuleDetailProps) {
   const name = siblings[0]?.name ?? v.name;
   return (
@@ -113,19 +116,12 @@ function Header({
           {name && <h1 className="text-lg leading-tight font-semibold text-pretty">{name}</h1>}
         </div>
         {v.status === "draft" && (
-          <button
-            type="button"
-            onClick={onEditDraft}
-            className="h-7 rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover"
-          >
+          <button type="button" onClick={onEditDraft} className={primary}>
             Edit draft v{v.version}
           </button>
         )}
-        <button
-          type="button"
-          onClick={onNewVersion}
-          className="h-7 rounded border border-indigo bg-bg px-3 text-[13px] font-semibold text-indigo hover:bg-indigo hover:text-white"
-        >
+        <StatusActions key={v.id} version={v} manager={manager} onStatusChanged={onStatusChanged} />
+        <button type="button" onClick={onNewVersion} className={secondary}>
           New version from v{v.version}
         </button>
       </div>
@@ -156,6 +152,51 @@ function Header({
   );
 }
 
+type StatusActionsProps = Pick<RuleDetailProps, "version" | "manager" | "onStatusChanged">;
+
+function StatusActions({ version: v, manager, onStatusChanged }: StatusActionsProps) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = async (action: Parameters<typeof changeRuleStatus>[1]) => {
+    setBusy(true);
+    setError(null);
+    try {
+      onStatusChanged(await changeRuleStatus(v.id, action));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const failure = error && (
+    <span role="alert" className="text-xs text-high">
+      {error}
+    </span>
+  );
+  if (v.status === "draft") {
+    return (
+      <>
+        {failure}
+        <button type="button" disabled={busy} onClick={() => run("submit")} className={secondary}>
+          Send for approval
+        </button>
+      </>
+    );
+  }
+  if (v.status !== "pending" || !manager) return null;
+  return (
+    <>
+      {failure}
+      <button type="button" disabled={busy} onClick={() => run("reject")} className={secondary}>
+        Reject
+      </button>
+      <button type="button" disabled={busy} onClick={() => run("approve")} className={primary}>
+        Approve v{v.version}
+      </button>
+    </>
+  );
+}
+
 function DraftNote({ draft, active }: { draft: RuleVersion; active: RuleVersion | undefined }) {
   const changes = active
     ? Object.entries(draft.params).flatMap(([name, param]) => {
@@ -167,7 +208,11 @@ function DraftNote({ draft, active }: { draft: RuleVersion; active: RuleVersion 
     : [];
   return (
     <div className="flex flex-col gap-1 rounded-md border border-draft-line bg-sel px-3 py-2.5">
-      <div className="font-semibold">Draft — not evaluating transactions yet</div>
+      <div className="font-semibold">
+        {draft.status === "pending"
+          ? `Waiting for approval by ${draft.assignee ?? "a manager"} — not evaluating transactions yet`
+          : "Draft — not evaluating transactions yet"}
+      </div>
       {active && changes.length > 0 && (
         <>
           <div className="text-fg-muted">Compared with v{active.version} active:</div>

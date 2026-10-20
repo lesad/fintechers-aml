@@ -39,11 +39,15 @@ const ruleVersion = z.object({
   id: z.number(),
   version: z.number(),
   name: z.string().nullable(),
-  status: z.enum(["draft", "approved", "active", "retired"]),
+  status: z.enum(["draft", "pending", "approved", "active", "retired"]),
   author: z.string().nullable(),
   createdAt: z.string(),
   explanation: z.string().nullable(),
   explanationModel: z.string().nullable(),
+  /** The manager a `pending` version waits for. */
+  assignee: z.string().nullable(),
+  approver: z.string().nullable(),
+  approvedAt: z.string().nullable(),
 });
 
 export type RuleWindow = z.infer<typeof window>;
@@ -56,7 +60,7 @@ export type NewRule = z.infer<z.ZodObject<typeof ruleFields>> & {
   name: string | null;
 };
 
-/** The engine refused a rule (400, 409) or could not explain it (502); the message is its reason. */
+/** The engine refused a rule (400, 403, 409) or could not explain it (502); the message is its reason. */
 export class RuleRejectedError extends Error {}
 
 const problem = z.object({ detail: z.string() });
@@ -70,18 +74,18 @@ export async function fetchRules(signal?: AbortSignal): Promise<RuleVersion[]> {
   return z.array(ruleVersion).parse(await res.json());
 }
 
-/** Sends a rule; a 400, 409 or 502 becomes a {@link RuleRejectedError} carrying the engine's reason. */
+/** Sends a rule; a 400, 403, 409 or 502 becomes a {@link RuleRejectedError} carrying the engine's reason. */
 async function postRule(
   path: string,
-  body: NewRule,
+  body: NewRule | null,
   method: "POST" | "PUT" = "POST",
 ): Promise<unknown> {
   const res = await fetch(path, {
     method,
     headers: { Accept: "application/json", "Content-Type": "application/json", ...userHeaders() },
-    body: JSON.stringify(body),
+    body: body && JSON.stringify(body),
   });
-  if (res.status === 400 || res.status === 409 || res.status === 502) {
+  if ([400, 403, 409, 502].includes(res.status)) {
     const parsed = problem.safeParse(await res.json().catch(() => null));
     throw new RuleRejectedError(parsed.success ? parsed.data.detail : `HTTP ${res.status}`);
   }
@@ -95,6 +99,15 @@ export const saveRule = async (body: NewRule): Promise<RuleVersion> =>
 /** Overwrites the draft [id]; the engine refuses any other status. */
 export const updateRule = async (id: number, body: NewRule): Promise<RuleVersion> =>
   ruleVersion.parse(await postRule(`/api/rules/${id}`, body, "PUT"));
+
+/**
+ * Moves a version along its approval: `submit` sends a draft to a manager, `approve` activates a pending one
+ * and `reject` returns it to draft; the engine lets only a manager approve or reject.
+ */
+export const changeRuleStatus = async (
+  id: number,
+  action: "submit" | "approve" | "reject",
+): Promise<RuleVersion> => ruleVersion.parse(await postRule(`/api/rules/${id}/${action}`, null));
 
 const explanation = z.object({ explanation: z.string(), model: z.string() });
 

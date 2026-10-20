@@ -92,7 +92,10 @@ export function App() {
       <Routes>
         <Route path="/" element={null} />
         <Route path="/transactions/:id" element={null} />
-        <Route path="/rules" element={<RulesPage author={user?.name ?? ""} />} />
+        <Route
+          path="/rules"
+          element={<RulesPage author={user?.name ?? ""} manager={user?.role === "MANAGER"} />}
+        />
         <Route path="/import" element={<ImportPage onDataChanged={queue.reload} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

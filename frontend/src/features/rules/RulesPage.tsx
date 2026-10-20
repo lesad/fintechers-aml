@@ -10,13 +10,15 @@ import { useRules } from "./use-rules";
 type RulesPageProps = {
   /** Recorded as the author of every saved version. */
   author: string;
+  /** Only a manager approves or rejects a pending version. */
+  manager: boolean;
 };
 
 type Mode = { kind: "view" } | { kind: "form"; from: RuleVersion | null; edit?: boolean };
 
 const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg hover:bg-hover";
 
-export function RulesPage({ author }: RulesPageProps) {
+export function RulesPage({ author, manager }: RulesPageProps) {
   const rules = useRules();
   const [params] = useSearchParams();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -66,10 +68,12 @@ export function RulesPage({ author }: RulesPageProps) {
               siblings={group?.versions ?? []}
               keys={groups.map((g) => g.key)}
               author={author}
+              manager={manager}
               onMode={setMode}
               onSelectVersion={setSelectedId}
               onSaved={(v) => {
-                setSaved((s) => [...s.filter((x) => x.id !== v.id), v]);
+                // NOTE: an approval retires a sibling, so earlier saved copies of the key go stale.
+                setSaved((s) => [...s.filter((x) => x.key !== v.key), v]);
                 select(v.key, v.id);
                 rules.reload();
               }}
@@ -103,6 +107,7 @@ type PanelProps = {
   /** Every rule key, so a new rule cannot reuse one. */
   keys: string[];
   author: string;
+  manager: boolean;
   onMode: (mode: Mode) => void;
   onSelectVersion: (id: number) => void;
   onSaved: (saved: RuleVersion) => void;
@@ -114,6 +119,7 @@ function Panel({
   siblings,
   keys,
   author,
+  manager,
   onMode,
   onSelectVersion,
   onSaved,
@@ -140,6 +146,8 @@ function Panel({
       onSelectVersion={onSelectVersion}
       onNewVersion={() => onMode({ kind: "form", from: version })}
       onEditDraft={() => onMode({ kind: "form", from: version, edit: true })}
+      manager={manager}
+      onStatusChanged={onSaved}
     />
   );
 }

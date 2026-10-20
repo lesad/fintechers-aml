@@ -127,7 +127,7 @@ describe("saving from the rules page", () => {
   };
 
   const openB2Form = async () => {
-    render(<RulesPage author="J. Novák" />);
+    render(<RulesPage author="J. Novák" manager={false} />);
     fireEvent.click(
       within(await screen.findByRole("navigation", { name: "Rules" })).getByRole("button", {
         name: /B2/,
@@ -193,7 +193,7 @@ describe("editing a draft", () => {
         return json([...SEEDED, puts.length ? edited : B2_V2]);
       }),
     );
-    render(<RulesPage author="J. Novák" />, { route: `/rules?rule=${B2_V2.id}` });
+    render(<RulesPage author="J. Novák" manager={false} />, { route: `/rules?rule=${B2_V2.id}` });
     fireEvent.click(await screen.findByRole("button", { name: "Edit draft v2" }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("B2 · edit draft v2");
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "70000" } });
@@ -217,7 +217,7 @@ describe("editing a draft", () => {
       "fetch",
       vi.fn(async () => json(SEEDED)),
     );
-    render(<RulesPage author="J. Novák" />);
+    render(<RulesPage author="J. Novák" manager={false} />);
     await screen.findByRole("button", { name: /New version from/ });
     expect(screen.queryByRole("button", { name: /Edit draft/ })).not.toBeInTheDocument();
   });
