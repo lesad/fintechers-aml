@@ -45,14 +45,14 @@ export function AssigneeCard({ assignee, users, closed, onAssign }: AssigneeCard
               Change
             </button>
             {open && (
-              <Popover anchor={button} onClose={() => setOpen(false)} className="w-56">
+              <Popover anchor={button} onClose={() => setOpen(false)} className="w-max min-w-56">
                 <span className="px-2 text-[11px] text-fg-subtle">Hand the case to</span>
                 {others.map((u) => (
                   <button
                     key={u.id}
                     type="button"
                     onClick={() => pick(u)}
-                    className="flex w-full cursor-pointer items-baseline gap-1 rounded border-0 bg-transparent px-2 py-1.5 text-left text-[13px] outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-purple/40"
+                    className="flex w-full cursor-pointer items-baseline gap-1 rounded border-0 bg-transparent px-2 py-1.5 text-left text-[13px] whitespace-nowrap outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-purple/40"
                   >
                     {u.name}
                     <span className="font-normal text-fg-subtle">· {ROLE_LABEL[u.role]}</span>
