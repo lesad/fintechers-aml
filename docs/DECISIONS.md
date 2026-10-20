@@ -46,6 +46,8 @@ _Amended: both runs cover all the data, as a production run does, and the rows a
 
 _Amended: a changed row says why: `byRule` when the rule itself is about the transaction (as the draft or as the version it replaces), `byTriage` when it is not, or when its alert also holds other transactions whose hits weigh in that alert's triage; both may hold (migration 0028)._
 
+_Amended: the rows are the period's cases as the review queue lists them, not every transaction an alert touches: a transaction an alert points at, rated by the most severe disposition of its alerts, `AUTO_CLOSE` left out, so the All view counts what the queue would hold. A case changed `byRule` when it holds a hit of the draft or of the version it replaces, `byTriage` when it holds none or other rules' hits too. A client alert that moves to another transaction shows as one dropped and one new case._
+
 ### ADR-0048 — Triage config is versioned data in the database, normalized into columns and child tables
 
 _Superseded in part by ADR-0056: a one-field change writes a draft and no longer activates it, and the two `PATCH` endpoints below are replaced by `POST /api/triage/config/draft`. Everything else stands._

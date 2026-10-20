@@ -50,6 +50,8 @@ data class Backtest(
     val droppedCount: Int,
     val changedCount: Int,
     val unchangedCount: Int,
+    /** Transactions of the period with an open alert after the change: the `all` view. */
+    val alerts: Int,
     /** Cases in the period people closed as false positive in the current production run. */
     val falsePositives: Int,
     /** Of [falsePositives], those the draft no longer flags. */
@@ -77,7 +79,7 @@ data class BacktestRows(val items: List<BacktestRow>, val page: Int, val size: I
 /**
  * Shows what a draft rule version would have changed in a period: the rules run once as they are active and once
  * with the draft in place of its active version (or added, for a new rule), each over all the data with triage, as
- * a production run does, and every transaction of the period is compared before and after. Both runs are rolled back, so no production run, alert or case is left; the comparison is stored
+ * a production run does, and the period's cases, as the review queue lists them, are compared before and after. Both runs are rolled back, so no production run, alert or case is left; the comparison is stored
  * apart, in `backtest` and `backtest_row` (ADR-0049). It runs in the background, one at a time; starting one deletes
  * every stored backtest, and a backtest deleted while it runs drops its result.
  */
@@ -122,6 +124,7 @@ class BacktestService(
                 droppedCount = 0,
                 changedCount = 0,
                 unchangedCount = 0,
+                alerts = 0,
                 falsePositives = 0,
                 falsePositivesCleared = 0,
                 reported = 0,
@@ -138,7 +141,7 @@ class BacktestService(
     /** The draft's stored backtest; null when it has none. */
     fun summary(draftId: Long): Backtest? = store.summary(draftId)
 
-    /** A page of the stored rows in one view: `all`, `changed` (rating raised or lowered), `new` or `dropped`. */
+    /** A page of the stored rows in one view: `all` (an open alert after the change), `changed` (rating raised or lowered), `new` or `dropped`. */
     fun rows(draftId: Long, view: String, page: Int, size: Int): BacktestRows? = store.rows(draftId, view, page, size)
 
     private fun compute(id: Long, draft: RuleDefinition, period: Period) {
@@ -151,25 +154,20 @@ class BacktestService(
                 val falsePositives = closedAs(FALSE_POSITIVE, period)
                 val reported = closedAs(REPORTED, period)
                 val active = rules.activeRules()
-                // Both runs cover all the data, as a production run does; only the period's transactions are compared.
+                // Both runs cover all the data, as a production run does; the period's cases are compared.
                 val replaced = active.firstOrNull { it.sameSlot(draft) }
-                val beforeRun = runs.run(ruleSet = active, export = false).runId
+                val before = cases(runs.run(ruleSet = active, export = false).runId, period)
                 log.info("backtest {}: active rules run at {}", id, took())
-                val before = ratings(beforeRun, period)
-                val afterRun = runs.run(ruleSet = active.filterNot { it.sameSlot(draft) } + draft, export = false).runId
+                val after = cases(runs.run(ruleSet = active.filterNot { it.sameSlot(draft) } + draft, export = false).runId, period)
                 log.info("backtest {}: draft run at {}", id, took())
-                val after = ratings(afterRun, period)
-                // The transactions the rule itself is about, as the draft or as the version it replaces.
-                val direct = hitBy(afterRun, draft.id, period) + (replaced?.let { hitBy(beforeRun, it.id, period) } ?: emptySet())
-                val transactions = transactions(period)
-                log.info("backtest {}: compared at {}", id, took())
                 BacktestResult(
-                    transactions = transactions.size,
+                    transactions = jdbc.sql("select count(*) from transaction where ts >= ? and ts < ?")
+                        .params(period.from, period.toExclusive).query(Int::class.java).single(),
                     falsePositives = falsePositives.size,
                     falsePositivesCleared = falsePositives.count { it !in after },
                     reported = reported.size,
                     falseNegatives = reported.count { it !in after },
-                    rows = compare(transactions, before, after, direct),
+                    rows = compare(before, after, setOfNotNull(draft.id, replaced?.id)),
                 )
             }!!
             store.finish(id, result)
@@ -194,96 +192,71 @@ class BacktestService(
         ).params(period.from, period.toExclusive, status).query { rs, _ -> rs.getString(1) }.set()
 
     /**
-     * The rating of every transaction in [period] that belongs to an alert of the run triage left open: a transaction
-     * a hit was about (the transaction, the anchor, or every transaction of the client's day) or the alert points at.
-     * A transaction in several alerts takes the highest rating; it is [Rating.grouped] when one of them holds other
-     * transactions too, whose hits weigh in that alert's triage.
+     * The run's cases in [period], as the review queue lists them: a transaction an alert points at, rated by the most
+     * severe disposition of its alerts, unless triage closed them all; with the rules whose hits its alerts hold.
      */
-    private fun ratings(runId: Long, period: Period): Map<String, Rating> =
+    private fun cases(runId: Long, period: Period): Map<String, Case> =
         jdbc.sql(
             """
-            with open as (
-                select a.id, a.transaction_id, max(array_position($DISPOSITIONS, tr.disposition)) as level
-                from alert a join alert_triage tr on tr.alert_id = a.id
-                where a.run_id = ?
-                group by a.id, a.transaction_id
-                having max(array_position($DISPOSITIONS, tr.disposition)) > 1
-            ), linked as (
-                select o.id as alert_id, o.level, o.transaction_id as tx_id from open o where o.transaction_id is not null
-                union all
-                select o.id, o.level, h.grain_key
-                from open o join alert_hit ah on ah.alert_id = o.id join rule_hit h on h.id = ah.hit_id join rule r on r.id = h.rule_id
-                where r.grain <> 'client_day'
-                union all
-                select o.id, o.level, t.id
-                from open o join alert_hit ah on ah.alert_id = o.id join rule_hit h on h.id = ah.hit_id join rule r on r.id = h.rule_id
-                join transaction t on t.client_id = h.client_id
-                    -- grain_key is a date only for a day hit; the case keeps the cast from other hits' keys.
-                    and t.ts >= (case when r.grain = 'client_day' then h.grain_key::date end)
-                    and t.ts < (case when r.grain = 'client_day' then h.grain_key::date + 1 end)
-                where r.grain = 'client_day'
-            ), grouped as (
-                select alert_id, count(distinct tx_id) > 1 as grouped from linked group by alert_id
+            select t.id, t.client_id, t.amount, t.ts, ($DISPOSITIONS)[c.level] as disposition, c.rules
+            from (
+                select a.transaction_id, max(array_position($DISPOSITIONS, tr.disposition)) as level,
+                       array_agg(distinct h.rule_id) as rules
+                from alert a
+                join alert_triage tr on tr.alert_id = a.id
+                join alert_hit ah on ah.alert_id = a.id join rule_hit h on h.id = ah.hit_id
+                where a.run_id = ? and a.transaction_id is not null
+                group by a.transaction_id
+            ) c join transaction t on t.id = c.transaction_id
+            where t.ts >= ? and t.ts < ? and c.level > 1
+            """,
+        ).params(runId, period.from, period.toExclusive).query { rs, _ ->
+            Case(
+                id = rs.getString("id"),
+                clientId = rs.getString("client_id"),
+                amount = rs.getDouble("amount"),
+                ts = rs.getObject("ts", LocalDateTime::class.java),
+                rating = ratingOf(rs.getString("disposition")),
+                rules = (rs.getArray("rules").array as Array<*>).map { (it as Number).toLong() }.toSet(),
             )
-            select l.tx_id, ($DISPOSITIONS)[max(l.level)] as disposition, bool_or(g.grouped) as grouped
-            from linked l join grouped g using (alert_id) join transaction t on t.id = l.tx_id
-            where t.ts >= ? and t.ts < ?
-            group by l.tx_id
-            """,
-        ).params(runId, period.from, period.toExclusive)
-            .query { rs, _ -> rs.getString("tx_id") to Rating(ratingOf(rs.getString("disposition")), rs.getBoolean("grouped")) }
-            .list().toMap()
-
-    /** The transactions in [period] the rule version [ruleId] hit in the run: its own, its anchor, or its day's. */
-    private fun hitBy(runId: Long, ruleId: Long, period: Period): Set<String> =
-        jdbc.sql(
-            """
-            select t.id
-            from rule_hit h join rule r on r.id = h.rule_id
-            join transaction t on (r.grain <> 'client_day' and t.id = h.grain_key)
-                or (r.grain = 'client_day' and t.client_id = h.client_id
-                    -- grain_key is a date only for a day hit; the case keeps the cast from other hits' keys.
-                    and t.ts >= (case when r.grain = 'client_day' then h.grain_key::date end)
-                    and t.ts < (case when r.grain = 'client_day' then h.grain_key::date + 1 end))
-            where h.run_id = ? and h.rule_id = ? and t.ts >= ? and t.ts < ?
-            """,
-        ).params(runId, ruleId, period.from, period.toExclusive).query { rs, _ -> rs.getString(1) }.set()
-
-    private fun transactions(period: Period): List<Tx> =
-        jdbc.sql("select id, client_id, amount, ts from transaction where ts >= ? and ts < ?")
-            .params(period.from, period.toExclusive)
-            .query { rs, _ -> Tx(rs.getString("id"), rs.getString("client_id"), rs.getDouble("amount"), rs.getObject("ts", LocalDateTime::class.java)) }
-            .list()
+        }.list().associateBy { it.id }
 
     /**
-     * Every transaction of the period, before and after; unchanged ones too, last. A change is the rule's own when
-     * the rule is about the transaction ([direct]); it came through triage when the rule is not, or when the
-     * transaction's alert holds other transactions whose hits weigh in its rating too.
+     * Every case of the period, before and after; unchanged ones too, last. A change is the rule's own when the case
+     * holds a hit of the rule ([ruleIds]: the draft and the version it replaces); it came through triage when it holds
+     * none, or holds other rules' hits too, which weigh in its rating.
      */
-    private fun compare(transactions: List<Tx>, before: Map<String, Rating>, after: Map<String, Rating>, direct: Set<String>): List<BacktestRow> =
-        transactions.map { tx ->
-            val b = before[tx.id]?.rating
-            val a = after[tx.id]?.rating
+    private fun compare(before: Map<String, Case>, after: Map<String, Case>, ruleIds: Set<Long>): List<BacktestRow> =
+        (before.keys + after.keys).map { id ->
+            val b = before[id]
+            val a = after[id]
+            val shown = (a ?: b)!!
             val change = when {
-                b == a -> "UNCHANGED"
+                b?.rating == a?.rating -> "UNCHANGED"
                 b == null -> "NEW"
                 a == null -> "DROPPED"
-                RANK.getValue(a) > RANK.getValue(b) -> "RAISED"
+                RANK.getValue(a.rating) > RANK.getValue(b.rating) -> "RAISED"
                 else -> "LOWERED"
             }
             val changed = change != "UNCHANGED"
-            val byRule = changed && tx.id in direct
-            val grouped = before[tx.id]?.grouped == true || after[tx.id]?.grouped == true
-            BacktestRow(tx.id, tx.clientId, tx.amount, tx.ts, b, a, change, byRule, changed && (!byRule || grouped))
+            val rules = b?.rules.orEmpty() + a?.rules.orEmpty()
+            val byRule = changed && rules.any { it in ruleIds }
+            val byTriage = changed && (!byRule || rules.any { it !in ruleIds })
+            BacktestRow(shown.id, shown.clientId, shown.amount, shown.ts, b?.rating, a?.rating, change, byRule, byTriage)
         }.sortedWith(
             compareBy<BacktestRow> { ORDER.getValue(it.change) }
                 .thenByDescending { RANK[it.after ?: it.before] ?: 0 }
                 .thenBy { it.ts },
         )
 
-    private data class Tx(val id: String, val clientId: String, val amount: Double, val ts: LocalDateTime)
-
-    private data class Rating(val rating: String, val grouped: Boolean)
+    private data class Case(
+        val id: String,
+        val clientId: String,
+        val amount: Double,
+        val ts: LocalDateTime,
+        val rating: String,
+        val rules: Set<Long>,
+    )
 
     private companion object {
         val RANK = mapOf("Low" to 1, "Medium" to 2, "High" to 3)

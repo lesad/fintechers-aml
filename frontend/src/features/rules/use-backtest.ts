@@ -88,6 +88,8 @@ export function useBacktestSummary(
 const PAGE_SIZE = 100;
 
 type RowsState = {
+  /** The list these rows belong to: draft, view and backtest version. */
+  list: string;
   items: BacktestRow[];
   total: number;
   next: number;
@@ -95,24 +97,36 @@ type RowsState = {
   error: string | null;
 };
 
-const START: RowsState = { items: [], total: 0, next: 0, loading: true, error: null };
+const start = (list: string): RowsState => ({
+  list,
+  items: [],
+  total: 0,
+  next: 0,
+  loading: true,
+  error: null,
+});
 
 /**
  * The stored backtest's rows in one view, a page at a time, filtered and ordered by the engine. [version] changes
  * when a new backtest is stored, which starts the list over.
  */
 export function useBacktestRows(draftId: number, view: BacktestView, version: string | null) {
-  const [state, setState] = useState<RowsState>(START);
+  const list = `${draftId}:${view}:${version}`;
+  const [stored, setState] = useState<RowsState>(() => start(list));
   const ctrl = useRef<AbortController | null>(null);
+  // Rows of another view are not this view's: until its first page comes, this view is empty and loading, so the
+  // list's end cannot ask for the next page with the previous view's place (it did, page after empty page).
+  const state = stored.list === list ? stored : start(list);
 
   const load = (page: number, reset: boolean) => {
     ctrl.current?.abort();
     const c = new AbortController();
     ctrl.current = c;
-    setState((s) => ({ ...(reset ? START : s), loading: true, error: null }));
+    setState((s) => ({ ...(reset ? start(list) : s), loading: true, error: null }));
     fetchBacktestRows(draftId, { view, page, size: PAGE_SIZE }, c.signal)
       .then((res) =>
         setState((s) => ({
+          list,
           items: [...(reset ? [] : s.items), ...res.items],
           total: res.total,
           next: page + 1,

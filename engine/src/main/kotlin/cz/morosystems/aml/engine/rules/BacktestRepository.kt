@@ -69,7 +69,12 @@ class BacktestRepository(private val jdbc: JdbcClient) {
     }
 
     fun summary(draftId: Long): Backtest? =
-        jdbc.sql("select * from backtest where rule_id = ?").param(draftId).query { rs, _ ->
+        jdbc.sql(
+            """
+            select b.*, (select count(*) from backtest_row r where r.backtest_id = b.id and r.after_rating is not null) as alerts
+            from backtest b where b.rule_id = ?
+            """,
+        ).param(draftId).query { rs, _ ->
             Backtest(
                 ruleKey = rs.getString("rule_key"),
                 ruleName = rs.getString("rule_name"),
@@ -85,6 +90,7 @@ class BacktestRepository(private val jdbc: JdbcClient) {
                 droppedCount = rs.getInt("dropped_count"),
                 changedCount = rs.getInt("changed_count"),
                 unchangedCount = rs.getInt("unchanged_count"),
+                alerts = rs.getInt("alerts"),
                 falsePositives = rs.getInt("false_positives"),
                 falsePositivesCleared = rs.getInt("false_positives_cleared"),
                 reported = rs.getInt("reported"),
@@ -122,7 +128,8 @@ class BacktestRepository(private val jdbc: JdbcClient) {
 
         /** The row views the page offers, as SQL conditions. */
         val VIEWS = mapOf(
-            "all" to "true",
+            // Every transaction the draft leaves with an open alert: what the queue would hold.
+            "all" to "after_rating is not null",
             "changed" to "change in ('RAISED', 'LOWERED')",
             "new" to "change = 'NEW'",
             "dropped" to "change = 'DROPPED'",

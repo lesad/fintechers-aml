@@ -189,6 +189,7 @@ class RuleControllerTest {
         val run = assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatusOk().bodyJson()
         run.extractingPath("$.status").isEqualTo("DONE")
         run.extractingPath("$.transactions").isEqualTo(2)
+        run.extractingPath("$.alerts").isEqualTo(2)
         run.extractingPath("$.newCount").isEqualTo(1)
         run.extractingPath("$.unchangedCount").isEqualTo(1)
         // No production run is left, and the result is kept apart.

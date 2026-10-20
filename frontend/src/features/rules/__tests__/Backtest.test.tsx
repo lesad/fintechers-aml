@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, renderHook, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "@/test/render";
 
 import { BacktestView } from "../BacktestView";
 import { RulesPage } from "../RulesPage";
+import { useBacktestRows } from "../use-backtest";
 import { B2_V2, json, SEEDED } from "./fixtures";
 
 // Unmount first: a component left mounted would otherwise fetch for real once `fetch` is restored.
@@ -56,6 +57,7 @@ const SUMMARY = {
   droppedCount: 1,
   changedCount: 0,
   unchangedCount: 1,
+  alerts: 2,
   falsePositives: 4,
   falsePositivesCleared: 3,
   reported: 2,
@@ -102,12 +104,12 @@ const ROWS = [
 /** The engine's rows endpoint: filters by `view` and pages like the real one. */
 const rows = (url: URL) => {
   const view = url.searchParams.get("view") ?? "all";
-  const kept = ROWS.filter(
-    (r) =>
-      view === "all" ||
-      (view === "changed"
+  const kept = ROWS.filter((r) =>
+    view === "all"
+      ? r.after !== null
+      : view === "changed"
         ? r.change === "RAISED" || r.change === "LOWERED"
-        : r.change === view.toUpperCase()),
+        : r.change === view.toUpperCase(),
   );
   return json({ items: kept, page: 0, size: 100, total: kept.length });
 };
@@ -188,7 +190,8 @@ describe("a draft's delete and backtest", () => {
     expect(screen.getByText("397,853 transactions replayed", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("of 4 no longer flagged")).toBeInTheDocument();
     expect(screen.getByText("of 2 reported let through")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(4));
+    // All holds the transactions with an alert after the change: T2 and T1, not the dropped T3.
+    await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(3));
 
     fireEvent.click(screen.getByRole("tab", { name: /Dropped/ }));
     await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(2));
@@ -239,5 +242,23 @@ describe("a draft's delete and backtest", () => {
       "the engine stopped during the backtest",
     );
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  });
+
+  it("starts another view empty, so its end does not page on from where the last view was", async () => {
+    // The first view answers; the second never does, so what shows meanwhile is the hook's own.
+    engine({
+      "GET /api/rules/12/backtest/rows": (url) =>
+        url.searchParams.get("view") === "all" ? rows(url) : new Response(new ReadableStream()),
+    });
+    const { result, rerender } = renderHook(
+      ({ view }) => useBacktestRows(12, view, "2026-10-20T09:14:00Z"),
+      { initialProps: { view: "all" as "all" | "new" } },
+    );
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+
+    rerender({ view: "new" });
+    expect(result.current.items).toHaveLength(0);
+    expect(result.current.loading).toBe(true);
+    expect(result.current.done).toBe(false);
   });
 });

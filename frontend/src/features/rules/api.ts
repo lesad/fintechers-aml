@@ -198,6 +198,8 @@ const backtest = z.object({
   droppedCount: z.number(),
   changedCount: z.number(),
   unchangedCount: z.number(),
+  /** Transactions with an open alert after the change: the All view, the queue the draft would leave. */
+  alerts: z.number(),
   /** Cases in the period people closed as false positive in the current run. */
   falsePositives: z.number(),
   /** Of those, the ones the draft no longer flags. */

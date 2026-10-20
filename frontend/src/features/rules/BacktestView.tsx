@@ -11,11 +11,8 @@ import type { ReactNode } from "react";
 
 /** The views of the rows the engine filters by, with how many rows each has. */
 const VIEWS: { id: View; label: string; count: (b: Backtest) => number }[] = [
-  {
-    id: "all",
-    label: "All",
-    count: (b) => b.newCount + b.droppedCount + b.changedCount + b.unchangedCount,
-  },
+  // Every transaction with an alert after the change, so its count is the alerts the draft would leave.
+  { id: "all", label: "All", count: (b) => b.alerts },
   { id: "changed", label: "Changed", count: (b) => b.changedCount },
   { id: "new", label: "New", count: (b) => b.newCount },
   { id: "dropped", label: "Dropped", count: (b) => b.droppedCount },
