@@ -75,14 +75,18 @@ class RuleController(
 
     /**
      * Activates a pending version for the compliance officer in `X-User-Id`; 403 for anyone else or for the version's
-     * author, 400 when it is not pending. The alerts are then recalculated with it in the background, a job in the
-     * import history named after the version.
+     * author, 400 when it is not pending. With `recalculate=true` the alerts are then recalculated with it in the
+     * background, a job in the import history named after the version.
      */
     @PostMapping("/{id}/approve")
-    fun approve(@PathVariable id: Long, @RequestHeader("X-User-Id", required = false) userId: Long?): RuleVersionJson {
+    fun approve(
+        @PathVariable id: Long,
+        @RequestParam(defaultValue = "false") recalculate: Boolean,
+        @RequestHeader("X-User-Id", required = false) userId: Long?,
+    ): RuleVersionJson {
         val user = knownUser(userId)
         val approved = rules.approve(id, user) ?: throw notFound(id)
-        imports.recalculate("${approved.rule.key} v${approved.rule.version}", user.id)
+        if (recalculate) imports.recalculate("${approved.rule.key} v${approved.rule.version}", user.id)
         return approved.toJson()
     }
 

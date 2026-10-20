@@ -20,7 +20,8 @@ type RuleDetailProps = {
   user: User | null;
   /** Everyone an author can send a draft to, among others. */
   users: User[];
-  onStatusChanged: (changed: RuleVersion) => void;
+  /** [recalculating]: approved with "Approve and recalculate alerts", so the engine recalculates the alerts. */
+  onStatusChanged: (changed: RuleVersion, recalculating?: boolean) => void;
   /** Draft only: delete it, or replay a period with it. */
   onDelete: () => void;
   onBacktest: () => void;
@@ -51,8 +52,6 @@ const tab = cva(
 );
 
 const h2 = "text-[13px] font-semibold";
-const primary =
-  "inline-flex h-7 items-center gap-1.5 rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
 const secondary =
   "inline-flex h-7 items-center gap-1.5 rounded border border-indigo bg-bg px-3 text-[13px] font-semibold text-indigo hover:bg-indigo hover:text-white disabled:cursor-not-allowed";
 const danger =
@@ -212,11 +211,11 @@ function Header({
   );
 }
 
-const sendMain =
+const splitMain =
   "inline-flex h-7 items-center gap-1.5 rounded-l bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
-const sendMore =
+const splitMore =
   "inline-flex h-7 items-center rounded-r border-l border-white/30 bg-indigo px-1.5 text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
-const sendOption =
+const splitOption =
   "flex w-full cursor-pointer items-baseline gap-1 rounded px-2 py-1.5 text-left text-[13px] hover:bg-hover";
 
 type SendForApprovalProps = {
@@ -237,7 +236,7 @@ function SendForApproval({ fallback, eligible, busy, onSend }: SendForApprovalPr
         type="button"
         disabled={busy || !fallback}
         onClick={() => fallback && onSend(fallback.id)}
-        className={sendMain}
+        className={splitMain}
       >
         <Icon name="check" />
         {fallback ? `Send to ${fallback.name}` : "No approver available"}
@@ -250,7 +249,7 @@ function SendForApproval({ fallback, eligible, busy, onSend }: SendForApprovalPr
         aria-expanded={open}
         disabled={busy || eligible.length === 0}
         onClick={() => setOpen(!open)}
-        className={sendMore}
+        className={splitMore}
       >
         <Icon name="chevronDown" />
       </button>
@@ -271,7 +270,7 @@ function SendForApproval({ fallback, eligible, busy, onSend }: SendForApprovalPr
                   setOpen(false);
                   onSend(u.id);
                 }}
-                className={sendOption}
+                className={splitOption}
               >
                 {u.name}
                 <span className="text-fg-subtle">· {ROLE_LABEL[u.role]}</span>
@@ -297,11 +296,18 @@ function StatusActions({ version: v, user, users, onStatusChanged }: StatusActio
     (u) => APPROVERS.has(u.role) && u.name !== v.author && u.name !== user?.name,
   );
   const fallback = eligible.find((u) => u.role === "COMPLIANCE_OFFICER") ?? eligible[0];
-  const run = async (action: Parameters<typeof changeRuleStatus>[1], approverId?: number) => {
+  const run = async (
+    action: Parameters<typeof changeRuleStatus>[1],
+    approverId?: number,
+    recalculate = false,
+  ) => {
     setBusy(true);
     setError(null);
     try {
-      onStatusChanged(await changeRuleStatus(v.id, action, approverId));
+      onStatusChanged(
+        await changeRuleStatus(v.id, action, { approverId, recalculate }),
+        recalculate,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -341,11 +347,61 @@ function StatusActions({ version: v, user, users, onStatusChanged }: StatusActio
         <Icon name="close" />
         Reject
       </button>
-      <button type="button" disabled={busy} onClick={() => run("approve")} className={primary}>
-        <Icon name="check" />
-        Approve v{v.version}
-      </button>
+      <Approve busy={busy} onApprove={(recalculate) => run("approve", undefined, recalculate)} />
     </>
+  );
+}
+
+/** Approve, or under the arrow approve and recalculate the alerts with the new version at once (ADR-0055). */
+function Approve({
+  busy,
+  onApprove,
+}: {
+  busy: boolean;
+  onApprove: (recalculate: boolean) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="relative inline-flex">
+      <button type="button" disabled={busy} onClick={() => onApprove(false)} className={splitMain}>
+        <Icon name="check" />
+        Approve
+      </button>
+      <button
+        ref={more}
+        type="button"
+        aria-label="More ways to approve"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={busy}
+        onClick={() => setOpen(!open)}
+        className={splitMore}
+      >
+        <Icon name="chevronDown" />
+      </button>
+      {open && (
+        <Popover
+          anchor={more}
+          onClose={() => setOpen(false)}
+          className="w-max min-w-56 gap-0 p-1.5"
+        >
+          <div role="menu" aria-label="Approve" className="flex flex-col">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onApprove(true);
+              }}
+              className={splitOption}
+            >
+              Approve and recalculate alerts
+            </button>
+          </div>
+        </Popover>
+      )}
+    </div>
   );
 }
 

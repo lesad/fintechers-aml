@@ -192,13 +192,51 @@ describe("RulesPage", () => {
       () => json([...SEEDED, pending]),
       () => json({ ...pending, status: "active", assignee: null, approver: "M. Svobodová" }),
     );
-    render(<RulesPage author="M. Svobodová" user={OFFICER} users={USERS} onBacktest={() => {}} />, {
-      route: `/rules?rule=${B2_V2.id}`,
-    });
-    fireEvent.click(await screen.findByRole("button", { name: "Approve v2" }));
+    const onApproved = vi.fn();
+    render(
+      <RulesPage
+        author="M. Svobodová"
+        user={OFFICER}
+        users={USERS}
+        onBacktest={() => {}}
+        onApproved={onApproved}
+      />,
+      { route: `/rules?rule=${B2_V2.id}` },
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Approve" }));
 
     expect(await screen.findByRole("tab", { name: "v2 active" })).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(`/api/rules/${B2_V2.id}/approve`, expect.anything());
+    // A plain approval leaves the alerts as they are.
+    expect(onApproved).not.toHaveBeenCalled();
+  });
+
+  it("approves and recalculates the alerts from under the approve button's arrow", async () => {
+    const pending = { ...B2_V2, status: "pending" as const, assignee: "M. Svobodová" };
+    const fetch = serve(
+      () => json([...SEEDED, pending]),
+      () => json({ ...pending, status: "active", assignee: null, approver: "M. Svobodová" }),
+    );
+    const onApproved = vi.fn();
+    render(
+      <RulesPage
+        author="M. Svobodová"
+        user={OFFICER}
+        users={USERS}
+        onBacktest={() => {}}
+        onApproved={onApproved}
+      />,
+      { route: `/rules?rule=${B2_V2.id}` },
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "More ways to approve" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Approve and recalculate alerts" }));
+
+    expect(await screen.findByRole("tab", { name: "v2 active" })).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/rules/${B2_V2.id}/approve?recalculate=true`,
+      expect.anything(),
+    );
+    expect(onApproved).toHaveBeenCalledWith(expect.objectContaining({ id: B2_V2.id }));
   });
 
   it("lets a compliance officer send their own draft only to someone of their level or higher", async () => {
@@ -258,14 +296,14 @@ describe("RulesPage", () => {
       { route: `/rules?rule=${B2_V2.id}` },
     );
     expect(await screen.findByText(/Waiting for approval by M. Svobodová/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Approve v2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
     unmount();
 
     serve(() => json([...SEEDED, { ...toOfficer, assignee: "P. Dvořák" }]));
     render(<RulesPage author="P. Dvořák" user={BOARD} users={USERS} onBacktest={() => {}} />, {
       route: `/rules?rule=${B2_V2.id}`,
     });
-    expect(await screen.findByRole("button", { name: "Approve v2" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Approve" })).toBeInTheDocument();
   });
 
   it("never offers a compliance officer the approval of a version they wrote", async () => {
@@ -282,7 +320,7 @@ describe("RulesPage", () => {
     expect(
       await screen.findByText(/You wrote this version; P. Dvořák decides it/),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Approve v2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
   });
 
   it("shows the engine's reason when an approval is refused", async () => {
@@ -294,7 +332,7 @@ describe("RulesPage", () => {
     render(<RulesPage author="M. Svobodová" user={OFFICER} users={USERS} onBacktest={() => {}} />, {
       route: `/rules?rule=${B2_V2.id}`,
     });
-    fireEvent.click(await screen.findByRole("button", { name: "Approve v2" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Approve" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "only a compliance officer can approve a rule",

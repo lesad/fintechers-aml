@@ -113,15 +113,19 @@ export const updateRule = async (id: number, body: NewRule): Promise<RuleVersion
  * Moves a version along its approval: `submit` sends a draft to the approver its author picked, `approve` activates a
  * pending one and `reject` returns it to draft (four eyes, ADR-0052).
  *
- * @param approverId - `submit` only: a compliance officer or compliance manager who did not write the version
+ * @param options.approverId - `submit` only: a compliance officer or compliance manager who did not write the version
+ * @param options.recalculate - `approve` only: recalculate the alerts with the new version in the background (ADR-0055)
  */
 export const changeRuleStatus = async (
   id: number,
   action: "submit" | "approve" | "reject",
-  approverId?: number,
+  { approverId, recalculate = false }: { approverId?: number; recalculate?: boolean } = {},
 ): Promise<RuleVersion> =>
   ruleVersion.parse(
-    await postRule(`/api/rules/${id}/${action}`, approverId === undefined ? null : { approverId }),
+    await postRule(
+      `/api/rules/${id}/${action}${recalculate ? "?recalculate=true" : ""}`,
+      approverId === undefined ? null : { approverId },
+    ),
   );
 
 /** Deletes the draft [id]; the engine refuses any other status. */

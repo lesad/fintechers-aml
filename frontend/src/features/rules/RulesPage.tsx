@@ -21,7 +21,7 @@ type RulesPageProps = {
   users: User[];
   /** Opens the backtest just started for [draft] in its own tab. */
   onBacktest: (draft: RuleVersion) => void;
-  /** A version was approved and is now active; the engine recalculates the alerts with it. */
+  /** A version was approved with "Approve and recalculate alerts"; the engine recalculates the alerts with it. */
   onApproved?: (approved: RuleVersion) => void;
 };
 
@@ -92,13 +92,12 @@ export function RulesPage({ author, user, users, onBacktest, onApproved }: Rules
               onMode={setMode}
               onDialog={setDialog}
               onSelectVersion={setSelectedId}
-              onSaved={(v) => {
+              onSaved={(v, recalculating) => {
                 // NOTE: an approval retires a sibling, so earlier saved copies of the key go stale.
                 setSaved((s) => [...s.filter((x) => x.key !== v.key), v]);
                 select(v.key, v.id);
                 rules.reload();
-                // Only an approval makes a version active; a save is a draft, a submit pending.
-                if (v.status === "active") onApproved?.(v);
+                if (recalculating) onApproved?.(v);
               }}
             />
           </div>
@@ -211,7 +210,7 @@ type PanelProps = {
   onMode: (mode: Mode) => void;
   onDialog: (dialog: Dialog) => void;
   onSelectVersion: (id: number) => void;
-  onSaved: (saved: RuleVersion) => void;
+  onSaved: (saved: RuleVersion, recalculating?: boolean) => void;
 };
 
 function Panel({

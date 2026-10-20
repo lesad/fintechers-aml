@@ -442,12 +442,12 @@ class RuleControllerTest {
     fun theComplianceOfficerApprovesAnAnalystsDraftAndTheEarlierVersionRetires() {
         assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
         assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
-        val approved = assertThat(action(idOf("B2", 2), "approve", user = userId("COMPLIANCE_OFFICER"))).hasStatusOk().bodyJson()
+        val approved = assertThat(action(idOf("B2", 2), "approve?recalculate=true", user = userId("COMPLIANCE_OFFICER"))).hasStatusOk().bodyJson()
         approved.extractingPath("$.status").isEqualTo("active")
         approved.extractingPath("$.approver").isEqualTo("M. Svobodová")
         approved.extractingPath("$.assignee").isNull()
         assertThat(mvc.get().uri("/api/rules/${idOf("B2", 1)}")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("retired")
-        // The approval recalculates the alerts in the background, a job named after the version.
+        // Asked to, the approval recalculates the alerts in the background, a job named after the version.
         assertThat(awaitRecalculation("B2 v2")).isEqualTo("DONE")
     }
 
@@ -476,7 +476,8 @@ class RuleControllerTest {
             .bodyJson().extractingPath("$.detail").asString().contains("wrote this version")
         assertThat(action(id, "approve", user = userId("COMPLIANCE_MANAGER"))).hasStatusOk().bodyJson()
             .extractingPath("$.approver").isEqualTo("P. Dvořák")
-        awaitRecalculation("B2 v2")
+        // A plain approval recalculates nothing.
+        assertThat(jdbc.sql("select count(*) from import_job where rule = 'B2 v2'").query(Long::class.java).single()).isZero()
     }
 
     @Test
