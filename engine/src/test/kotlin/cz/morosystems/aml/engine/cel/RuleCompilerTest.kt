@@ -58,6 +58,14 @@ class RuleCompilerTest {
     }
 
     @Test
+    fun comparesAnAmountWithAWholeNumber() {
+        // People write `tx.amount > 1000`, not `1000.0`; CEL compares a double with an int only when told to.
+        val compiled = compiler.compile(rule("X1", Grain.TRANSACTION, "tx.amount > 1000 && client.q2_tx_count >= 1.5"), emptySet())
+        assertThat(compiled.evaluate(activation(tx = mapOf("amount" to czk(1_500)), client = mapOf("q2_tx_count" to 2L)))).isTrue()
+        assertThat(compiled.evaluate(activation(tx = mapOf("amount" to czk(1_000)), client = mapOf("q2_tx_count" to 2L)))).isFalse()
+    }
+
+    @Test
     fun b2FiresOnPepOutgoingOrUnclearAboveThreshold() {
         val compiled = compiler.compile(b2, seedParams.getValue("B2"))
         val pep = mapOf<String, Any?>("pep" to true)

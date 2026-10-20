@@ -31,4 +31,5 @@
     <include file="db/migrations/0025-case-event-postponed.sql" />
     <include file="db/migrations/0026-compliance-roles.sql" />
     <include file="db/migrations/0027-rule-change-reason.sql" />
+    <include file="db/migrations/0028-backtest-false-positives.sql" />
 </databaseChangeLog>

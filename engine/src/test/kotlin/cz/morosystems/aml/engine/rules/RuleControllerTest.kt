@@ -2,6 +2,7 @@ package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.PostgresTest
 import cz.morosystems.aml.engine.bedrock.BedrockException
+import cz.morosystems.aml.engine.run.RunService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -39,6 +40,9 @@ class RuleControllerTest {
 
     @Autowired
     lateinit var controller: RuleController
+
+    @Autowired
+    lateinit var runs: RunService
 
     @BeforeEach
     fun seededOnly() {
@@ -173,21 +177,7 @@ class RuleControllerTest {
     @Test
     fun backtestsADraftStoresItApartAndPagesItsRows() {
         // A PEP: 150,000 CZK out trips B2 v1 (limit 100,000), 50,000 does not; v2 at 40,000 flags both.
-        jdbc.sql("truncate run, transaction, client cascade").update()
-        jdbc.sql(
-            """
-            insert into client (id, country, contract_date, pep, type, channel, risk, expected_monthly_volume, q2_volume, q2_tx_count, q2_max_tx, q2_days)
-            values ('K1', 'CZ', '2026-06-01', true, 'legal entity', 'in person', 'low', 100000000, 0, 0, 0, 91)
-            """,
-        ).update()
-        for ((id, ts, amount) in listOf(Triple("T1", "2026-07-10 09:00", 150_000), Triple("T2", "2026-07-11 09:00", 50_000))) {
-            jdbc.sql(
-                """
-                insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_country, payee_country, payer_account, payee_account, type, direction)
-                values (?, 'K1', ?::timestamp, ?, ?, 'CZK', 1, 'CZ', 'CZ', 'K1', 'ACZ9', 'outgoing payment', 'out')
-                """,
-            ).params(id, ts, amount, amount).update()
-        }
+        seedPepPayments()
         val draft = Regex("\"id\":(\\d+)").find(post(b2Body(pepMin = 40_000.0)).exchange().response.contentAsString)!!.groupValues[1]
         assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatus(HttpStatus.NOT_FOUND)
 
@@ -212,7 +202,14 @@ class RuleControllerTest {
             .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T1")
         assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?view=new")).hasStatusOk()
             .bodyJson().extractingPath("$.items[*].change").asArray().containsExactly("NEW")
+        // T2 is new because the draft itself hits it, in an alert of its own; T1 did not change, so it has no cause.
+        val causes = assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows")).hasStatusOk().bodyJson()
+        causes.extractingPath("$.items[*].byRule").asArray().containsExactly(true, false)
+        causes.extractingPath("$.items[*].byTriage").asArray().containsExactly(false, false)
         assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?view=sideways")).hasStatus(HttpStatus.BAD_REQUEST)
+        // Changed holds rating changes only; T2 is new and T1 unchanged.
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?view=changed")).hasStatusOk()
+            .bodyJson().extractingPath("$.total").isEqualTo(0)
 
         // A new backtest replaces the old one; a week with no data replays nothing.
         assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-10-01&to=2026-10-07")).hasStatus(HttpStatus.ACCEPTED)
@@ -220,6 +217,13 @@ class RuleControllerTest {
         assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatusOk().bodyJson().extractingPath("$.transactions").isEqualTo(0)
         assertThat(count("backtest")).isEqualTo(1)
         assertThat(count("backtest_row")).isZero()
+
+        // The runs cover all the data, but only the period's transactions are compared: 10 July holds T1 alone.
+        assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-07-10&to=2026-07-10")).hasStatus(HttpStatus.ACCEPTED)
+        awaitBacktest(draft)
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatusOk().bodyJson().extractingPath("$.transactions").isEqualTo(1)
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T1")
 
         // Another draft's backtest deletes every stored one.
         val other = Regex("\"id\":(\\d+)").find(post(b2Body(key = "B9")).exchange().response.contentAsString)!!.groupValues[1]
@@ -248,6 +252,60 @@ class RuleControllerTest {
         assertThat(count("backtest")).isEqualTo(1)
         jdbc.sql("update rule set status = 'approved', approved_at = now() where id = ?").param(draft).update()
         assertThat(count("backtest")).isZero()
+    }
+
+    @Test
+    fun countsTheFalsePositivesADraftNoLongerFlags() {
+        // T1 (150,000 CZK) was flagged by B2 v1 and closed as a false positive; v2 at 200,000 lets it through.
+        seedPepPayments()
+        runs.run(export = false)
+        jdbc.sql("update alert set status = 'FALSE_POSITIVE' where transaction_id = 'T1'").update()
+        val draft = Regex("\"id\":(\\d+)").find(post(b2Body(pepMin = 200_000.0)).exchange().response.contentAsString)!!.groupValues[1]
+
+        assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-07-01&to=2026-07-31")).hasStatus(HttpStatus.ACCEPTED)
+        awaitBacktest(draft)
+        val bt = assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatusOk().bodyJson()
+        bt.extractingPath("$.falsePositives").isEqualTo(1)
+        bt.extractingPath("$.falsePositivesCleared").isEqualTo(1)
+        bt.extractingPath("$.droppedCount").isEqualTo(1)
+        // Dropped by the rule itself: B2 v1 hit T1, v2 no longer does.
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?view=dropped")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].byRule").asArray().containsExactly(true)
+    }
+
+    @Test
+    fun countsTheReportedCasesADraftWouldLetThrough() {
+        // T1 (150,000 CZK) was flagged by B2 v1 and reported; v2 at 200,000 lets it through: a false negative.
+        seedPepPayments()
+        runs.run(export = false)
+        jdbc.sql("update alert set status = 'REPORTED' where transaction_id = 'T1'").update()
+        val draft = Regex("\"id\":(\\d+)").find(post(b2Body(pepMin = 200_000.0)).exchange().response.contentAsString)!!.groupValues[1]
+
+        assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-07-01&to=2026-07-31")).hasStatus(HttpStatus.ACCEPTED)
+        awaitBacktest(draft)
+        val bt = assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatusOk().bodyJson()
+        bt.extractingPath("$.reported").isEqualTo(1)
+        bt.extractingPath("$.falseNegatives").isEqualTo(1)
+        bt.extractingPath("$.falsePositives").isEqualTo(0)
+    }
+
+    /** A PEP client with two outgoing payments in July: T1 for 150,000 CZK and T2 for 50,000 CZK. */
+    private fun seedPepPayments() {
+        jdbc.sql("truncate run, transaction, client cascade").update()
+        jdbc.sql(
+            """
+            insert into client (id, country, contract_date, pep, type, channel, risk, expected_monthly_volume, q2_volume, q2_tx_count, q2_max_tx, q2_days)
+            values ('K1', 'CZ', '2026-06-01', true, 'legal entity', 'in person', 'low', 100000000, 0, 0, 0, 91)
+            """,
+        ).update()
+        for ((id, ts, amount) in listOf(Triple("T1", "2026-07-10 09:00", 150_000), Triple("T2", "2026-07-11 09:00", 50_000))) {
+            jdbc.sql(
+                """
+                insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_country, payee_country, payer_account, payee_account, type, direction)
+                values (?, 'K1', ?::timestamp, ?, ?, 'CZK', 1, 'CZ', 'CZ', 'K1', 'ACZ9', 'outgoing payment', 'out')
+                """,
+            ).params(id, ts, amount, amount).update()
+        }
     }
 
     private fun count(table: String) = jdbc.sql("select count(*) from $table").query(Long::class.java).single()

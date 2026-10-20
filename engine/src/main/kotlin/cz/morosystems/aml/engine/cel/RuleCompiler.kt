@@ -2,6 +2,7 @@ package cz.morosystems.aml.engine.cel
 
 import cz.morosystems.aml.engine.rules.Grain
 import cz.morosystems.aml.engine.rules.RuleDefinition
+import dev.cel.common.CelOptions
 import dev.cel.common.CelValidationException
 import dev.cel.common.types.CelType
 import dev.cel.common.types.SimpleType
@@ -21,7 +22,9 @@ typealias CompiledPredicate = CompiledRule
 
 @Component
 class RuleCompiler {
-    private val runtime = CelRuntimeFactory.standardCelRuntimeBuilder().build()
+    // People write `tx.amount > 1000`, not `1000.0`: compare a double with an int as numbers.
+    private val options = CelOptions.current().enableHeterogeneousNumericComparisons(true).build()
+    private val runtime = CelRuntimeFactory.standardCelRuntimeBuilder().setOptions(options).build()
 
     fun compile(rule: RuleDefinition, paramNames: Set<String>): CompiledRule {
         val txVars = prefixed("tx", Vocabulary.tx)
@@ -48,6 +51,7 @@ class RuleCompiler {
     private fun check(ruleKey: String, part: String, source: String, vars: Map<String, CelType>) =
         try {
             CelCompilerFactory.standardCelCompilerBuilder()
+                .setOptions(options)
                 .apply { vars.forEach { (name, type) -> addVar(name, type) } }
                 .setResultType(SimpleType.BOOL)
                 .build()

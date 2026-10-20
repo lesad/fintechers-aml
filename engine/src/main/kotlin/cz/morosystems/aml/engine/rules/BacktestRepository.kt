@@ -30,25 +30,31 @@ class BacktestRepository(private val jdbc: JdbcClient) {
 
     /** Stores the result of backtest [id]; does nothing when it was deleted meanwhile (a newer backtest, its draft gone). */
     @Transactional
-    fun finish(id: Long, transactions: Int, rows: List<BacktestRow>) {
+    fun finish(id: Long, result: BacktestResult) {
+        val rows = result.rows
         val updated = jdbc.sql(
             """
-            update backtest set status = 'DONE', transactions = ?, new_count = ?, dropped_count = ?, changed_count = ?, unchanged_count = ?
+            update backtest set status = 'DONE', transactions = ?, new_count = ?, dropped_count = ?, changed_count = ?, unchanged_count = ?,
+                                false_positives = ?, false_positives_cleared = ?, reported = ?, false_negatives = ?
             where id = ? and status = 'RUNNING'
             """,
         ).params(
-            transactions,
+            result.transactions,
             rows.count { it.change == "NEW" },
             rows.count { it.change == "DROPPED" },
             rows.count { it.change == "RAISED" || it.change == "LOWERED" },
             rows.count { it.change == "UNCHANGED" },
+            result.falsePositives,
+            result.falsePositivesCleared,
+            result.reported,
+            result.falseNegatives,
             id,
         ).update()
         if (updated == 0) return
         rows.withIndex().chunked(BATCH).forEach { chunk ->
-            val values = List(chunk.size) { "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" }.joinToString(", ")
-            jdbc.sql("insert into backtest_row (backtest_id, position, transaction_id, client_id, amount, ts, before_rating, after_rating, change, note) values $values")
-                .params(chunk.flatMap { (i, r) -> listOf(id, i, r.id, r.clientId, r.amount, r.ts, r.before, r.after, r.change, r.note) })
+            val values = List(chunk.size) { "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" }.joinToString(", ")
+            jdbc.sql("insert into backtest_row (backtest_id, position, transaction_id, client_id, amount, ts, before_rating, after_rating, change, by_rule, by_triage) values $values")
+                .params(chunk.flatMap { (i, r) -> listOf(id, i, r.id, r.clientId, r.amount, r.ts, r.before, r.after, r.change, r.byRule, r.byTriage) })
                 .update()
         }
     }
@@ -79,6 +85,10 @@ class BacktestRepository(private val jdbc: JdbcClient) {
                 droppedCount = rs.getInt("dropped_count"),
                 changedCount = rs.getInt("changed_count"),
                 unchangedCount = rs.getInt("unchanged_count"),
+                falsePositives = rs.getInt("false_positives"),
+                falsePositivesCleared = rs.getInt("false_positives_cleared"),
+                reported = rs.getInt("reported"),
+                falseNegatives = rs.getInt("false_negatives"),
                 createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
             )
         }.optional().orElse(null)
@@ -100,7 +110,8 @@ class BacktestRepository(private val jdbc: JdbcClient) {
                     before = rs.getString("before_rating"),
                     after = rs.getString("after_rating"),
                     change = rs.getString("change"),
-                    note = rs.getString("note"),
+                    byRule = rs.getBoolean("by_rule"),
+                    byTriage = rs.getBoolean("by_triage"),
                 )
             }.list()
         return BacktestRows(items, page, size, total)
@@ -112,7 +123,7 @@ class BacktestRepository(private val jdbc: JdbcClient) {
         /** The row views the page offers, as SQL conditions. */
         val VIEWS = mapOf(
             "all" to "true",
-            "changed" to "change <> 'UNCHANGED'",
+            "changed" to "change in ('RAISED', 'LOWERED')",
             "new" to "change = 'NEW'",
             "dropped" to "change = 'DROPPED'",
         )
