@@ -62,7 +62,8 @@ class TransactionController(private val transactions: TransactionRepository, pri
 
     /**
      * Sets the status of the transaction's alerts in the latest run, e.g. `{"status": "ESCALATED", "reason": "…"}`,
-     * on behalf of the user in `X-User-Id`, and logs it. Escalating hands the case to the manager.
+     * on behalf of the user in `X-User-Id`, and logs it. Escalating hands the case to the manager. A report also says
+     * whether the client's order is held under §20 (`"postponed": true`); no other status takes it.
      */
     @PutMapping("/{id}/status")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -75,7 +76,8 @@ class TransactionController(private val transactions: TransactionRepository, pri
         if (body.status !in STATUSES) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "status is one of $STATUSES")
         val reason = body.reason?.trim().orEmpty()
         if (reason.isEmpty()) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "a decision needs a reason")
-        if (!transactions.setStatus(id, body.status, actor, reason)) throw noAlert(id)
+        if (body.postponed != null && body.status != "REPORTED") throw ResponseStatusException(HttpStatus.BAD_REQUEST, "only a report is postponed")
+        if (!transactions.setStatus(id, body.status, actor, reason, body.postponed)) throw noAlert(id)
     }
 
     /**
@@ -110,6 +112,6 @@ class TransactionController(private val transactions: TransactionRepository, pri
     }
 }
 
-data class StatusChange(val status: String, val reason: String?)
+data class StatusChange(val status: String, val reason: String?, val postponed: Boolean? = null)
 
 data class AssigneeChange(val userId: Long)

@@ -148,7 +148,15 @@ data class TransactionDetail(
  * @property actor the user's name; null when the engine took the step on its own (routing at triage)
  * @property assignee who works the case after this step
  */
-data class CaseEvent(val at: OffsetDateTime, val action: String, val actor: String?, val reason: String?, val assignee: String?)
+data class CaseEvent(
+    val at: OffsetDateTime,
+    val action: String,
+    val actor: String?,
+    val reason: String?,
+    val assignee: String?,
+    /** On a report: whether the client's order is held under §20; null on every other event. */
+    val postponed: Boolean? = null,
+)
 
 /** A batch of the client's transactions next to another one, newest first. */
 data class HistoryPage(val items: List<HistoryTransaction>, val more: Boolean)

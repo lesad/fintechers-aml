@@ -222,6 +222,21 @@ class TransactionControllerTest {
         assertThat(reassigned).isZero()
     }
 
+    @Test
+    fun aReportRecordsWhetherTheOrderIsPostponed() {
+        val (_, manager) = users()
+        fun put(id: String, body: String) =
+            mvc.put().uri("/api/transactions/$id/status").contentType(MediaType.APPLICATION_JSON).content(body)
+                .header("X-User-Id", manager.toString())
+
+        assertThat(put("T3", """{"status": "ESCALATED", "reason": "odd", "postponed": true}""")).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(put("T3", """{"status": "REPORTED", "reason": "layering", "postponed": true}""")).hasStatus(HttpStatus.NO_CONTENT)
+
+        val body = assertThat(mvc.get().uri("/api/transactions/T3")).hasStatusOk().bodyJson()
+        body.extractingPath("$.log[0].action").isEqualTo("REPORTED")
+        body.extractingPath("$.log[0].postponed").isEqualTo(true)
+    }
+
     private fun putStatus(id: String, status: String, user: Long? = firstUser(), reason: String? = "checked") =
         mvc.put().uri("/api/transactions/$id/status").contentType(MediaType.APPLICATION_JSON)
             .content(if (reason == null) """{"status": "$status"}""" else """{"status": "$status", "reason": "$reason"}""")

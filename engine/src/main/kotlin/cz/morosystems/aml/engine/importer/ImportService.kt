@@ -90,8 +90,8 @@ class ImportService(
             jdbc.sql("delete from case_event where run_id = ? and transaction_id = any(?)").params(runId, decided).update()
             jdbc.sql(
                 """
-                insert into case_event (run_id, transaction_id, at, actor_id, action, reason, assignee_id)
-                select ?, transaction_id, at, actor_id, action, reason, assignee_id
+                insert into case_event (run_id, transaction_id, at, actor_id, action, reason, assignee_id, postponed)
+                select ?, transaction_id, at, actor_id, action, reason, assignee_id, postponed
                 from case_event where run_id = ? and transaction_id = any(?) order by id
                 """,
             ).params(runId, previous, decided).update()

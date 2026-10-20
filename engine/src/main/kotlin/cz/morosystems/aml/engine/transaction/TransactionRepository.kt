@@ -3,6 +3,7 @@ package cz.morosystems.aml.engine.transaction
 import cz.morosystems.aml.engine.assessment.AssessmentService
 import cz.morosystems.aml.engine.user.AppUser
 import java.sql.ResultSet
+import java.sql.Types
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -18,7 +19,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
      * Sets the status of the transaction's alerts in the latest finished run and who set it, hands an escalated
      * case to the manager, and logs the decision with its reason; false when the transaction has no alert there.
      */
-    fun setStatus(id: String, status: String, userId: Long, reason: String): Boolean =
+    fun setStatus(id: String, status: String, userId: Long, reason: String, postponed: Boolean? = null): Boolean =
         jdbc.sql(
             """
             with changed as (
@@ -28,10 +29,11 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 where transaction_id = :tx and run_id = ($LATEST_RUN)
                 returning run_id, assignee_id
             )
-            insert into case_event (run_id, transaction_id, actor_id, action, reason, assignee_id)
-            select run_id, :tx, :user, :status, :reason, max(assignee_id) from changed group by run_id
+            insert into case_event (run_id, transaction_id, actor_id, action, reason, assignee_id, postponed)
+            select run_id, :tx, :user, :status, :reason, max(assignee_id), :postponed from changed group by run_id
             """,
-        ).params(mapOf("status" to status, "user" to userId, "tx" to id, "reason" to reason)).update() > 0
+        ).params(mapOf("status" to status, "user" to userId, "tx" to id, "reason" to reason))
+            .param("postponed", postponed, Types.BOOLEAN).update() > 0
 
     /** The case's status in the latest run, the most advanced of its alerts' as in the queue; null when it has no alert there. */
     fun caseStatus(id: String): String? =
@@ -66,7 +68,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
     private fun log(transactionId: String): List<CaseEvent> =
         jdbc.sql(
             """
-            select e.at, e.action, e.reason, actor.name as actor, assignee.name as assignee
+            select e.at, e.action, e.reason, e.postponed, actor.name as actor, assignee.name as assignee
             from case_event e
             left join app_user actor on actor.id = e.actor_id
             left join app_user assignee on assignee.id = e.assignee_id
@@ -80,6 +82,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                 actor = rs.getString("actor"),
                 reason = rs.getString("reason"),
                 assignee = rs.getString("assignee"),
+                postponed = rs.getBoolean("postponed").takeUnless { rs.wasNull() },
             )
         }.list()
 
