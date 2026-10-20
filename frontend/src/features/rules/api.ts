@@ -109,6 +109,16 @@ export const changeRuleStatus = async (
   action: "submit" | "approve" | "reject",
 ): Promise<RuleVersion> => ruleVersion.parse(await postRule(`/api/rules/${id}/${action}`, null));
 
+/** Deletes the draft [id]; the engine refuses any other status. */
+export async function deleteRule(id: number): Promise<void> {
+  const res = await fetch(`/api/rules/${id}`, { method: "DELETE", headers: userHeaders() });
+  if (res.status === 400) {
+    const parsed = problem.safeParse(await res.json().catch(() => null));
+    throw new RuleRejectedError(parsed.success ? parsed.data.detail : "HTTP 400");
+  }
+  if (!res.ok) throw new Error(`/api/rules/${id}: HTTP ${res.status}`);
+}
+
 const explanation = z.object({ explanation: z.string(), model: z.string() });
 
 /** Asks the engine to explain a rule as it would be saved, without saving it. */

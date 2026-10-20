@@ -53,7 +53,35 @@ export function AiLabel({ children }: { children: ReactNode }) {
   );
 }
 
-/** Rule rating with an "AI" tag once the alert has an AI rating; the rule rating alone otherwise. The tooltip says whether the two match. */
+const RANK = { High: 3, Medium: 2, Low: 1 } as const;
+
+const aiPill = cva(
+  "flex flex-none items-center px-[5px] text-[10px] font-bold tracking-[0.06em] text-white",
+  {
+    variants: {
+      /** The AI level's colour when it differs from the rule rating; purple when they match. */
+      tone: { High: "bg-high-dot", Medium: "bg-med-dot", Low: "bg-low-dot", same: "bg-purple" },
+      attached: { true: "", false: "h-5 rounded" },
+    },
+    defaultVariants: { attached: false },
+  },
+);
+
+/** "AI ↑" or "AI ↓" in the AI level's colour when the AI rating differs from the rule rating; a plain "AI" when they match. */
+export function AiPill({
+  rule,
+  ai,
+  attached,
+}: {
+  rule: RiskLevel;
+  ai: RiskLevel;
+  attached?: boolean;
+}) {
+  const arrow = ai === rule ? "" : RANK[ai] > RANK[rule] ? " ↑" : " ↓";
+  return <span className={aiPill({ tone: ai === rule ? "same" : ai, attached })}>AI{arrow}</span>;
+}
+
+/** Rule rating with an AI pill once the alert has an AI rating; the rule rating alone otherwise. The tooltip says whether the two match. */
 export function RatingBadge({ rule, ai }: { rule: RiskLevel; ai: AiStatus }) {
   if (ai === "none") {
     return (
@@ -68,9 +96,7 @@ export function RatingBadge({ rule, ai }: { rule: RiskLevel; ai: AiStatus }) {
       className="inline-flex h-5 flex-none items-stretch overflow-hidden rounded text-xs leading-none"
     >
       <RiskBadge level={rule} attached />
-      <span className="flex items-center bg-purple px-[5px] text-[10px] font-bold tracking-[0.06em] text-white">
-        AI
-      </span>
+      <AiPill rule={rule} ai={ai.rating} attached />
     </span>
   );
 }

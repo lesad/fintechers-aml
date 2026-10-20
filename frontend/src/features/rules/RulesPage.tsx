@@ -33,10 +33,14 @@ export function RulesPage({ author, manager }: RulesPageProps) {
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   // NOTE: a just-saved draft shows at once, before the reload brings it back from the engine.
   const [saved, setSaved] = useState<RuleVersion[]>([]);
+  // A deleted draft disappears at once, before the reload confirms it.
+  const [deleted, setDeleted] = useState<number[]>([]);
 
   const fetched = rules.status === "ready" ? rules.versions : [];
   // An edited draft keeps its id, so the saved copy replaces the fetched one.
-  const versions = [...fetched.filter((v) => !saved.some((s) => s.id === v.id)), ...saved];
+  const versions = [...fetched.filter((v) => !saved.some((s) => s.id === v.id)), ...saved].filter(
+    (v) => !deleted.includes(v.id),
+  );
   const groups = groupByKey(versions);
   const { group, version } = pick(groups, selectedKey, selectedId);
 
@@ -83,6 +87,11 @@ export function RulesPage({ author, manager }: RulesPageProps) {
                 select(v.key, v.id);
                 rules.reload();
               }}
+              onDeleted={(v) => {
+                setDeleted((d) => [...d, v.id]);
+                select(v.key);
+                rules.reload();
+              }}
             />
           </div>
         </div>
@@ -119,6 +128,7 @@ type PanelProps = {
   onMode: (mode: Mode) => void;
   onSelectVersion: (id: number) => void;
   onSaved: (saved: RuleVersion) => void;
+  onDeleted: (deleted: RuleVersion) => void;
 };
 
 function Panel({
@@ -132,6 +142,7 @@ function Panel({
   onMode,
   onSelectVersion,
   onSaved,
+  onDeleted,
 }: PanelProps) {
   if (mode.kind === "export") {
     return (
@@ -162,6 +173,7 @@ function Panel({
       onEditDraft={() => onMode({ kind: "form", from: version, edit: true })}
       manager={manager}
       onStatusChanged={onSaved}
+      onDeleted={onDeleted}
     />
   );
 }

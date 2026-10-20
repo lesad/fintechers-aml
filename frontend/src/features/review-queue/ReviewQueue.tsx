@@ -62,13 +62,14 @@ export function ReviewQueue({
   onOpen,
 }: ReviewQueueProps) {
   const now = new Date();
-  const hasFilters = filter.query !== "" || filter.rating !== "all" || filter.status !== "all";
+  const hasFilters =
+    filter.query !== "" || filter.rating !== "all" || filter.status !== "all" || filter.aiOnly;
 
   const columns: Column<QueueItem>[] = [
     {
       key: "rating",
       header: "Rating · score",
-      width: 130,
+      width: 150,
       cell: (r) => (
         <span
           className="flex items-center gap-2"
@@ -161,6 +162,15 @@ export function ReviewQueue({
             </option>
           ))}
         </Select>
+        <label className="flex h-7 cursor-pointer items-center gap-1.5 text-[13px] text-fg-muted">
+          <input
+            type="checkbox"
+            checked={filter.aiOnly}
+            onChange={(e) => onFilter({ ...filter, aiOnly: e.target.checked })}
+            className="accent-purple"
+          />
+          With AI Rating
+        </label>
         {hasFilters && (
           <button
             type="button"

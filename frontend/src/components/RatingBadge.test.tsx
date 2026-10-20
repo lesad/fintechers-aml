@@ -8,12 +8,18 @@ describe("RatingBadge", () => {
   it("says when the AI rating differs", () => {
     render(<RatingBadge rule="High" ai={{ rating: "Medium" }} />);
     expect(screen.getByTitle("Rule rating High · AI rating Medium (differs)")).toBeTruthy();
-    expect(screen.getByText("AI")).toBeTruthy();
+    expect(screen.getByText("AI ↓")).toBeTruthy();
+  });
+
+  it("points up when the AI rating is above the rule rating", () => {
+    render(<RatingBadge rule="Low" ai={{ rating: "Medium" }} />);
+    expect(screen.getByText("AI ↑")).toBeTruthy();
   });
 
   it("says when it matches", () => {
     render(<RatingBadge rule="High" ai={{ rating: "High" }} />);
     expect(screen.getByTitle("Rule rating High · AI rating High (matches)")).toBeTruthy();
+    expect(screen.getByText("AI")).toBeTruthy();
   });
 
   it("shows the rule rating alone until the AI rating exists", () => {

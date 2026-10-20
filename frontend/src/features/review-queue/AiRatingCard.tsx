@@ -1,15 +1,19 @@
-import { RiskBadge, type RiskLevel } from "@/components";
+import { useState } from "react";
 
-import { ASK_WHO_LABEL, ASSESSMENT, VERDICT_LABEL } from "./ai";
+import { AiPill, RiskBadge, type RiskLevel } from "@/components";
+import { cn } from "@/utils";
+
+import { ASK_WHO_LABEL, ASSESSMENT, type AssessmentBody, VERDICT_LABEL } from "./ai";
 import { AiResultCard, Refs } from "./AiResultCard";
 import { useAiResult } from "./use-ai-result";
 
 const LEVEL = { high: "High", medium: "Medium", low: "Low" } as const;
-const ORDER = { High: 3, Medium: 2, Low: 1 } as const;
 
-const section = "text-[11px] font-semibold text-ai-fg";
 const item = "m-0 text-[13px] leading-normal text-pretty text-fg";
 const detail = "block text-xs text-fg-muted";
+const unverified = "underline decoration-med-dot decoration-dotted underline-offset-2";
+const link =
+  "cursor-pointer self-start border-0 bg-transparent p-0 text-xs font-semibold text-ai-fg hover:underline";
 
 /** The model's advice on the alert: a rating next to the rule rating, a verdict, a summary and open points. Triage never reads it (ADR-0043). */
 export function AiRatingCard({
@@ -25,50 +29,121 @@ export function AiRatingCard({
       title="Rating"
       state={state}
       onRun={run}
+      aside={() => (
+        <button
+          type="button"
+          className={cn(link, "ml-auto inline-flex items-center gap-1 self-center")}
+          onClick={run}
+        >
+          <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3 w-3">
+            <path
+              d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 2v3h-3"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Regenerate
+        </button>
+      )}
       copy={{
-        running: "Assessment in progress…",
+        running: "Assessment in progress (may take up to 20 seconds)…",
         failed:
           "The AI assessment could not be completed for this transaction. Review it based on the rule rating.",
       }}
     >
-      {({ body }) => {
-        const level = LEVEL[body.rating];
-        const differs = ruleRating !== null && ruleRating !== level;
-        return (
-          <>
-            <div className="flex items-center gap-2">
-              <RiskBadge level={level} />
-              <span className="text-[13px] text-fg-muted">{VERDICT_LABEL[body.verdict]}</span>
-              {differs && (
-                <span className="rounded-[3px] bg-fg px-[5px] text-[11px] leading-4 font-semibold text-bg">
-                  ≠ {ORDER[level] > ORDER[ruleRating] ? "higher" : "lower"} than rule
-                </span>
-              )}
-            </div>
-            <p className={item}>
-              {body.summary.map((s) => (
-                <span key={s.text} className="mr-1">
-                  {s.text}
-                  <Refs refs={s.refs} />
-                </span>
-              ))}
-            </p>
-            <span className={section}>Open points</span>
-            <ul className="m-0 flex list-none flex-col gap-2 p-0">
-              {body.openPoints.map((p) => (
-                <li key={p.question.text} className={item}>
-                  <span className="font-semibold">{p.question.text}</span>
-                  <Refs refs={p.question.refs} />
-                  <span className={detail}>Suspicious: {p.suspicious}</span>
-                  <span className={detail}>Normal: {p.normal}</span>
-                  <span className={detail}>Would settle: {p.wouldSettle}</span>
-                  <span className={detail}>Ask: {ASK_WHO_LABEL[p.askWho]}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        );
-      }}
+      {({ body }) => <Assessment body={body} ruleRating={ruleRating} />}
     </AiResultCard>
   );
+}
+
+function Assessment({ body, ruleRating }: { body: AssessmentBody; ruleRating: RiskLevel | null }) {
+  const [open, setOpen] = useState(false);
+  const level = LEVEL[body.rating];
+  const refs = [...new Set(body.summary.flatMap((s) => s.refs))];
+  const points = body.openPoints;
+  /** Model text with each number the check could not match to the data marked, the reason as its tooltip. */
+  const text = (at: string, value: string) => {
+    const warning = body.warnings.find((w) => w.at === at);
+    if (!warning) return value;
+    const title = `Unverified: ${warning.message}`;
+    const parts = splitOn(value, warning.numbers);
+    // No flagged number found in the text: mark the whole field rather than lose the warning.
+    if (parts.length === 1) {
+      return (
+        <span className={unverified} title={title}>
+          {value}
+        </span>
+      );
+    }
+    // Each part is keyed by where it starts in the text, which is unique and stable for this text.
+    const starts = parts.map((_, i) => parts.slice(0, i).join("").length);
+    return parts.map((part, i) =>
+      i % 2 === 1 ? (
+        <span key={starts[i]} className={unverified} title={title}>
+          {part}
+        </span>
+      ) : (
+        part
+      ),
+    );
+  };
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <RiskBadge level={level} />
+        <span className="text-[13px] text-fg-muted">{VERDICT_LABEL[body.verdict]}</span>
+        {ruleRating !== null && ruleRating !== level && <AiPill rule={ruleRating} ai={level} />}
+      </div>
+      <p className={item}>
+        {body.summary.map((s, i) => (
+          <span key={s.text}>
+            {i > 0 && " "}
+            {text(`summary[${i}]`, s.text)}
+          </span>
+        ))}
+        <Refs refs={refs} />
+      </p>
+      {body.warnings.length > 0 && (
+        <span className="text-xs text-med">
+          Dotted numbers are not in the data the model was given. Check them before relying on them.
+        </span>
+      )}
+      {points.length > 0 && (
+        <button type="button" className={link} aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "Hide" : "Show"} open points ({points.length})
+        </button>
+      )}
+      {open && (
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {points.map((p, i) => (
+            <li key={p.question.text} className={item}>
+              <span className="font-semibold">
+                {text(`openPoints[${i}].question`, p.question.text)}
+              </span>
+              <Refs refs={p.question.refs} />
+              <span className={detail}>
+                Suspicious: {text(`openPoints[${i}].suspicious`, p.suspicious)}
+              </span>
+              <span className={detail}>Normal: {text(`openPoints[${i}].normal`, p.normal)}</span>
+              <span className={detail}>
+                Would settle: {text(`openPoints[${i}].wouldSettle`, p.wouldSettle)}
+              </span>
+              <span className={detail}>Ask: {ASK_WHO_LABEL[p.askWho]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+/** Splits [text] around whole occurrences of [numbers]; odd indexes are the matches. */
+function splitOn(text: string, numbers: string[]): string[] {
+  if (numbers.length === 0) return [text];
+  const alternatives = numbers.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  // Same edges as the engine's number check: not part of a longer number on either side.
+  return text.split(new RegExp(`(?<![\\d.,])(${alternatives})(?![\\d]|[.,]\\d)`));
 }

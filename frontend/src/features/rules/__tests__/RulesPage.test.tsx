@@ -126,6 +126,26 @@ describe("RulesPage", () => {
     expect(screen.queryByRole("button", { name: /Approve/ })).not.toBeInTheDocument();
   });
 
+  it("deletes a draft after a confirm and offers no new version from it", async () => {
+    const fetch = serve(
+      () => json([...SEEDED, B2_V2]),
+      () => new Response(null, { status: 204 }),
+      () => json(SEEDED),
+    );
+    render(<RulesPage author="J. Novák" manager={false} />, { route: `/rules?rule=${B2_V2.id}` });
+    await screen.findByRole("button", { name: "Delete draft" });
+    expect(screen.queryByRole("button", { name: /New version from/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByRole("button", { name: /New version from v1/ })).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/rules/${B2_V2.id}`,
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
   it("lets a manager approve a pending version", async () => {
     const pending = { ...B2_V2, status: "pending" as const, assignee: "M. Svobodová" };
     const fetch = serve(

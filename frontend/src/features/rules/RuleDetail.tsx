@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { ConditionCode, ConditionLegend } from "@/components";
 
-import { changeRuleStatus, type RuleVersion } from "./api";
+import { changeRuleStatus, deleteRule, type RuleVersion } from "./api";
 import { grainLabel, paramParts, paramText, scopeLabel, shortDate, windowShort } from "./format";
 
 import type { ReactNode } from "react";
@@ -18,6 +18,7 @@ type RuleDetailProps = {
   /** Only a manager approves or rejects a pending version. */
   manager: boolean;
   onStatusChanged: (changed: RuleVersion) => void;
+  onDeleted: (deleted: RuleVersion) => void;
 };
 
 const dot = cva("inline-block size-1.5 flex-none rounded-full", {
@@ -49,6 +50,8 @@ const primary =
   "h-7 rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
 const secondary =
   "h-7 rounded border border-indigo bg-bg px-3 text-[13px] font-semibold text-indigo hover:bg-indigo hover:text-white disabled:cursor-not-allowed";
+const danger =
+  "h-7 rounded border border-high bg-bg px-3 text-[13px] font-semibold text-high hover:bg-high hover:text-white disabled:cursor-not-allowed";
 
 const byline = (v: RuleVersion) => {
   const by = v.author ?? "unknown";
@@ -102,6 +105,7 @@ function Header({
   onEditDraft,
   manager,
   onStatusChanged,
+  onDeleted,
 }: RuleDetailProps) {
   const name = siblings[0]?.name ?? v.name;
   return (
@@ -120,10 +124,19 @@ function Header({
             Edit draft v{v.version}
           </button>
         )}
-        <StatusActions key={v.id} version={v} manager={manager} onStatusChanged={onStatusChanged} />
-        <button type="button" onClick={onNewVersion} className={secondary}>
-          New version from v{v.version}
-        </button>
+        <StatusActions
+          key={v.id}
+          version={v}
+          manager={manager}
+          onStatusChanged={onStatusChanged}
+          onDeleted={onDeleted}
+        />
+        {/* A draft or pending version is still being decided: edit it instead of stacking a new version on it. */}
+        {(v.status === "active" || v.status === "retired") && (
+          <button type="button" onClick={onNewVersion} className={secondary}>
+            New version from v{v.version}
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <div
@@ -152,11 +165,26 @@ function Header({
   );
 }
 
-type StatusActionsProps = Pick<RuleDetailProps, "version" | "manager" | "onStatusChanged">;
+type StatusActionsProps = Pick<
+  RuleDetailProps,
+  "version" | "manager" | "onStatusChanged" | "onDeleted"
+>;
 
-function StatusActions({ version: v, manager, onStatusChanged }: StatusActionsProps) {
+function StatusActions({ version: v, manager, onStatusChanged, onDeleted }: StatusActionsProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const remove = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteRule(v.id);
+      onDeleted(v);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
   const run = async (action: Parameters<typeof changeRuleStatus>[1]) => {
     setBusy(true);
     setError(null);
@@ -173,12 +201,39 @@ function StatusActions({ version: v, manager, onStatusChanged }: StatusActionsPr
       {error}
     </span>
   );
+  if (v.status === "draft" && confirming) {
+    return (
+      <>
+        {failure}
+        <span className="text-[13px] text-fg-muted">Delete draft v{v.version}?</span>
+        <button type="button" disabled={busy} onClick={remove} className={danger}>
+          Delete
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setConfirming(false)}
+          className={secondary}
+        >
+          Keep
+        </button>
+      </>
+    );
+  }
   if (v.status === "draft") {
     return (
       <>
         {failure}
         <button type="button" disabled={busy} onClick={() => run("submit")} className={secondary}>
           Send for approval
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setConfirming(true)}
+          className={danger}
+        >
+          Delete draft
         </button>
       </>
     );

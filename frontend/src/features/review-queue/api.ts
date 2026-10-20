@@ -170,6 +170,8 @@ export function fetchFlagged(
     status: string;
     /** A user id: only that user's cases, and the counts scoped to them. */
     assignee: number | undefined;
+    /** Only transactions with a ready AI Rating. */
+    aiOnly?: boolean;
     page: number;
     size: number;
   },
@@ -180,6 +182,7 @@ export function fetchFlagged(
   if (params.rating !== "all") qs.set("rating", params.rating);
   if (params.status) qs.set("status", params.status);
   if (params.assignee !== undefined) qs.set("assignee", String(params.assignee));
+  if (params.aiOnly) qs.set("ai", "true");
   return get(`/api/transactions?${qs}`, page, signal);
 }
 

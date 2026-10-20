@@ -2,6 +2,7 @@ export { Card } from "./Card";
 export { ConditionCode, ConditionLegend, conditionToken } from "./Condition";
 export {
   AiLabel,
+  AiPill,
   type AiStatus,
   RatingBadge,
   RiskBadge,

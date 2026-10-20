@@ -24,7 +24,7 @@ const VERDICTS = [
 const assessmentBody = z.object({
   rating: z.enum(["high", "medium", "low"]),
   verdict: z.enum(VERDICTS),
-  summary: z.array(claim).min(1).max(3),
+  summary: z.array(claim).min(1).max(6),
   openPoints: z
     .array(
       z.object({
@@ -35,8 +35,14 @@ const assessmentBody = z.object({
         askWho: z.enum(["client", "account_manager", "analyst"]),
       }),
     )
-    .min(1)
     .max(3),
+  // Checks the result passed with a remark, e.g. a number the input does not hold (ADR-0046); older rows have none.
+  // `numbers` are the flagged numbers as the text writes them, so the card marks just those.
+  warnings: z
+    .array(
+      z.object({ at: z.string(), message: z.string(), numbers: z.array(z.string()).default([]) }),
+    )
+    .default([]),
 });
 
 function resultOf<B extends z.ZodType>(kind: AiKind, body: B) {

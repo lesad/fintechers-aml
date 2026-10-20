@@ -60,6 +60,7 @@ export function App() {
     rating: filter.rating,
     status: statusParam(filter.status),
     assignee: user?.id,
+    aiOnly: filter.aiOnly,
   });
   const items = review.apply(queue.items);
   const rating = new Map(items.map((r) => [r.id, r.rule]));

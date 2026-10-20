@@ -54,12 +54,16 @@ describe("AI Rating card", () => {
     replies["POST /api/alerts/7/assessment"] = new Promise((resolve) => (finish = resolve));
     render(<AiRatingCard alertId={7} ruleRating="High" />);
 
-    expect(await screen.findByText("Assessment in progress…")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Assessment in progress (may take up to 20 seconds)…"),
+    ).toBeInTheDocument();
     finish(json(envelope("assessment", "ready", assessment)));
     expect(await screen.findByText("High")).toBeInTheDocument();
     expect(screen.getByText("Pass-through")).toBeInTheDocument();
     expect(screen.getByText("CZK 110,000 came in and left the same day.")).toBeInTheDocument();
-    expect(screen.getByText("Open points")).toBeInTheDocument();
+    expect(screen.queryByText("What is the source of the incoming funds?")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show open points (1)" }));
     expect(screen.getByText("What is the source of the incoming funds?")).toBeInTheDocument();
     expect(screen.getByText("Suspicious: The money left within hours.")).toBeInTheDocument();
     expect(screen.getByText("Ask: Client")).toBeInTheDocument();
@@ -69,7 +73,66 @@ describe("AI Rating card", () => {
     replies["GET /api/alerts/7/assessment"] = json(envelope("assessment", "ready", assessment));
     render(<AiRatingCard alertId={7} ruleRating="Medium" />);
 
-    expect(await screen.findByText("≠ higher than rule")).toBeInTheDocument();
+    expect(await screen.findByText("AI ↑")).toBeInTheDocument();
+  });
+
+  it("shows no open points toggle when there are none", async () => {
+    replies["GET /api/alerts/7/assessment"] = json(
+      envelope("assessment", "ready", { ...assessment, openPoints: [] }),
+    );
+    render(<AiRatingCard alertId={7} ruleRating="High" />);
+
+    expect(await screen.findByText("Pass-through")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /open points/ })).not.toBeInTheDocument();
+  });
+
+  it("regenerates a ready result on request", async () => {
+    replies["GET /api/alerts/7/assessment"] = json(envelope("assessment", "ready", assessment));
+    render(<AiRatingCard alertId={7} ruleRating="High" />);
+    expect(await screen.findByText("Pass-through")).toBeInTheDocument();
+
+    replies["POST /api/alerts/7/assessment"] = json(
+      envelope("assessment", "ready", { ...assessment, verdict: "funnel" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate" }));
+
+    expect(await screen.findByText("Funnel")).toBeInTheDocument();
+  });
+
+  it("marks just the unverified number in a sentence", async () => {
+    replies["GET /api/alerts/7/assessment"] = json(
+      envelope("assessment", "ready", {
+        ...assessment,
+        warnings: [
+          {
+            at: "summary[0]",
+            message: "numbers not in the input: [110,000]",
+            numbers: ["110,000"],
+          },
+        ],
+      }),
+    );
+    render(<AiRatingCard alertId={7} ruleRating="High" />);
+
+    const number = await screen.findByText("110,000");
+    expect(number).toHaveAttribute("title", "Unverified: numbers not in the input: [110,000]");
+    expect(screen.getByText(/came in and left the same day/)).not.toHaveAttribute("title");
+    expect(screen.getByText(/Dotted numbers are not in the data/)).toBeInTheDocument();
+  });
+
+  it("marks the whole field when the flagged number is not found in it", async () => {
+    replies["GET /api/alerts/7/assessment"] = json(
+      envelope("assessment", "ready", {
+        ...assessment,
+        warnings: [{ at: "summary[0]", message: "numbers not in the input: [7]" }],
+      }),
+    );
+    render(<AiRatingCard alertId={7} ruleRating="High" />);
+
+    expect(await screen.findByText("CZK 110,000 came in and left the same day.")).toHaveAttribute(
+      "title",
+      "Unverified: numbers not in the input: [7]",
+    );
   });
 
   it("shows no difference badge when they match", async () => {
@@ -77,7 +140,7 @@ describe("AI Rating card", () => {
     render(<AiRatingCard alertId={7} ruleRating="High" />);
 
     expect(await screen.findByText("Pass-through")).toBeInTheDocument();
-    expect(screen.queryByText(/≠/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^AI [↑↓]$/)).not.toBeInTheDocument();
   });
 
   it("shows a rejected result with its reason and a retry that replaces it", async () => {

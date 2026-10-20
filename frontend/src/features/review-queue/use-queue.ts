@@ -37,9 +37,10 @@ type QueueParams = {
   status: string;
   /** A user id, or undefined for everyone's cases. */
   assignee: number | undefined;
+  aiOnly?: boolean;
 };
 
-export function useQueue({ query, rating, status, assignee }: QueueParams) {
+export function useQueue({ query, rating, status, assignee, aiOnly = false }: QueueParams) {
   const [state, setState] = useState<QueueState>(EMPTY);
   const inFlight = useRef<AbortController | null>(null);
 
@@ -53,7 +54,7 @@ export function useQueue({ query, rating, status, assignee }: QueueParams) {
       loading: true,
       error: null,
     }));
-    fetchFlagged({ q: query, rating, status, assignee, page, size: PAGE_SIZE }, ctrl.signal)
+    fetchFlagged({ q: query, rating, status, assignee, aiOnly, page, size: PAGE_SIZE }, ctrl.signal)
       .then((res) =>
         setState((s) => ({
           items: [...(reset ? [] : s.items), ...res.items.map(toQueueItem)],
@@ -80,9 +81,9 @@ export function useQueue({ query, rating, status, assignee }: QueueParams) {
       clearTimeout(timer);
       inFlight.current?.abort();
     };
-    // `load` closes over query, rating, status and assignee, the only inputs that start a new list.
+    // `load` closes over query, rating, status, assignee and aiOnly, the only inputs that start a new list.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, rating, status, assignee]);
+  }, [query, rating, status, assignee, aiOnly]);
 
   const done = !state.loading && state.items.length >= state.total;
   return {

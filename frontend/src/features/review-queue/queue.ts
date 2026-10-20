@@ -54,9 +54,11 @@ export type QueueFilter = {
   query: string;
   rating: RiskLevel | "all";
   status: StatusFilter;
+  /** Temporary: only transactions with a ready AI Rating. */
+  aiOnly: boolean;
 };
 
-export const NO_FILTER: QueueFilter = { query: "", rating: "all", status: "all" };
+export const NO_FILTER: QueueFilter = { query: "", rating: "all", status: "all", aiOnly: false };
 
 /** The engine's alert status for each case status the UI shows (`GET /api/transactions?status=`). */
 export const STATUS_CODE: Record<CaseStatus, AlertStatus> = {
