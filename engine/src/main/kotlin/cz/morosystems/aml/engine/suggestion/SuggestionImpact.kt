@@ -13,9 +13,11 @@ import org.springframework.transaction.annotation.Transactional
 /**
  * [minHits]: how many hits a change must stop, this alert's included, to be worth suggesting. Alerts of a per-client
  * type hold all of the client's hits in the run, so "other alerts" alone would rule out every client change.
+ *
+ * @property declineRiskyClosures false lets a change close alerts triaged high or escalated; the impact still counts them
  */
 @ConfigurationProperties("suggestion")
-data class SuggestionProperties(val minHits: Int = 2)
+data class SuggestionProperties(val minHits: Int = 2, val declineRiskyClosures: Boolean = true)
 
 /**
  * Measures a drafted rule against the alert's run: it evaluates the new rule over the period and compares its hits with
@@ -69,7 +71,7 @@ class SuggestionImpact(
         val risky = scope.closedByDisposition.filterKeys { it in RISKY }.values.sum()
         return when {
             !impact.stopsThisAlert -> "The change would not stop this alert."
-            risky > 0 -> "The change would also close $risky other alerts that triage rated high or escalated."
+            risky > 0 && properties.declineRiskyClosures ->"The change would also close $risky other alerts that triage rated high or escalated."
             scope.hitsAdded > 0 -> "The change would raise ${scope.hitsAdded} new hits."
             scope.hitsStopped < properties.minHits -> "The change would stop only ${scope.hitsStopped} hit in this run, too few to be worth a rule."
             else -> null

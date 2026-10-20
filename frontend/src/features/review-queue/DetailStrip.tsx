@@ -68,7 +68,7 @@ export function DetailStrip({
         <div className={stripBlock({ first: true })}>
           <span className={eyebrow}>Triage score</span>
           <span className="flex items-baseline gap-0.5 leading-tight whitespace-nowrap">
-            <span className="text-lg font-bold tabular-nums">{triage.score}</span>
+            <span className="text-lg leading-tight font-bold tabular-nums">{triage.score}</span>
             <span className="text-xs text-fg-muted">/100</span>
           </span>
           <button
@@ -108,12 +108,16 @@ export function DetailStrip({
         <span className={eyebrow}>{directionLabel[tx.direction]}</span>
         <div className="flex items-center gap-3 whitespace-nowrap">
           <div className="flex flex-col leading-tight">
-            <span className="font-mono text-sm font-semibold">{parties.from.account}</span>
+            <span className="font-mono text-lg font-semibold tracking-[-0.01em]">
+              {parties.from.account}
+            </span>
             <span className="text-xs text-fg-muted">{parties.from.sub}</span>
           </div>
-          <span className="text-base font-bold text-fg-subtle">{parties.arrow}</span>
+          <span className="text-lg font-bold text-fg-subtle">{parties.arrow}</span>
           <div className="flex flex-col leading-tight">
-            <span className="font-mono text-sm font-semibold">{parties.to.account}</span>
+            <span className="font-mono text-lg font-semibold tracking-[-0.01em]">
+              {parties.to.account}
+            </span>
             <span className="text-xs text-fg-muted">{parties.to.sub}</span>
           </div>
         </div>
