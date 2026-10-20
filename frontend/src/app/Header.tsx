@@ -147,6 +147,28 @@ export function Header({
       </form>
 
       <div className="flex flex-1 items-center justify-end gap-2 whitespace-nowrap">
+        <a
+          href="/api/alerts/export.csv"
+          download
+          aria-label="Download CSV"
+          title="Download CSV"
+          className={pageButton({ active: false })}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </a>
         <button
           type="button"
           aria-label="Data import"

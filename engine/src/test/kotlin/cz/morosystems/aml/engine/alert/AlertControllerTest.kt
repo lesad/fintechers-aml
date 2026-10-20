@@ -55,6 +55,36 @@ class AlertControllerTest {
         assertThat(mvc.get().uri("/api/alerts/999999")).hasStatus(HttpStatus.NOT_FOUND)
     }
 
+    @Test
+    fun exportsTheLatestRunInTheMandatedColumns() {
+        jdbc.sql(
+            "insert into alert_triage (alert_id, disposition, score, reasons, config_version, input_hash) " +
+                "values (?, 'REVIEW_HIGH', 70, '[{\"code\":\"RULE_BASE\",\"description\":\"base score for B2\",\"points\":70}]', 'v1', 'h')",
+        ).param(alertId).update()
+        val result = assertThat(mvc.get().uri("/api/alerts/export.csv")).hasStatusOk()
+        result.headers().hasValue("Content-Disposition", "attachment; filename=\"alerts-${latestRun()}.csv\"")
+        val lines = result.bodyText().actual().lines().filter { it.isNotEmpty() }
+        assertThat(lines.first())
+            .isEqualTo("alert_id,alert_type,client_id,transaction_id,triage,priority,executive_role,executive_person,approver,reason,log")
+        assertThat(lines.drop(1)).singleElement().asString()
+            .startsWith("$alertId,B,K1,T1,REVIEW,70,ANALYST,J. Novák,M. Svobodová,\"REVIEW_HIGH, score 70: base score for B2.\",")
+    }
+
+    @Test
+    fun aPersonsFalsePositiveWinsOverTheEngineAndNamesThemInTheReason() {
+        jdbc.sql(
+            "insert into alert_triage (alert_id, disposition, score, reasons, config_version, input_hash) values (?, 'REVIEW_LOW', 30, '[]', 'v1', 'h')",
+        ).param(alertId).update()
+        jdbc.sql(
+            "insert into case_event (run_id, transaction_id, actor_id, action, reason) " +
+                "select ?, 'T1', id, 'FALSE_POSITIVE', 'salary' from app_user where role = 'ANALYST'",
+        ).param(latestRun()).update()
+        val body = assertThat(mvc.get().uri("/api/alerts/export.csv")).hasStatusOk().bodyText().actual()
+        assertThat(body).contains("$alertId,B,K1,T1,FP,30,").contains("Final decision FALSE_POSITIVE by J. Novák: salary")
+    }
+
+    private fun latestRun(): Long = jdbc.sql("select max(id) from run").query(Long::class.java).single()
+
     private fun run(): Long =
         jdbc.sql("insert into run (kind, started_at, finished_at) values ('production', now(), now()) returning id").query(Long::class.java).single()
 

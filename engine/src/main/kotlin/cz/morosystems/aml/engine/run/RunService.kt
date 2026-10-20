@@ -1,12 +1,14 @@
 package cz.morosystems.aml.engine.run
 
 import cz.morosystems.aml.engine.EngineProperties
+import cz.morosystems.aml.engine.alert.AlertCsv
 import cz.morosystems.aml.engine.cel.RuleCompiler
 import cz.morosystems.aml.engine.rules.RuleDefinition
 import cz.morosystems.aml.engine.rules.RuleRepository
 import cz.morosystems.aml.engine.rules.RuleResolver
 import cz.morosystems.aml.engine.sql.Period
 import cz.morosystems.aml.engine.triage.TriageService
+import java.nio.file.Files
 import java.sql.Timestamp
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Service
@@ -25,6 +27,7 @@ class RunService(
     private val picker: TransactionPicker,
     private val triage: TriageService,
     private val props: EngineProperties,
+    private val alertCsv: AlertCsv,
 ) {
     private val json = JsonMapper()
 
@@ -54,9 +57,12 @@ class RunService(
         insertHits(runId, withIds)
 
         val alerts = AlertGrouper.group(withIds, clients.alertUnits()).map { it.copy(transactionId = picker.pick(it)) }
-        val stored = alerts.map { insertAlert(runId, it) to it }
-        val decisions = triage.triageRun(runId).associateBy { it.alertId }
-        val csv = if (export) props.outDir.resolve("alerts-$runId.csv").also { CsvExporter.write(it, stored, decisions) } else null
+        alerts.forEach { insertAlert(runId, it) }
+        triage.triageRun(runId)
+        val csv = if (export) props.outDir.resolve("alerts-$runId.csv").also { path ->
+            Files.createDirectories(path.parent)
+            Files.newBufferedWriter(path).use { alertCsv.write(runId, it) }
+        } else null
 
         val report = RunReport(
             runId = runId,

@@ -418,6 +418,13 @@ describe("App", () => {
     expect(screen.getByText("3 of 3 loaded")).toBeInTheDocument();
   });
 
+  it("the download icon next to upload fetches the alert CSV of the latest run", async () => {
+    render(<App />);
+    const link = await screen.findByRole("link", { name: "Download CSV" });
+    expect(link).toHaveAttribute("href", "/api/alerts/export.csv");
+    expect(link).toHaveAttribute("download");
+  });
+
   it("switches the user from the avatar, shows their name and sends them with every call", async () => {
     render(<App />);
     expect(await screen.findByText("J. Novák")).toBeInTheDocument();

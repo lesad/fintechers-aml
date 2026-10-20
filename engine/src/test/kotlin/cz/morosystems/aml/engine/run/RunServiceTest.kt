@@ -79,8 +79,9 @@ class RunServiceTest {
     fun writesOneCsvLinePerAlert() {
         val report = runs.run()
         val lines = Files.readAllLines(report.csv!!)
-        assertThat(lines.first()).isEqualTo("alert_id,disposition,score,alert_type,client_id,transaction_id,evidence")
-        assertThat(lines.drop(1)).hasSize(2).allMatch { it.endsWith("\"") }
+        assertThat(lines.first())
+            .isEqualTo("alert_id,alert_type,client_id,transaction_id,triage,priority,executive_role,executive_person,approver,reason,log")
+        assertThat(lines.drop(1)).hasSize(2).allMatch { it.endsWith("}\"") }
     }
 
     @Test

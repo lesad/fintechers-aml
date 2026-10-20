@@ -54,6 +54,7 @@ Run from `engine/`:
 ```
 
 - `GET /api/alerts`: alerts of the latest finished run, with the hit count. `?runId=` picks another run.
+- `GET /api/alerts/export.csv`: the FINREG alert CSV of the latest finished run as a download. `?runId=` picks another run.
 - `GET /api/alerts/{id}`: one alert. 404 for an unknown id.
 - `POST /api/alerts/{id}/assessment`: asks Bedrock for the AI Rating (what the model makes of the alert: a rating, a verdict, a short summary and up to three open points with whom to ask), checks it and stores it. It returns the `AiResult` envelope with 200 (ADR-0043): `{alertId, kind, status, body, error, modelId, promptHash, inputHash, createdAt}`, where `status` is `ready`, `rejected` (the checks refused the reply; `error` says why) or `failed` (Bedrock or the transport failed). Every result is stored, so a rejected one stays visible.
 - `GET /api/alerts/{id}/assessment`: the newest stored result, whatever prompt made it (ADR-0045); 404 when it never ran.
