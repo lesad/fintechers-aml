@@ -1,6 +1,7 @@
 package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.cel.RuleCompiler
+import cz.morosystems.aml.engine.cel.Vocabulary
 import cz.morosystems.aml.engine.user.AppUser
 import org.springframework.stereotype.Service
 
@@ -20,6 +21,14 @@ class RuleService(
     fun all(): List<RuleVersion> = rules.allVersions()
 
     fun find(id: Long): RuleVersion? = rules.find(id)
+
+    fun vocabulary() = VocabularyJson(
+        tx = Vocabulary.tx.mapValues { it.value.name() },
+        client = Vocabulary.client.mapValues { it.value.name() },
+        day = Vocabulary.day.mapValues { it.value.name() },
+        lists = Vocabulary.lists.mapValues { it.value.name() },
+        values = rules.fieldValues(),
+    )
 
     /**
      * Validates [rule], stores it as the next draft version of its key, then asks for its explanation.

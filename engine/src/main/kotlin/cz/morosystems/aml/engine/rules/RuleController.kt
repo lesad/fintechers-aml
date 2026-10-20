@@ -27,6 +27,10 @@ class RuleController(private val rules: RuleService, private val users: UserRepo
     @GetMapping
     fun all(): List<RuleVersionJson> = rules.all().map { it.toJson() }
 
+    /** What a condition, anchor or filter may name, for the editor's autocomplete. */
+    @GetMapping("/vocabulary")
+    fun vocabulary(): VocabularyJson = rules.vocabulary()
+
     @GetMapping("/{id}")
     fun find(@PathVariable id: Long): RuleVersionJson =
         rules.find(id)?.toJson() ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "rule version $id not found")

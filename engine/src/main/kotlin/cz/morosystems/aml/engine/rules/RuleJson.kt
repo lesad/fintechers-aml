@@ -31,6 +31,15 @@ data class RuleBody(
 
 data class ExplanationJson(val explanation: String, val model: String)
 
+/** The names a rule's CEL may use, by prefix, each with its CEL type, and the values of the text fields that have few. */
+data class VocabularyJson(
+    val tx: Map<String, String>,
+    val client: Map<String, String>,
+    val day: Map<String, String>,
+    val lists: Map<String, String>,
+    val values: Map<String, List<String>>,
+)
+
 data class RuleVersionJson(
     val id: Long,
     val key: String,

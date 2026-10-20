@@ -161,6 +161,16 @@ class RuleControllerTest {
     }
 
     @Test
+    fun listsTheVocabularyWithTheValuesOfTextFields() {
+        val vocabulary = assertThat(mvc.get().uri("/api/rules/vocabulary")).hasStatusOk().bodyJson()
+        vocabulary.extractingPath("$.tx.amount").isEqualTo("double")
+        vocabulary.extractingPath("$.client.pep").isEqualTo("bool")
+        vocabulary.extractingPath("$.day.month").isEqualTo("int")
+        vocabulary.extractingPath("$.lists.high_risk").asString().startsWith("list")
+        vocabulary.extractingPath("$.values").asMap().containsKeys("tx.direction", "client.risk")
+    }
+
+    @Test
     fun findsOneVersion() {
         val id = jdbc.sql("select id from rule where key = 'C1' and version = 1").query(Long::class.java).single()
         assertThat(mvc.get().uri("/api/rules/$id")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("retired")

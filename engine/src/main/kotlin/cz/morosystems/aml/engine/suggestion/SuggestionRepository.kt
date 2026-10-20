@@ -33,17 +33,11 @@ class SuggestionRepository(
             segments = rules.segments(),
             clients = clients.findAll(),
             latest = (hitKeys + hitKeys.map { clientKey(it, alert.clientId) }).mapNotNull { key -> rules.latestOf(key)?.let { key to it } }.toMap(),
-            values = values(),
+            values = rules.fieldValues(),
             triage = triage(alertId),
             summary = summaries.latestText(alertId),
             existingRules = rules.allVersions().filter { it.status != "retired" },
         )
-    }
-
-    private fun values(): Map<String, List<String>> = TEXT_FIELDS.associateWith { field ->
-        val table = field.substringBefore(".").let { if (it == "tx") "transaction" else it }
-        val column = field.substringAfter(".")
-        jdbc.sql("select distinct $column from $table where $column is not null order by 1").query(String::class.java).list().filterNotNull()
     }
 
     private fun triage(alertId: Long): Map<String, Any?>? =
@@ -59,9 +53,4 @@ class SuggestionRepository(
             where ah.alert_id = ?
             """.trimIndent(),
         ).param(alertId).query(String::class.java).set().filterNotNull().toSet()
-
-    private companion object {
-        /** Text fields with a small fixed set of values; countries and currencies are ISO codes the model knows. */
-        val TEXT_FIELDS = listOf("tx.direction", "tx.type", "client.type", "client.channel", "client.risk")
-    }
 }

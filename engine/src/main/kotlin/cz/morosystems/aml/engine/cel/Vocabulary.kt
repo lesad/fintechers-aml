@@ -38,6 +38,9 @@ object Vocabulary {
 
     val lists: Map<String, CelType> = mapOf("high_risk" to ListType.create(SimpleType.STRING))
 
+    /** Text fields with a small fixed set of values; countries and currencies are ISO codes, too many to list. */
+    val textFields = listOf("tx.direction", "tx.type", "client.type", "client.channel", "client.risk")
+
     /**
      * The type a rule variable takes in CEL. Money is a double, so every aggregate over it is one; a count is
      * still whole. CEL has no mixed int/double arithmetic, so a condition that multiplies a count by an amount

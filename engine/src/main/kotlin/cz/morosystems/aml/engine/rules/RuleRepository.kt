@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.rules
 
+import cz.morosystems.aml.engine.cel.Vocabulary
 import java.sql.ResultSet
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -27,6 +28,13 @@ class RuleRepository(private val jdbc: JdbcClient) {
 
     fun segmentName(id: Long): String? =
         jdbc.sql("select name from segment where id = ?").param(id).query(String::class.java).optional().orElse(null)
+
+    /** Every value each text field of [Vocabulary.textFields] takes in the data, sorted. */
+    fun fieldValues(): Map<String, List<String>> = Vocabulary.textFields.associateWith { field ->
+        val table = field.substringBefore(".").let { if (it == "tx") "transaction" else it }
+        val column = field.substringAfter(".")
+        jdbc.sql("select distinct $column from $table where $column is not null order by 1").query(String::class.java).list().filterNotNull()
+    }
 
     fun segments(): List<Segment> =
         jdbc.sql("select id, name, predicate from segment order by id")
