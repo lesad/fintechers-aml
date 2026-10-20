@@ -80,7 +80,7 @@ export function Header({
   }, []);
 
   return (
-    <header className="flex h-11 flex-none items-center gap-4 bg-[linear-gradient(90deg,#252746_0%,#2b2c55_55%,#3a2e66_100%)] px-4 text-white">
+    <header className="flex h-11 flex-none print:hidden items-center gap-4 bg-[linear-gradient(90deg,#252746_0%,#2b2c55_55%,#3a2e66_100%)] px-4 text-white">
       <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
         <Link
           to="/"

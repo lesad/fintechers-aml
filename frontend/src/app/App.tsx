@@ -68,7 +68,7 @@ export function App() {
   const openCases = openByRating.High + openByRating.Medium + openByRating.Low;
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden print:block print:h-auto print:overflow-visible">
       <Header
         openByRating={queue.countsByRating}
         user={user}

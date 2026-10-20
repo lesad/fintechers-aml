@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 
 import { groupByKey, type RuleVersion } from "./api";
 import { RuleDetail } from "./RuleDetail";
+import { RuleExport } from "./RuleExport";
 import { RuleForm } from "./RuleForm";
 import { RuleList } from "./RuleList";
 import { useRules } from "./use-rules";
@@ -14,7 +15,10 @@ type RulesPageProps = {
   manager: boolean;
 };
 
-type Mode = { kind: "view" } | { kind: "form"; from: RuleVersion | null; edit?: boolean };
+type Mode =
+  | { kind: "view" }
+  | { kind: "form"; from: RuleVersion | null; edit?: boolean }
+  | { kind: "export" };
 
 const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg hover:bg-hover";
 
@@ -43,7 +47,7 @@ export function RulesPage({ author, manager }: RulesPageProps) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col print:block">
       {rules.status === "loading" && <p className="p-4 text-xs text-fg-subtle">Loading rules…</p>}
       {rules.status === "error" && (
         <div className="flex items-center gap-3 p-4 text-xs text-high">
@@ -54,17 +58,19 @@ export function RulesPage({ author, manager }: RulesPageProps) {
         </div>
       )}
       {rules.status === "ready" && (
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 print:block">
           <RuleList
             groups={groups}
             selectedKey={group?.key ?? null}
             onSelect={(key) => select(key)}
             onNew={() => setMode({ kind: "form", from: null })}
+            onExport={() => setMode({ kind: "export" })}
           />
-          <div className="min-w-0 flex-1 overflow-y-auto">
+          <div className="min-w-0 flex-1 overflow-y-auto print:overflow-visible">
             <Panel
               mode={mode}
               version={version}
+              versions={versions}
               siblings={group?.versions ?? []}
               keys={groups.map((g) => g.key)}
               author={author}
@@ -103,6 +109,8 @@ function pick(groups: Group[], key: string | null, id: number | null) {
 type PanelProps = {
   mode: Mode;
   version: RuleVersion | undefined;
+  /** Every version of every key, for the export. */
+  versions: RuleVersion[];
   siblings: RuleVersion[];
   /** Every rule key, so a new rule cannot reuse one. */
   keys: string[];
@@ -116,6 +124,7 @@ type PanelProps = {
 function Panel({
   mode,
   version,
+  versions,
   siblings,
   keys,
   author,
@@ -124,6 +133,11 @@ function Panel({
   onSelectVersion,
   onSaved,
 }: PanelProps) {
+  if (mode.kind === "export") {
+    return (
+      <RuleExport versions={versions} author={author} onClose={() => onMode({ kind: "view" })} />
+    );
+  }
   if (mode.kind === "form") {
     return (
       <RuleForm

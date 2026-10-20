@@ -150,4 +150,22 @@ describe("RulesPage", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("only a manager can approve a rule");
   });
+
+  it("exports the rules in force at the picked date, without drafts", async () => {
+    serve(() => json([...SEEDED, B2_V2]));
+    render(<RulesPage author="J. Novák" manager={false} />);
+    await list();
+    fireEvent.click(screen.getByRole("button", { name: "Export rules" }));
+    fireEvent.change(screen.getByLabelText("Rules valid at"), {
+      target: { value: "2026-10-20T08:00" },
+    });
+    const report = screen.getByRole("article", { name: "Rules export" });
+    expect(within(report).getByText("2026-10-20 08:00")).toBeInTheDocument();
+    expect(within(report).getByRole("region", { name: "B2 v1" })).toBeInTheDocument();
+    expect(within(report).queryByRole("region", { name: "B2 v2" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Rules valid at"), {
+      target: { value: "2026-01-01T00:00" },
+    });
+    expect(within(report).getByText("No rule was in force at this date.")).toBeInTheDocument();
+  });
 });

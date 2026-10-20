@@ -23,18 +23,19 @@ type RuleListProps = {
   selectedKey: string | null;
   onSelect: (key: string) => void;
   onNew: () => void;
+  onExport: () => void;
 };
 
 const newest = (g: Group) => g.versions[0];
 
-export function RuleList({ groups, selectedKey, onSelect, onNew }: RuleListProps) {
+export function RuleList({ groups, selectedKey, onSelect, onNew, onExport }: RuleListProps) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const shown = groups.filter((g) => `${g.key} ${newest(g)?.name ?? ""}`.toLowerCase().includes(q));
   const alertTypes = [...new Set(shown.map((g) => newest(g)?.alertType ?? ""))].toSorted();
 
   return (
-    <aside className="flex w-[280px] flex-none flex-col border-r border-border bg-bg">
+    <aside className="flex w-[280px] flex-none flex-col border-r border-border bg-bg print:hidden">
       <div className="flex flex-none gap-1.5 border-b border-border-soft p-2">
         <input
           value={query}
@@ -73,6 +74,30 @@ export function RuleList({ groups, selectedKey, onSelect, onNew }: RuleListProps
           <div className="px-4 py-6 text-fg-subtle">No rules match “{query.trim()}”.</div>
         )}
       </nav>
+      <div className="flex flex-none border-t border-border-soft p-2">
+        <button
+          type="button"
+          onClick={onExport}
+          className="flex h-7 items-center gap-1.5 rounded px-2.5 text-[13px] font-semibold text-fg-muted hover:bg-hover hover:text-fg"
+        >
+          <svg
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 4v11" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M5 20h14" />
+          </svg>
+          Export rules
+        </button>
+      </div>
     </aside>
   );
 }
