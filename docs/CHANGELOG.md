@@ -6,6 +6,7 @@
 
 ### Added
 
+- `engine/`: `suggestion.decline-risky-closures` (default `true`). Set to `false` (`SUGGESTION_DECLINERISKYCLOSURES=false`), a rule suggestion that would close alerts triaged high or escalated is no longer declined; the impact still counts them by disposition for the approver.
 - **Audit trail of a case, printed to PDF.** "Audit trail (PDF)" in the detail's Decision box opens a Czech report for a ČNB or FAÚ inspection: the transaction, the client's KYC profile and Q2 baseline, the client's transactions on that day and inside the rule windows, every rule hit with its condition, inputs and thresholds, the triage score, routing, config version and reasons, the stored AI assessments (model, prompt and input hash; never generated from here), and the decision log oldest first with who acted. It names employees, so it is internal and stays out of the FAÚ report (§ 18(3)). Frontend only, from existing endpoints.
 
 ### Changed
