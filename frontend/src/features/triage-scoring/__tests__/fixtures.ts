@@ -1,4 +1,5 @@
 import type { ScoredRuleVersion, TriageConfigVersion } from "../api";
+import type { User } from "@/user";
 
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -26,12 +27,20 @@ export const RULES: ScoredRuleVersion[] = [
   { ...rule("B2", "B", "Old wording"), status: "retired", version: 0 },
 ];
 
+export const ANALYST: User = { id: 1, name: "J. Novák", role: "ANALYST" };
+export const OFFICER: User = { id: 2, name: "M. Svobodová", role: "COMPLIANCE_OFFICER" };
+export const MANAGER: User = { id: 3, name: "P. Dvořák", role: "COMPLIANCE_MANAGER" };
+export const USERS: User[] = [ANALYST, OFFICER, MANAGER];
+
 export const CONFIG: TriageConfigVersion = {
   version: 1,
   configVersion: "v1",
   status: "active",
   author: "finreg-brief",
   createdAt: "2026-10-20T09:00:00+02:00",
+  assignee: null,
+  approver: null,
+  approvedAt: null,
   payload: {
     unknownRuleScore: 70,
     bands: [
@@ -50,18 +59,30 @@ export const CONFIG: TriageConfigVersion = {
 
 export const COVERAGE = { unscored: ["A3", "C1"], orphaned: [] };
 
-/** The config as the engine returns it after [ruleKey] was rescored: a new activated version. */
-export const rescored = (ruleKey: string, baseScore: number): TriageConfigVersion => ({
+/** The same version, with whatever the lifecycle moved. */
+export const as = (
+  version: TriageConfigVersion,
+  over: Partial<TriageConfigVersion>,
+): TriageConfigVersion => ({ ...version, ...over });
+
+/** The draft the engine returns once [scores] were proposed against the active config. */
+export const proposed = (
+  scores: Record<string, number>,
+  over: Partial<TriageConfigVersion> = {},
+): TriageConfigVersion => ({
   ...CONFIG,
   version: CONFIG.version + 1,
   configVersion: "v2",
+  status: "draft",
+  author: ANALYST.name,
   rules: [
-    ...CONFIG.rules.filter((r) => r.ruleKey !== ruleKey),
-    {
+    ...CONFIG.rules.filter((r) => !(r.ruleKey in scores)),
+    ...Object.entries(scores).map(([ruleKey, baseScore]) => ({
       ruleKey,
       baseScore,
       autoCloseable: CONFIG.rules.find((r) => r.ruleKey === ruleKey)?.autoCloseable ?? false,
       impliesPep: CONFIG.rules.find((r) => r.ruleKey === ruleKey)?.impliesPep ?? false,
-    },
+    })),
   ],
+  ...over,
 });

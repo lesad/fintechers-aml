@@ -14,8 +14,23 @@ export { LoadMore } from "./LoadMore";
 export { Modal } from "./Modal";
 export { Popover } from "./Popover";
 export { Select } from "./Select";
+export {
+  APPROVER_ROLES,
+  approvers,
+  SendForApproval,
+  splitMain,
+  splitMore,
+  splitOption,
+} from "./SendForApproval";
 export { type CaseStatus, StatusLabel } from "./StatusLabel";
 export { type SubTabItem, SubTabs } from "./SubTabs";
 export { type Column, Table } from "./Table";
 export { Tab, Tabs } from "./Tabs";
 export { Toast } from "./Toast";
+export {
+  type VersionHistoryItem,
+  VersionHistory,
+  type VersionStatus,
+  type VersionTab,
+  VersionTabs,
+} from "./Version";

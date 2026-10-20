@@ -33,4 +33,5 @@
     <include file="db/migrations/0027-rule-change-reason.sql" />
     <include file="db/migrations/0028-backtest-false-positives.sql" />
     <include file="db/migrations/0029-import-job-rule.sql" />
+    <include file="db/migrations/0030-triage-config-approval.sql" />
 </databaseChangeLog>

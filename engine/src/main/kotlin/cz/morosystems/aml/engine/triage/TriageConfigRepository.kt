@@ -8,7 +8,9 @@ import org.springframework.transaction.annotation.Transactional
 
 /**
  * A stored triage config version: the lifecycle around the pure value a decision is taken with. The direct analogue
- * of [cz.morosystems.aml.engine.rules.RuleVersion]; [status] is `draft`, `approved`, `active` or `retired`.
+ * of [cz.morosystems.aml.engine.rules.RuleVersion]; [status] is `draft`, `pending`, `approved`, `active` or `retired`.
+ *
+ * @property assignee the compliance officer a `pending` version waits for, by name
  */
 data class TriageConfigVersion(
     val id: Long,
@@ -17,6 +19,9 @@ data class TriageConfigVersion(
     val status: String,
     val author: String?,
     val createdAt: OffsetDateTime,
+    val assignee: String? = null,
+    val approver: String? = null,
+    val approvedAt: OffsetDateTime? = null,
 )
 
 /**
@@ -48,6 +53,9 @@ class TriageConfigRepository(private val jdbc: JdbcClient) {
     fun allVersions(): List<TriageConfigVersion> = load("true")
 
     fun find(version: Int): TriageConfigVersion? = load("c.version = ?", version).singleOrNull()
+
+    /** The versions still being decided — a `draft` being written and a `pending` one waiting for its approver. */
+    fun open(): List<TriageConfigVersion> = load("c.status in ('draft', 'pending')")
 
     /** The keys of every live rule, to be read against the active config's scores. Detection, not policy — hence `rule`. */
     fun liveRuleKeys(): Set<String> =
@@ -116,11 +124,50 @@ class TriageConfigRepository(private val jdbc: JdbcClient) {
         if (promoted == 0) error("triage config version $version not found")
     }
 
+    /** Moves the draft [version] to `pending`, assigned to [approverId]; false when [version] is no draft. */
+    fun submit(version: Int, approverId: Long): Boolean =
+        jdbc.sql("update triage_config set status = 'pending', assignee_id = ? where version = ? and status = 'draft'")
+            .params(approverId, version).update() > 0
+
+    /** Sends the pending [version] back to `draft` with no assignee; false when [version] is not pending. */
+    fun reject(version: Int): Boolean =
+        jdbc.sql("update triage_config set status = 'draft', assignee_id = null where version = ? and status = 'pending'")
+            .param(version).update() > 0
+
+    /**
+     * Activates the pending [version] on behalf of [approver] and retires the version that was active.
+     *
+     * @return false when [version] is not pending
+     */
+    @Transactional
+    fun approve(version: Int, approver: String): Boolean {
+        // WARN: retire before activating; the partial unique index on `status = 'active'` rejects the reverse order.
+        jdbc.sql("update triage_config set status = 'retired' where status = 'active' and version <> ?").param(version).update()
+        return jdbc.sql(
+            """
+            update triage_config set status = 'active', assignee_id = null, approver = ?, approved_at = now()
+            where version = ? and status = 'pending'
+            """,
+        ).params(approver, version).update() > 0
+    }
+
+    /**
+     * Deletes the draft [version] with every child row; false when [version] is not a draft. A draft never decided an
+     * alert, so nothing refers to it.
+     */
+    @Transactional
+    fun deleteDraft(version: Int): Boolean {
+        val id = jdbc.sql("select id from triage_config where version = ? and status = 'draft' for update").param(version)
+            .query(Long::class.java).optional().orElse(null) ?: return false
+        CHILD_TABLES.forEach { (table, _) -> jdbc.sql("delete from $table where config_id = ?").param(id).update() }
+        return jdbc.sql("delete from triage_config where id = ? and status = 'draft'").param(id).update() > 0
+    }
+
     /**
      * Writes one rule's policy on the draft [configId], adding the row when that draft does not score the key yet.
      *
-     * Only ever legal against a draft the caller has just created with [copyAsDraft]: a stored version is never
-     * edited, so this is part of writing the new version, not a change to an existing one.
+     * Only ever legal against a draft — one just created with [copyAsDraft], or one still being written. A version
+     * that has left `draft` is never edited, so this is part of writing a new version, not a change to a decided one.
      */
     @Transactional
     fun upsertRule(configId: Long, ruleKey: String, triage: RuleTriage) {
@@ -267,8 +314,10 @@ class TriageConfigRepository(private val jdbc: JdbcClient) {
 
         return jdbc.sql(
             """
-            select c.id, c.version, c.status, c.author, c.created_at, $CONFIG_VALUE_COLUMNS
-            from triage_config c where $where order by c.version desc
+            select c.id, c.version, c.status, c.author, c.created_at, c.approver, c.approved_at,
+                   u.name as assignee, $CONFIG_VALUE_COLUMNS
+            from triage_config c left join app_user u on u.id = c.assignee_id
+            where $where order by c.version desc
             """,
         ).params(*args).query { rs, _ ->
             val id = rs.getLong("id")
@@ -305,6 +354,9 @@ class TriageConfigRepository(private val jdbc: JdbcClient) {
                 status = rs.getString("status"),
                 author = rs.getString("author"),
                 createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
+                assignee = rs.getString("assignee"),
+                approver = rs.getString("approver"),
+                approvedAt = rs.getObject("approved_at", OffsetDateTime::class.java),
             )
         }.list()
     }

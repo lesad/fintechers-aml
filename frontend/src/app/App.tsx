@@ -231,7 +231,7 @@ export function App() {
             />
           </div>
           <div hidden={settings.sub !== "triage"} className="flex min-h-0 flex-1 flex-col">
-            <TriageScoringPage author={user?.name ?? ""} />
+            <TriageScoringPage author={user?.name ?? ""} user={user} users={users} />
           </div>
         </>
       );

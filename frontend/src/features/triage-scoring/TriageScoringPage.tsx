@@ -1,18 +1,25 @@
 import { cva } from "class-variance-authority";
 import { Fragment } from "react";
 
-import { Toast } from "@/components";
+import { Toast, VersionHistory, VersionTabs } from "@/components";
 
 import { bandPill, BandLegend } from "./BandLegend";
 import { BAND_OUTCOME, bandOf, listKeys } from "./bands";
+import { bylineOf, historyOf, stamp, versionTabsOf } from "./history";
+import { ProposalPanel } from "./ProposalPanel";
 import { ScoreSlider } from "./ScoreSlider";
 import { useTriageConfig } from "./use-triage-config";
 
-import type { Band, ScoredRuleVersion, TriageConfigVersion } from "./api";
+import type { Band, ScoredRuleVersion, TriageConfigVersion, TriageCoverage } from "./api";
+import type { User } from "@/user";
 
 type TriageScoringPageProps = {
   /** The signed-in user, recorded as the author of every score change. */
   author: string;
+  /** The signed-in user; null before one is picked. */
+  user: User | null;
+  /** Everyone an author can send a draft to, among others. */
+  users: User[];
 };
 
 const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg hover:bg-hover";
@@ -83,8 +90,11 @@ function groupRows(config: TriageConfigVersion, rules: ScoredRuleVersion[]) {
 }
 
 /** The per-rule base scores of the active triage config, each editable on its band scale. */
-export function TriageScoringPage({ author }: TriageScoringPageProps) {
+export function TriageScoringPage({ author, user, users }: TriageScoringPageProps) {
   const triage = useTriageConfig(author);
+  const { active, shown } = triage;
+  /** The version an edit lands in: the open proposal, else the active config. */
+  const current = triage.proposal ?? active;
 
   return (
     // The scroll container; the inner `min-h-full` column is what lets the footer's `sticky bottom-0` sit at the
@@ -92,13 +102,24 @@ export function TriageScoringPage({ author }: TriageScoringPageProps) {
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="flex min-h-full flex-col">
         <div className="flex w-full max-w-[1040px] flex-1 flex-col gap-4 px-6 pt-4 pb-8">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-[18px] leading-tight font-semibold text-fg">Rule scores</h1>
-            <p className="max-w-[640px] text-fg-muted">
-              How much each detection rule contributes to an alert&rsquo;s 0&ndash;100 score. The
-              band the score falls into decides how the alert is handled. Changes apply from the
-              next run.
-            </p>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-[18px] leading-tight font-semibold text-fg">Rule scores</h1>
+              <p className="max-w-[640px] text-fg-muted">
+                How much each detection rule contributes to an alert&rsquo;s 0&ndash;100 score.
+                Every change is reviewed by a second person before it is used, and applies from the
+                next run.
+              </p>
+            </div>
+            {shown && (
+              <VersionTabs
+                items={versionTabsOf(triage.status === "ready" ? triage.versions : [], shown)}
+                selected={shown.version}
+                onSelect={triage.select}
+                byline={bylineOf(shown)}
+                label="Triage policy versions"
+              />
+            )}
           </div>
 
           {triage.status === "loading" && (
@@ -112,27 +133,22 @@ export function TriageScoringPage({ author }: TriageScoringPageProps) {
               </button>
             </div>
           )}
-          {triage.status === "ready" && (
-            <>
-              <UnscoredCallout
-                keys={triage.coverage.unscored}
-                fallback={triage.config.payload.unknownRuleScore}
-                bands={triage.config.payload.bands}
-              />
-              <ScoreTable
-                config={triage.config}
-                rules={triage.rules}
-                draft={triage.draft}
-                saving={triage.saving}
-                onScore={triage.setScore}
-                onRevert={triage.revert}
-              />
-            </>
+          {triage.status === "ready" && active && shown && current && (
+            <Scoring
+              triage={triage}
+              loaded={triage}
+              active={active}
+              shown={shown}
+              current={current}
+              user={user}
+              users={users}
+            />
           )}
         </div>
-        {triage.status === "ready" && (
+        {triage.status === "ready" && !triage.locked && !triage.viewing && (
           <SavePanel
             dirtyKeys={triage.dirtyKeys}
+            proposal={triage.proposal}
             savedAt={triage.savedAt}
             saving={triage.saving}
             onDiscard={triage.discard}
@@ -147,22 +163,33 @@ export function TriageScoringPage({ author }: TriageScoringPageProps) {
   );
 }
 
-/** What the footer's pill says: what is outstanding, else when this page last wrote, else that nothing is. */
-function statusOf(dirtyKeys: string[], savedAt: string | null, saving: boolean) {
+/** What the footer's pill says: what is outstanding, else where the proposal stands, else that nothing is. */
+function statusOf({
+  dirtyKeys,
+  proposal,
+  savedAt,
+  saving,
+}: Omit<SavePanelProps, "onDiscard" | "onSave">) {
   if (saving) return { tone: "idle", text: "Saving…" } as const;
   if (dirtyKeys.length > 0)
     return {
       tone: "draft",
       text: `${plural(dirtyKeys.length, "unsaved change")} · ${dirtyKeys.join(", ")}`,
     } as const;
-  if (savedAt)
-    return { tone: "saved", text: `Saved at ${savedAt} · applies from the next run` } as const;
+  if (proposal)
+    return {
+      tone: "draft",
+      text: `Saved${savedAt ? ` at ${savedAt}` : ""} to draft v${proposal.version} · send it for approval to apply it`,
+    } as const;
+  if (savedAt) return { tone: "saved", text: `Saved at ${savedAt}` } as const;
   return { tone: "idle", text: "All scores saved" } as const;
 }
 
 type SavePanelProps = {
   /** The changed rule keys, in key order. */
   dirtyKeys: string[];
+  /** The open proposal the next save writes into; null when a save would open one. */
+  proposal: TriageConfigVersion | null;
   savedAt: string | null;
   saving: boolean;
   onDiscard: () => void;
@@ -170,9 +197,9 @@ type SavePanelProps = {
 };
 
 /** The bottom bar: what is outstanding on the left, Discard and Save on the right. */
-function SavePanel({ dirtyKeys, savedAt, saving, onDiscard, onSave }: SavePanelProps) {
+function SavePanel({ dirtyKeys, proposal, savedAt, saving, onDiscard, onSave }: SavePanelProps) {
   const dirty = dirtyKeys.length > 0;
-  const s = statusOf(dirtyKeys, savedAt, saving);
+  const s = statusOf({ dirtyKeys, proposal, savedAt, saving });
 
   return (
     <div className="sticky bottom-0 flex flex-none flex-wrap items-center gap-3 border-t border-border bg-bg/90 px-6 py-2 backdrop-blur-md">
@@ -246,6 +273,95 @@ function RevertButton({
   );
 }
 
+type ScoringProps = {
+  triage: ReturnType<typeof useTriageConfig>;
+  /** What the page loaded: every stored version, the coverage gap and the rules a row names. */
+  loaded: { versions: TriageConfigVersion[]; coverage: TriageCoverage; rules: ScoredRuleVersion[] };
+  /** The version triage runs under: the scale and the coverage callout are always read from it. */
+  active: TriageConfigVersion;
+  /** The version the table shows. */
+  shown: TriageConfigVersion;
+  /** The version an edit lands in: the open proposal, else [active]. */
+  current: TriageConfigVersion;
+  user: User | null;
+  users: User[];
+};
+
+/** Everything the page shows once it has loaded: the proposal, the coverage gap, the table and the history. */
+function Scoring({ triage, loaded, active, shown, current, user, users }: ScoringProps) {
+  return (
+    <>
+      {triage.proposal && !triage.viewing && (
+        <ProposalPanel
+          active={active}
+          proposal={triage.proposal}
+          user={user}
+          users={users}
+          busy={triage.saving}
+          onSubmit={(approverId) => void triage.submit(approverId)}
+          onApprove={() => void triage.approve()}
+          onReject={() => void triage.reject()}
+          onDiscard={() => void triage.discardProposal()}
+        />
+      )}
+      {triage.viewing && (
+        <ViewingNote
+          shown={shown}
+          current={current}
+          onBack={() => triage.select(current.version)}
+        />
+      )}
+      <UnscoredCallout
+        keys={loaded.coverage.unscored}
+        fallback={active.payload.unknownRuleScore}
+        bands={active.payload.bands}
+      />
+      <ScoreTable
+        config={shown}
+        bands={active.payload.bands}
+        unknownRuleScore={active.payload.unknownRuleScore}
+        rules={loaded.rules}
+        draft={triage.draft}
+        saving={triage.saving || triage.locked || triage.viewing}
+        onScore={triage.setScore}
+        onRevert={triage.revert}
+      />
+      <VersionHistory
+        items={historyOf(loaded.versions)}
+        selected={shown.version}
+        onSelect={triage.select}
+        label="Triage policy versions"
+      />
+    </>
+  );
+}
+
+/** Says which stored version the table is showing, and gets back to the one an edit would land in. */
+function ViewingNote({
+  shown,
+  current,
+  onBack,
+}: {
+  shown: TriageConfigVersion;
+  /** The version an edit lands in: the open proposal, else the active config. */
+  current: TriageConfigVersion;
+  onBack: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-bg-sub px-3 py-2">
+      <span className="min-w-[240px] flex-1">
+        <b className="font-semibold">
+          Viewing v{shown.version} ({shown.status}), as it was on {stamp(shown.createdAt)}.
+        </b>{" "}
+        <span className="text-fg-muted">Read-only — scores are changed on v{current.version}.</span>
+      </span>
+      <button type="button" onClick={onBack} className={button}>
+        Back to v{current.version}
+      </button>
+    </div>
+  );
+}
+
 /** Names the rules the active config does not score, with the fallback the engine uses meanwhile. */
 function UnscoredCallout({
   keys,
@@ -276,7 +392,11 @@ function UnscoredCallout({
 }
 
 type ScoreTableProps = {
+  /** The version a slider sits on: the open proposal when there is one, else the active config. */
   config: TriageConfigVersion;
+  /** The scale, always the active config's: a proposal here only moves scores, never the bands they fall into. */
+  bands: Band[];
+  unknownRuleScore: number;
   rules: ScoredRuleVersion[];
   /** The moved-but-unsaved scores by rule key; a row with one is highlighted and shows what it was. */
   draft: Record<string, number>;
@@ -287,9 +407,17 @@ type ScoreTableProps = {
   onRevert: (ruleKey: string) => void;
 };
 
-function ScoreTable({ config, rules, draft, saving, onScore, onRevert }: ScoreTableProps) {
+function ScoreTable({
+  config,
+  bands,
+  unknownRuleScore,
+  rules,
+  draft,
+  saving,
+  onScore,
+  onRevert,
+}: ScoreTableProps) {
   const groups = groupRows(config, rules);
-  const { bands, unknownRuleScore } = config.payload;
 
   if (groups.length === 0) {
     return <p className="text-xs text-fg-subtle">No rules to score yet.</p>;

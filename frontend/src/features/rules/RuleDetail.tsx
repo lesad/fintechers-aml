@@ -1,12 +1,23 @@
 import { cva } from "class-variance-authority";
 import { useRef, useState } from "react";
 
-import { ConditionCode, ConditionLegend, Icon, Popover } from "@/components";
-import { ROLE_LABEL, type User } from "@/user";
+import {
+  APPROVER_ROLES,
+  approvers,
+  ConditionCode,
+  ConditionLegend,
+  Icon,
+  Popover,
+  SendForApproval,
+  splitMain,
+  splitMore,
+  splitOption,
+} from "@/components";
 
 import { changeRuleStatus, type RuleVersion } from "./api";
 import { grainLabel, paramParts, paramText, scopeLabel, shortDate, windowShort } from "./format";
 
+import type { User } from "@/user";
 import type { ReactNode } from "react";
 
 type RuleDetailProps = {
@@ -211,91 +222,13 @@ function Header({
   );
 }
 
-const splitMain =
-  "inline-flex h-7 items-center gap-1.5 rounded-l bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
-const splitMore =
-  "inline-flex h-7 items-center rounded-r border-l border-white/30 bg-indigo px-1.5 text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
-const splitOption =
-  "flex w-full cursor-pointer items-baseline gap-1 rounded px-2 py-1.5 text-left text-[13px] hover:bg-hover";
-
-type SendForApprovalProps = {
-  /** Who the main button sends to: the first eligible compliance officer, else the first eligible approver. */
-  fallback: User | undefined;
-  eligible: User[];
-  busy: boolean;
-  onSend: (approverId: number) => void;
-};
-
-/** A split button: the main part sends to the default approver, the arrow picks another eligible one and sends. */
-function SendForApproval({ fallback, eligible, busy, onSend }: SendForApprovalProps) {
-  const [open, setOpen] = useState(false);
-  const more = useRef<HTMLButtonElement>(null);
-  return (
-    <div className="relative inline-flex">
-      <button
-        type="button"
-        disabled={busy || !fallback}
-        onClick={() => fallback && onSend(fallback.id)}
-        className={splitMain}
-      >
-        <Icon name="check" />
-        {fallback ? `Send to ${fallback.name}` : "No approver available"}
-      </button>
-      <button
-        ref={more}
-        type="button"
-        aria-label="Choose approver"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        disabled={busy || eligible.length === 0}
-        onClick={() => setOpen(!open)}
-        className={splitMore}
-      >
-        <Icon name="chevronDown" />
-      </button>
-      {open && (
-        <Popover
-          anchor={more}
-          onClose={() => setOpen(false)}
-          className="w-max min-w-56 gap-0 p-1.5"
-        >
-          <span className="px-2 pb-1 text-[11px] text-fg-subtle">Send for approval to</span>
-          <div role="menu" aria-label="Approvers" className="flex flex-col">
-            {eligible.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false);
-                  onSend(u.id);
-                }}
-                className={splitOption}
-              >
-                {u.name}
-                <span className="text-fg-subtle">· {ROLE_LABEL[u.role]}</span>
-              </button>
-            ))}
-          </div>
-        </Popover>
-      )}
-    </div>
-  );
-}
-
-/** Four eyes (ADR-0052): the compliance officer's level and above approve what someone else wrote. */
-const APPROVERS = new Set<User["role"]>(["COMPLIANCE_OFFICER", "COMPLIANCE_MANAGER"]);
-
 type StatusActionsProps = Pick<RuleDetailProps, "version" | "user" | "users" | "onStatusChanged">;
 
 function StatusActions({ version: v, user, users, onStatusChanged }: StatusActionsProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Four eyes: neither the author nor whoever sends it approves it.
-  const eligible = users.filter(
-    (u) => APPROVERS.has(u.role) && u.name !== v.author && u.name !== user?.name,
-  );
-  const fallback = eligible.find((u) => u.role === "COMPLIANCE_OFFICER") ?? eligible[0];
+  const { eligible, fallback } = approvers(users, v.author, user);
   const run = async (
     action: Parameters<typeof changeRuleStatus>[1],
     approverId?: number,
@@ -332,7 +265,7 @@ function StatusActions({ version: v, user, users, onStatusChanged }: StatusActio
       </>
     );
   }
-  if (v.status !== "pending" || !user || !APPROVERS.has(user.role)) return null;
+  if (v.status !== "pending" || !user || !APPROVER_ROLES.has(user.role)) return null;
   if (v.author === user.name)
     return (
       <span className="text-xs text-fg-muted">

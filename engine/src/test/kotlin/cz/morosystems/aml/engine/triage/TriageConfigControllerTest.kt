@@ -115,7 +115,6 @@ class TriageConfigControllerTest {
         assertThat(post(body(author = "M. Svobodová"))).hasStatus(HttpStatus.CREATED)
         assertThat(activate(3)).hasStatus(HttpStatus.FORBIDDEN)
             .bodyJson().extractingPath("$.detail").asString().contains("wrote this version")
-        assertThat(patchRule("A1", """{"author": "J. Novák", "baseScore": 9}""", user = userId("ANALYST"))).hasStatus(HttpStatus.FORBIDDEN)
     }
 
     @Test
@@ -181,53 +180,149 @@ class TriageConfigControllerTest {
     }
 
     @Test
-    fun patchingARuleScoreCreatesTheNextVersionAndActivatesIt() {
-        val patched = assertThat(patchRule("A1", """{"author": "J. Novák", "baseScore": 30, "autoCloseable": false, "impliesPep": true}"""))
-            .hasStatusOk().bodyJson()
-        patched.extractingPath("$.version").isEqualTo(2)
-        patched.extractingPath("$.status").isEqualTo("active")
-        patched.extractingPath("$.author").isEqualTo("J. Novák")
-        patched.extractingPath("$.rules[0].ruleKey").isEqualTo("A1")
-        patched.extractingPath("$.rules[0].baseScore").isEqualTo(30)
-        patched.extractingPath("$.rules[0].impliesPep").isEqualTo(true)
+    fun proposingARescoreWritesADraftAndLeavesTheActiveVersionAlone() {
+        val draft = assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 30, "impliesPep": true}]""")).hasStatusOk().bodyJson()
+        draft.extractingPath("$.version").isEqualTo(2)
+        draft.extractingPath("$.status").isEqualTo("draft")
+        draft.extractingPath("$.author").isEqualTo("J. Novák")
+        draft.extractingPath("$.rules[0].ruleKey").isEqualTo("A1")
+        draft.extractingPath("$.rules[0].baseScore").isEqualTo(30)
+        draft.extractingPath("$.rules[0].impliesPep").isEqualTo(true)
         // The rest of the policy travelled with the copy, untouched.
-        patched.extractingPath("$.rules.length()").isEqualTo(6)
-        patched.extractingPath("$.payload.unknownRuleScore").isEqualTo(70)
+        draft.extractingPath("$.rules.length()").isEqualTo(6)
+        draft.extractingPath("$.payload.unknownRuleScore").isEqualTo(70)
 
-        // Insert-only: version 1 is still stored and still says what it said.
-        val previous = assertThat(mvc.get().uri("/api/triage/config/1")).hasStatusOk().bodyJson()
-        previous.extractingPath("$.status").isEqualTo("retired")
-        previous.extractingPath("$.rules[0].baseScore").isEqualTo(8)
+        // Triage still runs under version 1, which still says what it said.
+        val active = assertThat(mvc.get().uri("/api/triage/config")).hasStatusOk().bodyJson()
+        active.extractingPath("$.version").isEqualTo(1)
+        active.extractingPath("$.rules[0].baseScore").isEqualTo(8)
     }
 
     @Test
-    fun patchingARuleTheActiveConfigDoesNotScoreAddsIt() {
+    fun asecondProposalStacksOntoTheSameDraft() {
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+        val draft = assertThat(propose(rules = """[{"ruleKey": "B1", "baseScore": 55}]""")).hasStatusOk().bodyJson()
+        draft.extractingPath("$.version").isEqualTo(2)
+        draft.extractingPath("$.rules[0].baseScore").isEqualTo(30)
+        draft.extractingPath("$.rules[3].ruleKey").isEqualTo("B1")
+        draft.extractingPath("$.rules[3].baseScore").isEqualTo(55)
+        assertThat(mvc.get().uri("/api/triage/configs")).hasStatusOk().bodyJson().extractingPath("$.length()").isEqualTo(2)
+    }
+
+    @Test
+    fun theOpenDraftIsServedOnItsOwnAndIsGoneOnceApproved() {
+        assertThat(mvc.get().uri("/api/triage/config/open")).hasStatus(HttpStatus.NOT_FOUND)
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+        assertThat(mvc.get().uri("/api/triage/config/open")).hasStatusOk().bodyJson().extractingPath("$.version").isEqualTo(2)
+
+        assertThat(submit(2)).hasStatusOk()
+        assertThat(approve(2)).hasStatusOk()
+        assertThat(mvc.get().uri("/api/triage/config/open")).hasStatus(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun proposingARuleTheActiveConfigDoesNotScoreAddsIt() {
         assertThat(mvc.get().uri("/api/triage/coverage")).hasStatusOk().bodyJson().extractingPath("$.orphaned.length()").isEqualTo(0)
 
-        val patched = assertThat(patchRule("Z9", """{"author": "J. Novák", "baseScore": 50}""")).hasStatusOk().bodyJson()
-        patched.extractingPath("$.rules.length()").isEqualTo(7)
-        patched.extractingPath("$.rules[6].ruleKey").isEqualTo("Z9")
-        patched.extractingPath("$.rules[6].baseScore").isEqualTo(50)
+        val draft = assertThat(propose(rules = """[{"ruleKey": "Z9", "baseScore": 50}]""")).hasStatusOk().bodyJson()
+        draft.extractingPath("$.rules.length()").isEqualTo(7)
+        draft.extractingPath("$.rules[6].ruleKey").isEqualTo("Z9")
 
+        // Coverage reads the active version, so a draft does not change it until it is approved.
+        assertThat(mvc.get().uri("/api/triage/coverage")).hasStatusOk().bodyJson().extractingPath("$.orphaned.length()").isEqualTo(0)
+        assertThat(submit(2)).hasStatusOk()
+        assertThat(approve(2)).hasStatusOk()
         assertThat(mvc.get().uri("/api/triage/coverage")).hasStatusOk().bodyJson().extractingPath("$.orphaned").isEqualTo(listOf("Z9"))
     }
 
     @Test
-    fun patchingTheFactorsChangesOnlyWhatItNames() {
-        val patched = assertThat(patchFactors("""{"author": "J. Novák", "unknownRuleScore": 55, "pep": 21}""")).hasStatusOk().bodyJson()
-        patched.extractingPath("$.version").isEqualTo(2)
-        patched.extractingPath("$.status").isEqualTo("active")
-        patched.extractingPath("$.payload.unknownRuleScore").isEqualTo(55)
-        patched.extractingPath("$.payload.factors.pep").isEqualTo(21)
-        patched.extractingPath("$.payload.factors.staticCap").isEqualTo(25)
-        patched.extractingPath("$.payload.perExtraRule").isEqualTo(3)
-        patched.extractingPath("$.payload.bands.length()").isEqualTo(5)
-        patched.extractingPath("$.rules.length()").isEqualTo(6)
+    fun proposingFactorsChangesOnlyWhatItNames() {
+        val draft = assertThat(propose(factors = """{"unknownRuleScore": 55, "pep": 21}""")).hasStatusOk().bodyJson()
+        draft.extractingPath("$.version").isEqualTo(2)
+        draft.extractingPath("$.status").isEqualTo("draft")
+        draft.extractingPath("$.payload.unknownRuleScore").isEqualTo(55)
+        draft.extractingPath("$.payload.factors.pep").isEqualTo(21)
+        draft.extractingPath("$.payload.factors.staticCap").isEqualTo(25)
+        draft.extractingPath("$.payload.perExtraRule").isEqualTo(3)
+        draft.extractingPath("$.payload.bands.length()").isEqualTo(5)
+        draft.extractingPath("$.rules.length()").isEqualTo(6)
     }
 
     @Test
-    fun aPatchThatWouldProduceAnInvalidConfigRollsBack() {
-        assertThat(patchFactors("""{"author": "J. Novák", "unknownRuleScore": 101}""")).hasStatus(HttpStatus.BAD_REQUEST)
+    fun aDraftIsSentToAnApproverWhoIsNeitherItsAuthorNorItsSender() {
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+
+        val pending = assertThat(submit(2)).hasStatusOk().bodyJson()
+        pending.extractingPath("$.status").isEqualTo("pending")
+        pending.extractingPath("$.assignee").isEqualTo(name("COMPLIANCE_OFFICER"))
+
+        // A pending version is no longer edited: the next change waits for it to be decided.
+        assertThat(propose(rules = """[{"ruleKey": "B1", "baseScore": 55}]""")).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("waiting for")
+    }
+
+    @Test
+    fun aDraftCannotBeSentToItsOwnAuthor() {
+        assertThat(propose(author = name("COMPLIANCE_OFFICER"), rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+        assertThat(submit(2, approverId = userId("COMPLIANCE_OFFICER"))).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("needs an approver")
+        // An analyst is too junior to approve one.
+        assertThat(submit(2, approverId = userId("ANALYST"))).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun approvingThePendingVersionActivatesItAndRetiresTheOneThatWasActive() {
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+        assertThat(submit(2)).hasStatusOk()
+
+        val approved = assertThat(approve(2)).hasStatusOk().bodyJson()
+        approved.extractingPath("$.status").isEqualTo("active")
+        approved.extractingPath("$.approver").isEqualTo(name("COMPLIANCE_OFFICER"))
+        approved.extractingPath("$.assignee").isEqualTo(null)
+
+        assertThat(mvc.get().uri("/api/triage/config/1")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("retired")
+        assertThat(mvc.get().uri("/api/triage/config")).hasStatusOk().bodyJson().extractingPath("$.rules[0].baseScore").isEqualTo(30)
+    }
+
+    @Test
+    fun nobodyApprovesTheirOwnVersionAndAnAnalystApprovesNone() {
+        assertThat(propose(author = name("COMPLIANCE_OFFICER"), rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+        assertThat(submit(2, approverId = userId("COMPLIANCE_MANAGER"))).hasStatusOk()
+
+        assertThat(approve(2)).hasStatus(HttpStatus.FORBIDDEN)
+            .bodyJson().extractingPath("$.detail").asString().contains("wrote this version")
+        assertThat(approve(2, user = userId("ANALYST"))).hasStatus(HttpStatus.FORBIDDEN)
+        assertThat(approve(2, user = userId("COMPLIANCE_MANAGER"))).hasStatusOk()
+    }
+
+    @Test
+    fun rejectingSendsThePendingVersionBackToDraft() {
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+        assertThat(submit(2)).hasStatusOk()
+
+        val rejected = assertThat(reject(2)).hasStatusOk().bodyJson()
+        rejected.extractingPath("$.status").isEqualTo("draft")
+        rejected.extractingPath("$.assignee").isEqualTo(null)
+        // It is editable again, and triage still runs under version 1.
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 40}]""")).hasStatusOk()
+            .bodyJson().extractingPath("$.version").isEqualTo(2)
+        assertThat(mvc.get().uri("/api/triage/config")).hasStatusOk().bodyJson().extractingPath("$.version").isEqualTo(1)
+    }
+
+    @Test
+    fun onlyADraftIsDeleted() {
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatusOk()
+        assertThat(mvc.delete().uri("/api/triage/config/2")).hasStatus(HttpStatus.NO_CONTENT)
+        assertThat(mvc.get().uri("/api/triage/configs")).hasStatusOk().bodyJson().extractingPath("$.length()").isEqualTo(1)
+
+        assertThat(mvc.delete().uri("/api/triage/config/1")).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("only a draft")
+        assertThat(mvc.delete().uri("/api/triage/config/999")).hasStatus(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun aProposalThatWouldProduceAnInvalidConfigRollsBack() {
+        assertThat(propose(factors = """{"unknownRuleScore": 101}""")).hasStatus(HttpStatus.BAD_REQUEST)
             .bodyJson().extractingPath("$.detail").asString().contains("unknownRuleScore")
 
         // Nothing half-applied: no new version, and the one that was active still is.
@@ -238,16 +333,16 @@ class TriageConfigControllerTest {
     }
 
     @Test
-    fun aPatchWithoutAnAuthorIs400() {
-        assertThat(patchRule("A1", """{"author": " ", "baseScore": 30}""")).hasStatus(HttpStatus.BAD_REQUEST)
+    fun aProposalWithoutAnAuthorOrWithoutAChangeIs400() {
+        assertThat(propose(author = " ", rules = """[{"ruleKey": "A1", "baseScore": 30}]""")).hasStatus(HttpStatus.BAD_REQUEST)
             .bodyJson().extractingPath("$.detail").asString().contains("author")
-        assertThat(patchFactors("""{"author": " ", "pep": 20}""")).hasStatus(HttpStatus.BAD_REQUEST)
-            .bodyJson().extractingPath("$.detail").asString().contains("author")
+        assertThat(propose()).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("at least one")
     }
 
     @Test
-    fun aRuleBaseScoreOutsideTheRangeIsRejectedByThePatchToo() {
-        assertThat(patchRule("A1", """{"author": "J. Novák", "baseScore": 101}""")).hasStatus(HttpStatus.BAD_REQUEST)
+    fun aRuleBaseScoreOutsideTheRangeIsRejectedByAProposalToo() {
+        assertThat(propose(rules = """[{"ruleKey": "A1", "baseScore": 101}]""")).hasStatus(HttpStatus.BAD_REQUEST)
             .bodyJson().extractingPath("$.detail").asString().contains("base score")
         assertThat(mvc.get().uri("/api/triage/configs")).hasStatusOk().bodyJson().extractingPath("$.length()").isEqualTo(1)
     }
@@ -271,19 +366,29 @@ class TriageConfigControllerTest {
 
     private fun post(body: String) = mvc.post().uri("/api/triage/config").contentType(MediaType.APPLICATION_JSON).content(body)
 
-    private fun patchRule(ruleKey: String, body: String, user: Long? = userId("COMPLIANCE_OFFICER")) =
-        mvc.patch().uri("/api/triage/config/rules/$ruleKey").contentType(MediaType.APPLICATION_JSON).content(body)
-            .apply { if (user != null) header("X-User-Id", user.toString()) }
+    /** Proposes a change as a draft. The author defaults to the analyst the UI signs a save with. */
+    private fun propose(author: String = "J. Novák", rules: String = "[]", factors: String = "{}") =
+        mvc.post().uri("/api/triage/config/draft").contentType(MediaType.APPLICATION_JSON)
+            .content("""{ "author": "$author", "rules": $rules, "factors": $factors }""")
 
-    private fun patchFactors(body: String) =
-        mvc.patch().uri("/api/triage/config/factors").contentType(MediaType.APPLICATION_JSON).content(body)
-            .header("X-User-Id", userId("COMPLIANCE_OFFICER").toString())
+    private fun submit(version: Int, approverId: Long? = null) =
+        mvc.post().uri("/api/triage/config/$version/submit").contentType(MediaType.APPLICATION_JSON)
+            .content(if (approverId == null) "{}" else """{"approverId": $approverId}""")
+
+    private fun approve(version: Int, user: Long = userId("COMPLIANCE_OFFICER")) =
+        mvc.post().uri("/api/triage/config/$version/approve").header("X-User-Id", user.toString())
+
+    private fun reject(version: Int, user: Long = userId("COMPLIANCE_OFFICER")) =
+        mvc.post().uri("/api/triage/config/$version/reject").header("X-User-Id", user.toString())
 
     private fun activate(version: Int, user: Long? = userId("COMPLIANCE_OFFICER")) =
         mvc.post().uri("/api/triage/config/$version/activate").apply { if (user != null) header("X-User-Id", user.toString()) }
 
     private fun userId(role: String) =
         jdbc.sql("select min(id) from app_user where role = ?").param(role).query(Long::class.java).single()
+
+    private fun name(role: String) =
+        jdbc.sql("select name from app_user where id = ?").param(userId(role)).query(String::class.java).single()
 
     private fun body(
         author: String = "J. Novák",

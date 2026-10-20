@@ -4,18 +4,52 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@/test/render";
 
 import { TriageScoringPage } from "../TriageScoringPage";
-import { CONFIG, COVERAGE, json, problem, rescored, RULES } from "./fixtures";
+import {
+  ANALYST,
+  as,
+  CONFIG,
+  COVERAGE,
+  json,
+  MANAGER,
+  OFFICER,
+  problem,
+  proposed,
+  RULES,
+  USERS,
+} from "./fixtures";
+
+import type { TriageConfigVersion } from "../api";
+import type { User } from "@/user";
 
 afterEach(() => vi.unstubAllGlobals());
 
-/** Serves the three loads; `onPatch` answers each rescore, by the rule key in its URL. */
-const serve = (
-  onPatch: (url: string) => Response | Promise<Response> = () => json(rescored("A1", 30)),
-) => {
+type ServeOptions = {
+  /** What `GET /api/triage/configs` answers with, newest first. */
+  versions?: TriageConfigVersion[];
+  /** What it answers with once a change has gone through — the reload every mutation ends with. */
+  after?: TriageConfigVersion[];
+  /** Answers every POST, by the URL it was sent to. */
+  onPost?: (url: string) => Response | Promise<Response>;
+  /** Answers `DELETE /api/triage/config/{version}`. */
+  onDelete?: () => Response | Promise<Response>;
+};
+
+const serve = ({
+  versions = [CONFIG],
+  after,
+  onPost = () => json(proposed({ A1: 30 })),
+  onDelete = () => new Response(null, { status: 204 }),
+}: ServeOptions = {}) => {
+  let stored = versions;
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-    if (init?.method === "PATCH") return onPatch(url);
+    if (init?.method === "POST" || init?.method === "DELETE") {
+      const res = init.method === "POST" ? await onPost(url) : await onDelete();
+      // A refused change stores nothing, so only a successful one moves what the reload reads back.
+      if (res.ok && after) stored = after;
+      return res;
+    }
+    if (url.startsWith("/api/triage/configs")) return json(stored);
     if (url.startsWith("/api/triage/coverage")) return json(COVERAGE);
-    if (url.startsWith("/api/triage/config")) return json(CONFIG);
     if (url.startsWith("/api/rules")) return json(RULES);
     throw new Error(`unexpected fetch: ${url}`);
   });
@@ -33,15 +67,15 @@ const revertOf = (key: string) =>
 
 const saveButton = () => screen.getByRole("button", { name: /^Sav/ });
 
-const patches = (fetch: ReturnType<typeof serve>) =>
-  fetch.mock.calls.filter(([, init]) => init?.method === "PATCH");
+const posts = (fetch: ReturnType<typeof serve>) =>
+  fetch.mock.calls.filter(([, init]) => init?.method === "POST");
 
 const bodiesOf = (fetch: ReturnType<typeof serve>) =>
-  patches(fetch).map(([url, init]) => [url, JSON.parse(String(init?.body))]);
+  posts(fetch).map(([url, init]) => [url, JSON.parse(String(init?.body))]);
 
-/** Loads the page and waits for the table. */
-const open = async () => {
-  render(<TriageScoringPage author="J. Novák" />);
+/** Loads the page as [user] and waits for the table. */
+const open = async (user: User = ANALYST) => {
+  render(<TriageScoringPage author={user.name} user={user} users={USERS} />);
   await findSlider("A1");
 };
 
@@ -80,7 +114,7 @@ describe("TriageScoringPage", () => {
     await open();
     fireEvent.change(slider("A1"), { target: { value: "30" } });
 
-    expect(patches(fetch)).toHaveLength(0);
+    expect(posts(fetch)).toHaveLength(0);
     expect(slider("A1")).toHaveValue("30");
     expect(revertOf("A1")).toBeInTheDocument();
     // The score and the band follow the draft, so the row reads as it will once saved.
@@ -155,7 +189,7 @@ describe("TriageScoringPage", () => {
     expect(screen.getByText("1 unsaved change · B2")).toBeInTheDocument();
     // The other change is untouched, and nothing went to the engine.
     expect(slider("B2")).toHaveValue("50");
-    expect(patches(fetch)).toHaveLength(0);
+    expect(posts(fetch)).toHaveLength(0);
   });
 
   it("discards every change at once", async () => {
@@ -171,7 +205,7 @@ describe("TriageScoringPage", () => {
     expect(slider("B2")).toHaveValue("35");
     expect(screen.queryByRole("button", { name: "Discard" })).not.toBeInTheDocument();
     expect(saveButton()).toBeDisabled();
-    expect(patches(fetch)).toHaveLength(0);
+    expect(posts(fetch)).toHaveLength(0);
   });
 
   it("disables Save again when a slider goes back to the score it started on", async () => {
@@ -186,34 +220,35 @@ describe("TriageScoringPage", () => {
     expect(screen.queryByRole("button", { name: /^Revert A1/ })).not.toBeInTheDocument();
   });
 
-  it("saves one PATCH per changed rule, in key order, carrying each rule's flags over", async () => {
-    const fetch = serve((url) => json(rescored(url.endsWith("A1") ? "A1" : "B2", 30)));
+  it("saves every changed score as one draft version, in key order, carrying each rule's flags over", async () => {
+    const draft = proposed({ A1: 30, B2: 50 });
+    const fetch = serve({ after: [draft, CONFIG], onPost: () => json(draft) });
     await open();
     fireEvent.change(slider("B2"), { target: { value: "50" } });
     fireEvent.change(slider("A1"), { target: { value: "30" } });
     fireEvent.click(saveButton());
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(/^Saved at \d\d:\d\d · applies from the next run$/),
-      ).toBeInTheDocument(),
-    );
+    expect(await screen.findByText(/Draft v2 — not deciding alerts yet/)).toBeInTheDocument();
     expect(bodiesOf(fetch)).toEqual([
       [
-        "/api/triage/config/rules/A1",
-        { author: "J. Novák", baseScore: 30, autoCloseable: true, impliesPep: false },
-      ],
-      [
-        "/api/triage/config/rules/B2",
-        { author: "J. Novák", baseScore: 50, autoCloseable: false, impliesPep: true },
+        "/api/triage/config/draft",
+        {
+          author: "J. Novák",
+          rules: [
+            { ruleKey: "A1", baseScore: 30, autoCloseable: true, impliesPep: false },
+            { ruleKey: "B2", baseScore: 50, autoCloseable: false, impliesPep: true },
+          ],
+        },
       ],
     ]);
     expect(saveButton()).toBeDisabled();
     expect(screen.queryByRole("button", { name: /^Revert/ })).not.toBeInTheDocument();
+    // Nothing is live yet: the footer says what is still missing.
+    expect(screen.getByText(/send it for approval to apply it/)).toBeInTheDocument();
   });
 
-  it("keeps the rule dirty and says why when the engine refuses the score", async () => {
-    const fetch = serve(() => problem("a base score must be between 0 and 100"));
+  it("keeps the rule dirty and says why when the engine refuses the proposal", async () => {
+    const fetch = serve({ onPost: () => problem("a base score must be between 0 and 100") });
     await open();
     fireEvent.change(slider("A1"), { target: { value: "30" } });
     fireEvent.click(saveButton());
@@ -221,69 +256,315 @@ describe("TriageScoringPage", () => {
     expect(
       await screen.findByText("Could not save: a base score must be between 0 and 100"),
     ).toBeInTheDocument();
-    expect(patches(fetch)).toHaveLength(1);
+    expect(posts(fetch)).toHaveLength(1);
     expect(screen.getByText(/^1 unsaved change · /)).toBeInTheDocument();
     expect(saveButton()).toBeEnabled();
     expect(revertOf("A1")).toBeInTheDocument();
     expect(slider("A1")).toHaveValue("30");
   });
 
-  it("stops at a refused patch, keeping the rules already written and the rest dirty", async () => {
-    const fetch = serve((url) =>
-      url.endsWith("A1") ? json(rescored("A1", 30)) : problem("rule B2 is scored twice"),
-    );
-    await open();
-    fireEvent.change(slider("A1"), { target: { value: "30" } });
-    fireEvent.change(slider("B2"), { target: { value: "50" } });
-    fireEvent.click(saveButton());
-
-    expect(await screen.findByText("Could not save: rule B2 is scored twice")).toBeInTheDocument();
-    expect(patches(fetch)).toHaveLength(2);
-    // A1 went through and is no longer dirty; B2 did not and still is.
-    expect(screen.getByText(/^1 unsaved change · /)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Revert A1/ })).not.toBeInTheDocument();
-    expect(revertOf("B2")).toBeInTheDocument();
-  });
-
   it("makes the whole table read-only while a save is in flight", async () => {
-    // The PATCH is held open, so the table can be inspected mid-save.
+    // The POST is held open, so the table can be inspected mid-save.
     let release: ((answer: Response) => void) | undefined;
     const held = new Promise<Response>((resolve) => {
       release = resolve;
     });
-    serve(() => held);
+    serve({ onPost: () => held });
     await open();
     fireEvent.change(slider("A1"), { target: { value: "30" } });
     fireEvent.click(saveButton());
 
     await waitFor(() => expect(slider("A1")).toBeDisabled());
     expect(slider("B2")).toBeDisabled();
-    expect(slider("C1")).toBeDisabled();
     expect(saveButton()).toBeDisabled();
     expect(saveButton()).toHaveTextContent("Saving…");
     expect(screen.getByRole("button", { name: "Discard" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Revert A1 to 8" })).toBeDisabled();
 
     await act(async () => {
-      release?.(json(rescored("A1", 30)));
+      release?.(json(proposed({ A1: 30 })));
       await held;
     });
     await waitFor(() => expect(slider("B2")).toBeEnabled());
   });
 
   it("offers a retry when the config cannot be loaded", async () => {
-    const fetch = vi.fn(async (url: string) =>
-      url.startsWith("/api/triage/config")
-        ? problem("no triage config is active", 404)
-        : json(url.startsWith("/api/rules") ? RULES : COVERAGE),
-    );
+    const fetch = vi.fn(async (url: string) => {
+      if (url.startsWith("/api/triage/configs")) return problem("the engine is down", 500);
+      return json(url.startsWith("/api/rules") ? RULES : COVERAGE);
+    });
     vi.stubGlobal("fetch", fetch);
-    render(<TriageScoringPage author="J. Novák" />);
+    render(<TriageScoringPage author={ANALYST.name} user={ANALYST} users={USERS} />);
+
+    expect(
+      await screen.findByText(/Could not load the rule scores: the engine is down/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(fetch.mock.calls.length).toBeGreaterThan(3));
+  });
+
+  it("says so when no version is active, rather than showing an empty table", async () => {
+    serve({ versions: [as(CONFIG, { status: "retired" })] });
+    render(<TriageScoringPage author={ANALYST.name} user={ANALYST} users={USERS} />);
 
     expect(
       await screen.findByText(/Could not load the rule scores: no triage config is active/),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    await waitFor(() => expect(fetch.mock.calls.length).toBeGreaterThan(3));
+  });
+});
+
+describe("the open proposal", () => {
+  const draft = proposed({ A1: 30 });
+  const pending = proposed({ A1: 30 }, { status: "pending", assignee: OFFICER.name });
+  const activated = proposed({ A1: 30 }, { status: "active", approver: OFFICER.name });
+
+  it("shows what the draft would change and the sliders sitting on it", async () => {
+    serve({ versions: [draft, CONFIG] });
+    await open();
+
+    expect(screen.getByText("Draft v2 — not deciding alerts yet")).toBeInTheDocument();
+    expect(screen.getByText(/^Drafted by J. Novák, 2026-10-20 \d\d:00$/)).toBeInTheDocument();
+    expect(screen.getByText("One score changes against v1:")).toBeInTheDocument();
+    // The table shows the draft, so an edit stacks onto it rather than onto the active config.
+    expect(slider("A1")).toHaveValue("30");
+    expect(screen.getByText("Saved to draft v2 · send it for approval to apply it")).toBeTruthy();
+  });
+
+  it("sends the draft to an approver who neither wrote nor sends it", async () => {
+    const fetch = serve({
+      versions: [draft, CONFIG],
+      after: [pending, CONFIG],
+      onPost: () => json(pending),
+    });
+    await open();
+
+    // The author is an analyst, so both approvers are eligible and the compliance officer is the default.
+    fireEvent.click(screen.getByRole("button", { name: "Choose approver" }));
+    expect(screen.getAllByRole("menuitem").map((b) => b.textContent)).toEqual([
+      "M. Svobodová· Compliance officer",
+      "P. Dvořák· Compliance manager",
+    ]);
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Send to M. Svobodová" }));
+
+    expect(
+      await screen.findByText("v2 waiting for approval by M. Svobodová — not deciding alerts yet"),
+    ).toBeInTheDocument();
+    expect(bodiesOf(fetch)).toEqual([["/api/triage/config/2/submit", { approverId: OFFICER.id }]]);
+  });
+
+  it("leaves a pending version read-only for its author", async () => {
+    serve({ versions: [pending, CONFIG] });
+    await open();
+
+    expect(slider("A1")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^Sav/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Approve/ })).not.toBeInTheDocument();
+  });
+
+  it("offers Approve and Reject to the approver it was sent to", async () => {
+    const fetch = serve({
+      versions: [pending, CONFIG],
+      after: [activated, as(CONFIG, { status: "retired" })],
+      onPost: () => json(activated),
+    });
+    await open(OFFICER);
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve v2" }));
+
+    await waitFor(() => expect(screen.queryByText(/not deciding alerts yet/)).toBeNull());
+    expect(bodiesOf(fetch)).toEqual([["/api/triage/config/2/approve", {}]]);
+    // What the table shows is the newly active config.
+    expect(slider("A1")).toHaveValue("30");
+  });
+
+  it("sends a pending version back to draft when it is rejected", async () => {
+    const fetch = serve({
+      versions: [pending, CONFIG],
+      after: [draft, CONFIG],
+      onPost: () => json(draft),
+    });
+    await open(OFFICER);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+
+    expect(await screen.findByText("Draft v2 — not deciding alerts yet")).toBeInTheDocument();
+    expect(bodiesOf(fetch)).toEqual([["/api/triage/config/2/reject", {}]]);
+    // It is editable again.
+    expect(slider("A1")).toBeEnabled();
+  });
+
+  it("hides the decision from a compliance manager it was not sent to", async () => {
+    serve({ versions: [pending, CONFIG] });
+    await open(MANAGER);
+    expect(screen.queryByRole("button", { name: /^Approve/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+  });
+
+  it("throws the draft away with everything it proposed", async () => {
+    const fetch = serve({ versions: [draft, CONFIG], after: [CONFIG] });
+    await open();
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard draft" }));
+
+    await waitFor(() => expect(screen.queryByText(/not deciding alerts yet/)).toBeNull());
+    expect(fetch.mock.calls.filter(([, init]) => init?.method === "DELETE")).toEqual([
+      ["/api/triage/config/2", expect.objectContaining({ method: "DELETE" })],
+    ]);
+    // The table is back on the active config.
+    expect(slider("A1")).toHaveValue("8");
+  });
+
+  it("says why when the engine refuses a decision", async () => {
+    serve({
+      versions: [pending, CONFIG],
+      onPost: () => problem("M. Svobodová wrote this version", 403),
+    });
+    await open(OFFICER);
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve v2" }));
+
+    expect(
+      await screen.findByText("Could not save: M. Svobodová wrote this version"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve v2" })).toBeInTheDocument();
+  });
+});
+
+describe("the version strip in the header", () => {
+  const pending = proposed({ A1: 30 }, { status: "pending", assignee: OFFICER.name });
+
+  it("shows the version being decided beside the live one, newest first", async () => {
+    serve({ versions: [pending, CONFIG] });
+    await open();
+
+    expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
+      "v2in review",
+      "v1active",
+    ]);
+    expect(screen.getByRole("tab", { name: /^v2/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("names who submitted the version it is on and who is reviewing it", async () => {
+    serve({ versions: [pending, CONFIG] });
+    await open();
+    expect(
+      screen.getByText(/^Submitted by J. Novák, 2026-10-20 \d\d:00 · reviewer M. Svobodová$/),
+    ).toBeInTheDocument();
+  });
+
+  it("switches what the table shows, and says what the version it moved to is", async () => {
+    serve({ versions: [pending, CONFIG] });
+    await open();
+    expect(slider("A1")).toHaveValue("30");
+
+    fireEvent.click(screen.getByRole("tab", { name: /^v1/ }));
+
+    expect(slider("A1")).toHaveValue("8");
+    expect(screen.getByText(/^Active since 2026-10-20 \d\d:00 · by finreg-brief$/)).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^v1/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("carries a version opened from the history, so the strip always says where the reader is", async () => {
+    const activated = proposed({ A1: 30 }, { status: "active" });
+    serve({ versions: [activated, as(CONFIG, { status: "retired" })] });
+    await open();
+    expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["v2active"]);
+
+    fireEvent.click(screen.getByRole("button", { name: /^v1/ }));
+
+    expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual(["v2active", "v1retired"]);
+  });
+});
+
+describe("the version history", () => {
+  const draft = proposed({ A1: 30 });
+  const retiredV1 = as(CONFIG, { status: "retired" });
+
+  it("lists every stored version, newest first, with what it changed", async () => {
+    serve({ versions: [draft, CONFIG] });
+    await open();
+
+    const rows = screen.getAllByRole("button", { name: /^v\d/ }).map((b) => b.textContent);
+    expect(rows).toEqual([
+      "v2DraftA1 8 → 30J. Novák2026-10-20 09:00",
+      "v1ActiveFirst version · 2 rules scoredfinreg-brief2026-10-20 09:00",
+    ]);
+  });
+
+  it("marks the version the table is showing", async () => {
+    serve({ versions: [draft, CONFIG] });
+    await open();
+    expect(screen.getByRole("button", { name: /^v2/ })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: /^v1/ })).toHaveAttribute("aria-current", "false");
+  });
+
+  it("opens an earlier version read-only, and gets back to the one an edit lands in", async () => {
+    serve({ versions: [draft, CONFIG] });
+    await open();
+
+    fireEvent.click(screen.getByRole("button", { name: /^v1/ }));
+
+    // The table shows what v1 scored, and nothing on the page can change it.
+    expect(slider("A1")).toHaveValue("8");
+    expect(slider("A1")).toBeDisabled();
+    expect(screen.getByText(/Viewing v1 \(active\), as it was on 2026-10-20 09:00\./)).toBeTruthy();
+    expect(screen.getByText(/Read-only — scores are changed on v2\./)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Sav/ })).not.toBeInTheDocument();
+    // The draft's panel steps aside while an earlier version is open.
+    expect(screen.queryByText(/not deciding alerts yet/)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to v2" }));
+
+    expect(slider("A1")).toHaveValue("30");
+    expect(slider("A1")).toBeEnabled();
+    expect(screen.getByText("Draft v2 — not deciding alerts yet")).toBeInTheDocument();
+  });
+
+  it("shows the last ten and reveals the rest a page at a time", async () => {
+    // Twelve versions: v12 active, the rest retired below it.
+    const many = Array.from({ length: 12 }, (_, i) =>
+      as(CONFIG, {
+        version: 12 - i,
+        status: i === 0 ? "active" : "retired",
+        rules: [{ ruleKey: "A1", baseScore: 12 - i, autoCloseable: true, impliesPep: false }],
+      }),
+    );
+    serve({ versions: many });
+    await open();
+
+    const shownVersions = () =>
+      screen
+        .getAllByRole("button", { name: /^v\d/ })
+        .map((b) => /^v\d+/.exec(b.textContent ?? "")?.[0]);
+    expect(shownVersions()).toHaveLength(10);
+    expect(shownVersions()[0]).toBe("v12");
+    expect(shownVersions().at(-1)).toBe("v3");
+    expect(screen.getByText("10 of 12 versions")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show 2 more" }));
+
+    expect(shownVersions()).toHaveLength(12);
+    expect(shownVersions().at(-1)).toBe("v1");
+    expect(screen.queryByRole("button", { name: /^Show \d+ more/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/of 12 versions/)).not.toBeInTheDocument();
+  });
+
+  it("offers no Show more when everything already fits", async () => {
+    serve({ versions: [CONFIG] });
+    await open();
+    expect(screen.queryByRole("button", { name: /^Show \d+ more/ })).not.toBeInTheDocument();
+  });
+
+  it("reads a retired version against the one before it", async () => {
+    const activated = proposed({ A1: 30 }, { status: "active" });
+    serve({ versions: [activated, retiredV1] });
+    await open();
+
+    fireEvent.click(screen.getByRole("button", { name: /^v1/ }));
+
+    expect(screen.getByText(/Viewing v1 \(retired\)/)).toBeInTheDocument();
+    expect(slider("A1")).toHaveValue("8");
   });
 });
