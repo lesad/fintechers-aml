@@ -114,3 +114,20 @@ Schema changes are Liquibase SQL files in `src/main/resources/db/migrations/`, l
 Rule CEL declares every field as a qualified name (`tx.amount`, `client.pep`, `p.min_inflow`) with a concrete type; the vocabulary is in `src/main/kotlin/.../cel/Vocabulary.kt`.
 
 Variable filters are compiled to SQL with [cel2sql4j](https://github.com/SPANDigital/cel2sql4j) (`sql/Cel2SqlFilterCompiler.kt`). It does not accept qualified identifiers or dotted column aliases, so the filter sees `tx` as a map and earlier variables by bare column name; `RuleCompiler` type-checks the same filter against the full vocabulary.
+
+## Rule suggestion eval
+
+`scripts/eval/suggestion-eval.mts` walks the reviewer's path through the API for sampled alerts and scores the rule suggestion, so a change to `src/main/resources/prompts/rule-suggestion.md` is judged on numbers instead of single tries. Per alert it reads `GET /api/transactions/{id}`, gets or generates the AI Rating, has a simulated reviewer (Sonnet 4.5, `scripts/eval/reviewer-prompt.md`) write a false-positive reason, posts it to `/suggestion` a few times, and grades every fired rule with Opus 4.5 (`scripts/eval/grader-prompt.md`). It saves no decision, so runs repeat on the same data; it does store AI Ratings it had to generate.
+
+The reviewer writes in three modes, in the mix of [`docs/challenge/aml-review-workflow.md`](../docs/challenge/aml-review-workflow.md): `pattern` (about 60 %, should fire), `one-off` (25 %, should answer none) and `trap` (15 %: PEP routine, unverified, outdated profile; should not fire).
+
+```sh
+# engine, with the prompt read from src/ on every call (no restart after an edit)
+AWS_PROFILE=hackathon ENGINE_PORT=8090 ENGINE_PROMPTSDIR=src/main/resources/prompts ./gradlew bootRun
+# from frontend/
+AWS_PROFILE=hackathon pnpm eval:suggestion -- --per-rating 5 --reps 2 --seed 7
+pnpm eval:suggestion -- --ids TX000068908,TX000029968 --modes pattern,one-off
+pnpm eval:suggestion -- --compare ../data/out/eval/<a>.jsonl,../data/out/eval/<b>.jsonl
+```
+
+Flags: `--per-rating N` cases per rating (High, Medium, Low, status `NEW`), `--reps R` suggestion calls per reason, `--seed S` (same seed, same cases), `--mode pattern|one-off|trap`, `--concurrency C`, `--engine URL` (default `ENGINE_URL` or `http://127.0.0.1:8090`). Every call is a line in `data/out/eval/<time>.jsonl`; the summary next to it splits by prompt hash, mode, rating and alert type: fired, none, gate declines, check rejections, success, grader pass, too broad, remedy fits, mean hits stopped. `ENGINE_PROMPTSDIR` is the environment form of `engine.prompts-dir`; each suggestion returns `promptHash`, the first 12 hex of the sha256 of the prompt and schema it was made with.
