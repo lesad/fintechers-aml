@@ -50,6 +50,8 @@ describe("formatting", () => {
     ["2026-10-19T14:18", "12 min"],
     ["2026-10-19T09:27", "5h 3m"],
     ["2026-10-17T10:30", "2d 4h"],
+    // Flagged after the clock was last read: just in, never negative.
+    ["2026-10-19T14:32", "0 min"],
   ])("age since %s is %s", (flaggedAt, age) => {
     expect(formatAge(new Date(flaggedAt), now)).toBe(age);
   });

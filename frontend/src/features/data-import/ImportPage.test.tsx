@@ -9,6 +9,7 @@ const job = (over: Record<string, unknown> = {}) => ({
   id: 7,
   fileName: "tx_july.csv",
   fileSize: 2048,
+  rule: null,
   by: "J. Novák",
   startedAt: "2026-10-20T09:14:00Z",
   finishedAt: null,
@@ -87,6 +88,22 @@ describe("ImportPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Upload another file" }));
     expect(screen.getByRole("button", { name: "Upload a transactions file" })).toBeInTheDocument();
+  });
+
+  it("lists a rule approval's recalculation in the history without following it as an upload", async () => {
+    const recalculation = job({
+      id: 8,
+      fileName: null,
+      fileSize: null,
+      rule: "B2 v3",
+      stage: "RUN",
+    });
+    routes["GET /api/imports"] = () => json([recalculation]);
+    render(<ImportPage onDataChanged={() => {}} />);
+
+    expect(await screen.findByText("Recalculation · B2 v3 approved")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload a transactions file" })).toBeInTheDocument();
+    routes["GET /api/imports"] = () => json([]);
   });
 
   it("shows a failed import with its reason", async () => {

@@ -40,7 +40,8 @@ const columns: Column<ImportJob>[] = [
     key: "file",
     header: "File",
     className: "font-mono text-xs text-ellipsis",
-    cell: (j) => j.fileName,
+    // A rule approval's recalculation has no file; it names the approved version.
+    cell: (j) => j.fileName ?? <span className="font-sans">Recalculation · {j.rule} approved</span>,
   },
   {
     key: "at",
@@ -56,7 +57,7 @@ const columns: Column<ImportJob>[] = [
     width: 96,
     align: "right",
     className: "tabular-nums",
-    cell: (j) => (j.status === "FAILED" ? "—" : formatCount(j.rowsImported)),
+    cell: (j) => (j.status === "FAILED" || j.rule !== null ? "—" : formatCount(j.rowsImported)),
   },
   {
     key: "alerts",

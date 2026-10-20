@@ -87,7 +87,8 @@ export const CASE_STATUS: Record<AlertStatus, CaseStatus> = {
 
 /** "12 min", "5h 3m", "2d 4h". */
 export function formatAge(flagged: Date, now: Date): string {
-  const m = Math.round((now.getTime() - flagged.getTime()) / 60_000);
+  // Data newer than the clock the caller last read is just in, not from the future.
+  const m = Math.max(0, Math.round((now.getTime() - flagged.getTime()) / 60_000));
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ${m % 60}m`;

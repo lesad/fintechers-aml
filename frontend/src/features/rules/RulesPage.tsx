@@ -21,6 +21,8 @@ type RulesPageProps = {
   users: User[];
   /** Opens the backtest just started for [draft] in its own tab. */
   onBacktest: (draft: RuleVersion) => void;
+  /** A version was approved and is now active; the engine recalculates the alerts with it. */
+  onApproved?: (approved: RuleVersion) => void;
 };
 
 /** A dialog over the selected draft. */
@@ -33,7 +35,7 @@ type Mode =
 
 const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg hover:bg-hover";
 
-export function RulesPage({ author, user, users, onBacktest }: RulesPageProps) {
+export function RulesPage({ author, user, users, onBacktest, onApproved }: RulesPageProps) {
   const rules = useRules();
   const { selectedKey, setSelectedKey, selectedId, setSelectedId } = useSelection();
   const [mode, setMode] = useState<Mode>({ kind: "view" });
@@ -95,6 +97,8 @@ export function RulesPage({ author, user, users, onBacktest }: RulesPageProps) {
                 setSaved((s) => [...s.filter((x) => x.key !== v.key), v]);
                 select(v.key, v.id);
                 rules.reload();
+                // Only an approval makes a version active; a save is a draft, a submit pending.
+                if (v.status === "active") onApproved?.(v);
               }}
             />
           </div>

@@ -9,6 +9,7 @@ import {
   StatusLabel,
   Table,
 } from "@/components";
+import { useNow } from "@/hooks";
 
 import {
   DISPOSITION_LABEL,
@@ -61,7 +62,7 @@ export function ReviewQueue({
   openIds,
   onOpen,
 }: ReviewQueueProps) {
-  const now = new Date();
+  const now = useNow();
   const hasFilters =
     filter.query !== "" || filter.rating !== "all" || filter.status !== "all" || filter.aiOnly;
 

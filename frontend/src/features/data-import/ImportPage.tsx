@@ -51,10 +51,15 @@ export function ImportPage({ onDataChanged }: { onDataChanged: () => void }) {
   // On open: the history, and a job still running from before (another tab, a reload) to follow.
   useEffect(() => {
     void loadHistory().then((jobs) => {
-      const running = jobs.find((j) => j.status === null);
+      // An upload still running; a rule approval's recalculation has no file and shows in the history only.
+      const running = jobs.find((j) => j.status === null && j.fileName !== null);
       if (running)
         setCurrent(
-          (c) => c ?? { file: { name: running.fileName, size: running.fileSize }, job: running },
+          (c) =>
+            c ?? {
+              file: { name: running.fileName ?? "", size: running.fileSize ?? 0 },
+              job: running,
+            },
         );
     });
     // Loads once on open; `loadHistory` only wraps setters.

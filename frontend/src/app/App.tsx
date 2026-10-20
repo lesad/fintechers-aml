@@ -33,7 +33,8 @@ import {
   settingsPath,
   useAppRoutes,
 } from "./use-app-routes";
-import { useBacktestProgress } from "./use-backtest-progress";
+import { type ToastMessage, useBacktestProgress } from "./use-backtest-progress";
+import { useRecalculation } from "./use-recalculation";
 
 const NO_COUNTS: Record<RiskLevel, number> = { High: 0, Medium: 0, Low: 0 };
 
@@ -54,7 +55,9 @@ export function App() {
   // were started from it, so an open tab loads a new one afresh.
   const [btLabels, setBtLabels] = useState<Record<string, string>>({});
   const [btStarts, setBtStarts] = useState<Record<string, number>>({});
-  const backtests = useBacktestProgress(tabs.active);
+  // The app's one toast: backtests and alert recalculations report through it, the latest message wins.
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const backtests = useBacktestProgress(tabs.active, setToast);
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const [users, setUsers] = useState<User[]>([]);
@@ -89,6 +92,8 @@ export function App() {
     assignee: role === "COMPLIANCE_MANAGER" ? undefined : user?.id,
     aiOnly: filter.aiOnly,
   });
+  // An approved rule version recalculates the alerts in the background; the queue reloads once it is done.
+  const recalculation = useRecalculation(setToast, queue.reload);
   const items = review.apply(useAutoAssess(queue.items, !queue.loading));
   const rating = new Map(items.map((r) => [r.id, r.rule]));
   // The engine counts only the signed-in user's cases (X-User-Id).
@@ -188,11 +193,12 @@ export function App() {
           </div>
         ))}
       </div>
-      {backtests.toast && (
+      {toast && (
         <Toast
-          message={backtests.toast.message}
-          link={backtests.toast.link}
-          onDone={backtests.closeToast}
+          key={toast.message}
+          message={toast.message}
+          link={toast.link}
+          onDone={() => setToast(null)}
           duration={6000}
         />
       )}
@@ -215,6 +221,7 @@ export function App() {
               author={user?.name ?? ""}
               user={user}
               users={users}
+              onApproved={(v) => recalculation.start(`${v.key} v${v.version}`)}
               onBacktest={(draft) => {
                 const tab = backtestTab(draft.id);
                 setBtLabels((l) => ({ ...l, [tab]: `${draft.key} v${draft.version}` }));

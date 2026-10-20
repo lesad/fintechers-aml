@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { useBacktestProgress } from "./use-backtest-progress";
 
@@ -9,7 +9,8 @@ const BT = { ruleKey: "B2", draftVersion: 2, draftId: 12 } as Backtest;
 
 describe("a backtest running in its tab", () => {
   it("spins, then checks until the tab is opened, and says it finished", () => {
-    const { result, rerender } = renderHook(({ active }) => useBacktestProgress(active), {
+    const notify = vi.fn();
+    const { result, rerender } = renderHook(({ active }) => useBacktestProgress(active, notify), {
       initialProps: { active: null as string | null },
     });
     act(() => result.current.report("bt:12", "running", BT));
@@ -17,7 +18,7 @@ describe("a backtest running in its tab", () => {
 
     act(() => result.current.report("bt:12", "done", BT));
     expect(result.current.progress["bt:12"]).toBe("done");
-    expect(result.current.toast).toEqual({
+    expect(notify).toHaveBeenCalledWith({
       message: "Backtest of B2 v2 finished",
       link: { to: "/backtests/12", label: "Open" },
     });
@@ -27,17 +28,19 @@ describe("a backtest running in its tab", () => {
   });
 
   it("finishes without a check or a link when its tab is open", () => {
-    const { result } = renderHook(() => useBacktestProgress("bt:12"));
+    const notify = vi.fn();
+    const { result } = renderHook(() => useBacktestProgress("bt:12", notify));
     act(() => result.current.report("bt:12", "running", BT));
     act(() => result.current.report("bt:12", "failed", BT));
     expect(result.current.progress["bt:12"]).toBeUndefined();
-    expect(result.current.toast).toEqual({ message: "Backtest of B2 v2 failed", link: undefined });
+    expect(notify).toHaveBeenCalledWith({ message: "Backtest of B2 v2 failed", link: undefined });
   });
 
   it("stays quiet about a backtest that had already finished", () => {
-    const { result } = renderHook(() => useBacktestProgress(null));
+    const notify = vi.fn();
+    const { result } = renderHook(() => useBacktestProgress(null, notify));
     act(() => result.current.report("bt:12", "idle", BT));
     expect(result.current.progress).toEqual({});
-    expect(result.current.toast).toBeNull();
+    expect(notify).not.toHaveBeenCalled();
   });
 });

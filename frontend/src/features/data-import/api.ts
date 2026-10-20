@@ -6,8 +6,11 @@ import { userHeaders } from "@/user";
 
 const job = z.object({
   id: z.number(),
-  fileName: z.string(),
-  fileSize: z.number(),
+  /** Null for a recalculation after a rule approval, which has no file. */
+  fileName: z.string().nullable(),
+  fileSize: z.number().nullable(),
+  /** The approved rule version that started a recalculation, e.g. "B2 v3"; null for an upload. */
+  rule: z.string().nullable(),
   by: z.string().nullable(),
   startedAt: z.string(),
   finishedAt: z.string().nullable(),

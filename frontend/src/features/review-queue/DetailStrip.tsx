@@ -2,6 +2,7 @@ import { cva } from "class-variance-authority";
 import { useState } from "react";
 
 import { type CaseStatus, StatusLabel } from "@/components";
+import { useNow } from "@/hooks";
 import { cn } from "@/utils";
 
 import { formatAge, formatAmount, formatTs } from "./queue";
@@ -43,6 +44,7 @@ export function DetailStrip({
 }) {
   const { transaction: tx, client } = detail;
   const [breakdown, setBreakdown] = useState(false);
+  const now = useNow();
   const clientSide = { account: client.id, sub: `Client · ${sentence(client.type)}` };
   const parties =
     tx.direction === "in"
@@ -125,7 +127,7 @@ export function DetailStrip({
         )}
         {flagged && (
           <span className="text-xs whitespace-nowrap text-fg-muted">
-            flagged <b className="text-fg tabular-nums">{formatAge(flagged, new Date())}</b> ago
+            flagged <b className="text-fg tabular-nums">{formatAge(flagged, now)}</b> ago
           </span>
         )}
       </div>
