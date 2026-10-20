@@ -171,3 +171,30 @@ export function evidenceLines(hit: Hit, rule: OpoRule | undefined): Line[] {
     return variableLine([key, value], hit, rule);
   });
 }
+
+// Czech labels for the engine's English codes, as the FAÚ and audit reports print them.
+
+export const DIRECTION: Record<HistoryTransaction["direction"], string> = {
+  in: "příchozí",
+  out: "odchozí",
+  // NOTE: the importer gives only remittances no direction.
+  unknown: "remitence",
+};
+export const TX_TYPE: Record<string, string> = {
+  "incoming payment": "příchozí platba",
+  "outgoing payment": "odchozí platba",
+  remittance: "remitence (převod peněz)",
+};
+export const CLIENT_TYPE: Record<string, string> = {
+  "natural person": "fyzická osoba",
+  enterpreneur: "fyzická osoba podnikající",
+  "legal entity": "právnická osoba",
+};
+export const CHANNEL: Record<string, string> = {
+  "distant form": "na dálku",
+  "in person": "osobně",
+};
+export const RISK: Record<string, string> = { low: "nízký", medium: "střední", high: "vysoký" };
+
+export const cs = (map: Record<string, string>, v: string | null) =>
+  v === null ? null : (map[v] ?? v);

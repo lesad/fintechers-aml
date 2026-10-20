@@ -117,7 +117,24 @@ type DecisionPanelProps = {
   onDecide: (action: Decision["action"], reason: string, postponed?: boolean) => Promise<void>;
   /** Opens the FAÚ report of a reported case. */
   onFauReport: () => void;
+  onAudit: () => void;
 };
+
+/** The decision box's title row, with the case's audit trail on the right. */
+export function DecisionHeader({ onAudit }: { onAudit: () => void }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 pt-0.5">
+      <span className="text-sm font-bold text-fg">Decision</span>
+      <button
+        type="button"
+        onClick={onAudit}
+        className="cursor-pointer border-0 bg-transparent p-0 text-xs font-semibold whitespace-nowrap text-fg underline underline-offset-[0.2em] hover:text-purple"
+      >
+        Audit trail (PDF)
+      </button>
+    </div>
+  );
+}
 
 /** What the user sees in place of the choices: the case is closed, or it is not theirs to decide. */
 function notice(saved: CaseStatus, role: Role) {
@@ -150,7 +167,14 @@ function notice(saved: CaseStatus, role: Role) {
  * manager oversees and decides nothing. Only the compliance officer and the compliance manager open the FAÚ report.
  * Every choice needs a reason. Below, the decision log: who routed, decided or reassigned what and why.
  */
-export function DecisionPanel({ log, saved, role, onDecide, onFauReport }: DecisionPanelProps) {
+export function DecisionPanel({
+  log,
+  saved,
+  role,
+  onDecide,
+  onFauReport,
+  onAudit,
+}: DecisionPanelProps) {
   const choices: Choice[] =
     role === "COMPLIANCE_OFFICER" ? ["falsePositive", "report"] : ["falsePositive", "escalate"];
   const fauReport = role === "ANALYST" ? undefined : onFauReport;
@@ -185,7 +209,7 @@ export function DecisionPanel({ log, saved, role, onDecide, onFauReport }: Decis
   if (status) {
     return (
       <Card raised className="overflow-hidden pb-3.5">
-        <span className="pt-0.5 text-sm font-bold text-fg">Decision</span>
+        <DecisionHeader onAudit={onAudit} />
         <span className="text-[13px] text-fg-muted">{status}</span>
         <DecisionLog log={log} onFauReport={fauReport} />
       </Card>
@@ -194,7 +218,7 @@ export function DecisionPanel({ log, saved, role, onDecide, onFauReport }: Decis
 
   return (
     <Card raised className="overflow-hidden pb-3.5">
-      <span className="pt-0.5 text-sm font-bold text-fg">Decision</span>
+      <DecisionHeader onAudit={onAudit} />
       <div className="grid grid-cols-2 gap-2">
         {choices.map((kind) => (
           <button

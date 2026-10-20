@@ -5,10 +5,11 @@ import { Card, Toast } from "@/components";
 import { AiRatingCard } from "./AiRatingCard";
 import { assign, fetchSuggestion } from "./api";
 import { AssigneeCard } from "./AssigneeCard";
+import { AuditReport } from "./AuditReport";
 import { caseState } from "./case-state";
 import { ClientCard } from "./ClientCard";
 import { ClientHistoryCard } from "./ClientHistoryCard";
-import { DecisionPanel } from "./DecisionPanel";
+import { DecisionHeader, DecisionPanel } from "./DecisionPanel";
 import { DetailStrip } from "./DetailStrip";
 import { MoneyFlow } from "./MoneyFlow";
 import { OpoReport } from "./OpoReport";
@@ -69,6 +70,8 @@ export function TransactionDetail({ id, ...rest }: TransactionDetailProps) {
   );
 }
 
+const REPORTS = { opo: OpoReport, audit: AuditReport };
+
 /** One AI Rating card per alert, stacked, each beside its own rule rating. */
 function AiRatingCards({ detail, alertIds }: { detail: Detail; alertIds: number[] }) {
   if (alertIds.length === 0) return null;
@@ -102,7 +105,7 @@ function DetailView({
   const alertId = detail.alerts[0]?.id;
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [toast, setToast] = useState<{ message: string; ruleId?: number } | null>(null);
-  const [opo, setOpo] = useState(false);
+  const [report, setReport] = useState<keyof typeof REPORTS | null>(null);
   // The false-positive reason the suggestion came from: it says why the rule changes.
   const [fpReason, setFpReason] = useState("");
 
@@ -126,12 +129,14 @@ function DetailView({
     setToast({ message: `Draft rule ${rule.key} saved.`, ruleId });
   };
 
-  if (opo)
+  if (report) {
+    const Report = REPORTS[report];
     return (
       <main className="min-h-0 flex-1 overflow-auto bg-bg-sub print:overflow-visible print:bg-bg">
-        <OpoReport detail={detail} onClose={() => setOpo(false)} />
+        <Report detail={detail} onClose={() => setReport(null)} />
       </main>
     );
+  }
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
@@ -214,7 +219,8 @@ function DetailView({
             )}
             <ClientCard client={client} />
             {state.decides === "triage" && !decision && (
-              <Card raised title="Decision">
+              <Card raised>
+                <DecisionHeader onAudit={() => setReport("audit")} />
                 <span className="text-[13px] text-fg-muted">
                   Closed by triage without a reviewer: the score stayed low and only rules on the
                   auto-close list fired.
@@ -226,7 +232,8 @@ function DetailView({
                 log={detail.log}
                 saved={state.saved}
                 role={role}
-                onFauReport={() => setOpo(true)}
+                onFauReport={() => setReport("opo")}
+                onAudit={() => setReport("audit")}
                 onDecide={(action, reason, postponed) =>
                   action === "False Positive"
                     ? markFalsePositive(reason)

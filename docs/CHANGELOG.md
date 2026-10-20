@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Audit trail of a case, printed to PDF.** "Audit trail (PDF)" in the detail's Decision box opens a Czech report for a ČNB or FAÚ inspection: the transaction, the client's KYC profile and Q2 baseline, the client's transactions on that day and inside the rule windows, every rule hit with its condition, inputs and thresholds, the triage score, routing, config version and reasons, the stored AI assessments (model, prompt and input hash; never generated from here), and the decision log oldest first with who acted. It names employees, so it is internal and stays out of the FAÚ report (§ 18(3)). Frontend only, from existing endpoints.
+
 ### Changed
 
 - The AI Rating is about half as long. Its summary is the headline: the first sentence says what the activity looks like and the fact that decides it, and later sentences add only what the reviewer does not already see. It no longer quotes the client's profile, the Q2 baseline figures and ratios, or the rule evidence. Each fact appears once across the summary and the open points, and an open point is left out when the analyst can answer it in the app (such as what another alert shows). The summary has no fixed sentence count. The escalation focus no longer asks for every fact a report needs; the FAÚ report draft carries those.

@@ -1,7 +1,18 @@
-import { useEffect, useState } from "react";
-
-import { fetchHistory, fetchOpoRules } from "./api";
-import { csDateTime, czk, evidenceLines, flowOf, type HitFacts, splitHits } from "./opo";
+import {
+  CHANNEL,
+  CLIENT_TYPE,
+  cs,
+  csDateTime,
+  czk,
+  DIRECTION,
+  evidenceLines,
+  flowOf,
+  type HitFacts,
+  RISK,
+  splitHits,
+  TX_TYPE,
+} from "./opo";
+import { useReportFacts } from "./use-report-facts";
 
 import type { HistoryTransaction, OpoRule, TransactionDetail } from "./api";
 import type { ReactNode } from "react";
@@ -18,27 +29,6 @@ const CONTACT = {
   phone: "+420 222 000 111",
   email: "aml@banka.example",
 };
-
-const DIRECTION: Record<HistoryTransaction["direction"], string> = {
-  in: "příchozí",
-  out: "odchozí",
-  // NOTE: the importer gives only remittances no direction.
-  unknown: "remitence",
-};
-const TX_TYPE: Record<string, string> = {
-  "incoming payment": "příchozí platba",
-  "outgoing payment": "odchozí platba",
-  remittance: "remitence (převod peněz)",
-};
-const CLIENT_TYPE: Record<string, string> = {
-  "natural person": "fyzická osoba",
-  enterpreneur: "fyzická osoba podnikající",
-  "legal entity": "právnická osoba",
-};
-const CHANNEL: Record<string, string> = { "distant form": "na dálku", "in person": "osobně" };
-const RISK: Record<string, string> = { low: "nízký", medium: "střední", high: "vysoký" };
-
-const cs = (map: Record<string, string>, v: string | null) => (v === null ? null : (map[v] ?? v));
 
 const button =
   "h-7 rounded border border-border bg-bg px-3 text-[13px] font-semibold text-fg hover:border-fg";
@@ -71,7 +61,7 @@ function Fields({ rows }: { rows: Record<string, ReactNode> }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
       <h2 className="border-b border-border pb-1 text-sm font-bold break-after-avoid">{title}</h2>
@@ -151,39 +141,6 @@ function Execution({ postponed, ts }: { postponed: boolean | null | undefined; t
   return <Missing what="rozhodnutí o provedení či odkladu" />;
 }
 
-type Facts =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; rules: OpoRule[]; txs: HistoryTransaction[] };
-
-const AROUND = 200;
-
-/** The rule versions and the client's transactions around the reported one (up to 200 a side). */
-function useFacts(id: string, current: HistoryTransaction | undefined) {
-  const [facts, setFacts] = useState<Facts>({ status: "loading" });
-  useEffect(() => {
-    const ctrl = new AbortController();
-    Promise.all([
-      fetchOpoRules(ctrl.signal),
-      fetchHistory(id, { side: "older", limit: AROUND }, ctrl.signal),
-      fetchHistory(id, { side: "newer", limit: AROUND }, ctrl.signal),
-    ])
-      .then(([rules, older, newer]) =>
-        setFacts({
-          status: "ready",
-          rules,
-          txs: [...newer.items, ...(current ? [current] : []), ...older.items],
-        }),
-      )
-      .catch((err: unknown) => {
-        if (!ctrl.signal.aborted)
-          setFacts({ status: "error", message: err instanceof Error ? err.message : String(err) });
-      });
-    return () => ctrl.abort();
-  }, [id, current]);
-  return facts;
-}
-
 type OpoReportProps = { detail: TransactionDetail; onClose: () => void };
 
 /**
@@ -196,7 +153,7 @@ type OpoReportProps = { detail: TransactionDetail; onClose: () => void };
  */
 export function OpoReport({ detail, onClose }: OpoReportProps) {
   const current = detail.day.find((t) => t.id === detail.transaction.id);
-  const facts = useFacts(detail.transaction.id, current);
+  const facts = useReportFacts(detail.transaction.id, current);
 
   return (
     <div className="flex flex-col gap-4 px-6 pt-4 pb-8 print:p-0">
