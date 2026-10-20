@@ -66,7 +66,7 @@ export function AssigneeCard({ assignee, users, closed, onAssign }: AssigneeCard
     >
       {assignee ? (
         <div className="flex items-center gap-2.5">
-          <span className="flex size-8 flex-none items-center justify-center rounded-full bg-purple text-xs font-semibold text-white">
+          <span className="flex size-8 flex-none items-center justify-center rounded-full bg-indigo-80 text-xs font-semibold text-white">
             {initials(assignee.name)}
           </span>
           <span className="flex flex-col">

@@ -1,3 +1,5 @@
+import { cva } from "class-variance-authority";
+
 import { AiLabel, Card } from "@/components";
 
 import type { AiState } from "./use-ai-result";
@@ -16,6 +18,15 @@ type AiResultCardProps<T extends Ready | NotReady> = {
   aside?: (result: Extract<T, Ready>) => ReactNode;
 };
 
+// While the model works the card keeps a result's height and its gradient moves, so the detail doesn't jump.
+const card = cva("gap-2", {
+  variants: {
+    pending: {
+      true: "min-h-[240px] animate-ai-loading bg-[linear-gradient(120deg,var(--color-ai-from),var(--color-ai-to),var(--color-ai-from))] bg-size-[200%_200%] motion-reduce:animate-none",
+    },
+  },
+});
+
 const button =
   "h-7 cursor-pointer self-start rounded-md border-0 bg-purple px-3 text-xs font-semibold text-white hover:opacity-90";
 const muted = "m-0 text-[13px] leading-normal text-fg-muted";
@@ -31,12 +42,13 @@ export function AiResultCard<T extends Ready | NotReady>({
 }: AiResultCardProps<T>) {
   const ready = state.status === "done" && isReady(state.result) ? state.result : null;
   const refused = state.status === "done" && isRefused(state.result) ? state.result : null;
+  const pending = state.status === "loading" || state.status === "running";
   return (
     <Card
       tone="ai"
       title={<AiLabel>{title}</AiLabel>}
       aside={ready && aside?.(ready)}
-      className="gap-2"
+      className={card({ pending })}
     >
       {state.status === "loading" && <span className={muted}>Loading…</span>}
       {state.status === "running" && (

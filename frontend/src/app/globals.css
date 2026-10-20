@@ -75,6 +75,18 @@
   --color-header-med: #ff8048;
   --color-header-low: #45c086;
   --color-header-miss: #ff9a91;
+
+  /* AI card while the model works: its gradient drifts back and forth */
+  --animate-ai-loading: ai-loading 2.4s ease-in-out infinite;
+  @keyframes ai-loading {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
 }
 
 body {
