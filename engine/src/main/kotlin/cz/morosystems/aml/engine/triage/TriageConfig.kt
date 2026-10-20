@@ -1,8 +1,5 @@
 package cz.morosystems.aml.engine.triage
 
-import tools.jackson.databind.JsonNode
-import tools.jackson.databind.json.JsonMapper
-
 /** A score band. The first band whose [maxScore] the score does not exceed wins. */
 data class Band(val maxScore: Int, val disposition: Disposition)
 
@@ -50,27 +47,33 @@ data class Factors(
 )
 
 /**
- * Everything the decision is tuned by, as data and under a version. Changing a number means a new file and a new
- * [configVersion] — decisions already taken stay explicable under the config they were taken with.
+ * The triage policy for one rule key: what it scores on its own, whether an alert carrying only rules like it may be
+ * closed without a reviewer, and whether the rule already requires PEP status (so the PEP factor is not charged twice).
+ * Policy, not identity — the `rule` table says what a rule *is*, this says what triage does with it.
+ */
+data class RuleTriage(val baseScore: Int, val autoCloseable: Boolean, val impliesPep: Boolean)
+
+/**
+ * Everything the decision is tuned by, as data and under a version. Changing a number means a new stored version and a
+ * new [configVersion] — decisions already taken stay explicable under the config they were taken with.
  */
 data class TriageConfig(
     val configVersion: String,
-    val baseScores: Map<String, Int>,
+    val ruleTriage: Map<String, RuleTriage>,
     val unknownRuleScore: Int,
     val perExtraRule: Int,
     val extraRuleMax: Int,
     val factors: Factors,
     val amountBands: List<AmountBand>,
     val intensityBands: Map<String, List<IntensityBand>>,
-    val pepImpliedByRules: Set<String>,
     val bands: List<Band>,
-    val autoCloseWhitelist: Set<String>,
     val requiredFields: List<RequiredField>,
     val floors: List<Floor>,
     val highRiskCountries: Set<String>,
     /**
      * The reader-facing name of each alert type, by code, for the reason lines the review queue renders. Presentation
-     * only — no score reads it — and like [highRiskCountries] it comes from the database, so the file ships it empty.
+     * only — no score reads it — and like [highRiskCountries] it is overlaid at decision time, so a stored config
+     * version carries it empty.
      */
     val alertTypeNames: Map<String, String> = emptyMap(),
     /**
@@ -85,74 +88,17 @@ data class TriageConfig(
         require(bands.zipWithNext().all { (a, b) -> a.maxScore < b.maxScore }) { "band thresholds must strictly increase: ${bands.map { it.maxScore }}" }
         require(bands.last().maxScore >= MAX_SCORE) { "the last band must reach $MAX_SCORE, got ${bands.last().maxScore}" }
         require(unknownRuleScore in 0..MAX_SCORE) { "unknownRuleScore must be within 0..$MAX_SCORE" }
-        require(baseScores.values.all { it in 0..MAX_SCORE }) { "every base score must be within 0..$MAX_SCORE" }
+        require(ruleTriage.values.all { it.baseScore in 0..MAX_SCORE }) { "every base score must be within 0..$MAX_SCORE" }
         require(amountBands.zipWithNext().all { (a, b) -> a.from > b.from }) { "amount bands must be ordered by a strictly decreasing threshold" }
         require(amountBands.all { it.from >= 0 }) { "amount thresholds must not be negative" }
         require(intensityBands.values.all { bands -> bands.zipWithNext().all { (a, b) -> a.fromHits > b.fromHits } }) {
             "intensity bands must be ordered by a strictly decreasing hit count"
         }
-        require(pepImpliedByRules.all { it in baseScores }) { "every PEP-implying rule needs a base score: ${pepImpliedByRules - baseScores.keys}" }
-        require(autoCloseWhitelist.all { it in baseScores }) { "every whitelisted rule needs a base score: ${autoCloseWhitelist - baseScores.keys}" }
         require(floors.all { (it.condition == FloorCondition.ALERT_TYPE) == (it.alertType != null) }) { "alertType is required exactly for an ALERT_TYPE floor" }
         require(factors.staticCap >= 0) { "staticCap must not be negative" }
     }
 
     companion object {
         const val MAX_SCORE = 100
-        const val RESOURCE = "/triage/triage-config-v1.json"
-
-        private val mapper = JsonMapper()
-
-        /** Loads a config from the classpath. Throws on anything malformed — a bad config must not reach a decision. */
-        fun load(resource: String = RESOURCE): TriageConfig {
-            val stream = TriageConfig::class.java.getResourceAsStream(resource) ?: error("triage config not found on the classpath: $resource")
-            return stream.use { parse(it.readBytes().toString(Charsets.UTF_8)) }
-        }
-
-        fun parse(json: String): TriageConfig {
-            val root = mapper.readTree(json)
-            val factors = root.required("factors")
-            return TriageConfig(
-                configVersion = root.required("configVersion").stringValue(),
-                baseScores = root.required("baseScores").intMap(),
-                unknownRuleScore = root.required("unknownRuleScore").intValue(),
-                perExtraRule = root.required("perExtraRule").intValue(),
-                extraRuleMax = root.required("extraRuleMax").intValue(),
-                factors = Factors(
-                    riskPoints = factors.required("riskPoints").intMap().mapKeys { it.key.lowercase() },
-                    pep = factors.required("pep").intValue(),
-                    highRiskCountry = factors.required("highRiskCountry").intValue(),
-                    staticCap = factors.required("staticCap").intValue(),
-                    channelPoints = factors.required("channelPoints").intMap().mapKeys { it.key.lowercase() },
-                    unbaselinedClient = factors.required("unbaselinedClient").intValue(),
-                    tenureUnder90Days = factors.required("tenureUnder90Days").intValue(),
-                    tenureUnder365Days = factors.required("tenureUnder365Days").intValue(),
-                    perExtraAlertType = factors.required("perExtraAlertType").intValue(),
-                    extraAlertTypeMax = factors.required("extraAlertTypeMax").intValue(),
-                ),
-                amountBands = root.required("amountBands").values().map { AmountBand(it.required("from").doubleValue(), it.required("points").intValue()) },
-                intensityBands = root.required("intensityBands").properties().associate { (alertType, node) ->
-                    alertType to node.values().map { IntensityBand(it.required("fromHits").intValue(), it.required("points").intValue()) }
-                },
-                pepImpliedByRules = root.required("pepImpliedByRules").values().map { it.stringValue() }.toSet(),
-                bands = root.required("bands").values().map { Band(it.required("maxScore").intValue(), disposition(it.required("disposition").stringValue())) },
-                autoCloseWhitelist = root.required("autoCloseWhitelist").values().map { it.stringValue() }.toSet(),
-                requiredFields = root.required("requiredFields").values().map { RequiredField.of(it.stringValue()) },
-                floors = root.required("floors").values().map {
-                    Floor(
-                        condition = enumValueOf<FloorCondition>(it.required("condition").stringValue()),
-                        alertType = it.get("alertType")?.takeUnless { node -> node.isNull }?.stringValue(),
-                        minDisposition = disposition(it.required("minDisposition").stringValue()),
-                    )
-                },
-                highRiskCountries = root.required("highRiskCountries").values().map { it.stringValue().uppercase() }.toSet(),
-            )
-        }
-
-        private fun disposition(name: String) = enumValueOf<Disposition>(name)
-
-        private fun JsonNode.required(field: String): JsonNode = get(field) ?: error("triage config is missing '$field'")
-
-        private fun JsonNode.intMap(): Map<String, Int> = properties().associate { (key, node) -> key to node.intValue() }
     }
 }

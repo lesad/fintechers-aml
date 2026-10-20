@@ -5,37 +5,48 @@ import org.assertj.core.api.Assertions.assertThatCode
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
-/** The shipped config has to load, and a config that cannot be reasoned about has to fail at load, not at a decision. */
+/**
+ * A config that cannot be reasoned about has to fail when it is constructed, not at a decision. [TriageConfig]'s
+ * `init` is the single gate for that, and it runs the same whether the value came from a request body or from rows,
+ * so these tests construct configs directly and stay DB-free.
+ *
+ * [SEEDED_CONFIG] is the policy the migration seeds version 1 with, as a Kotlin value. It is the fixture the
+ * repository test rounds the stored rows against.
+ */
 class TriageConfigTest {
-    private val shipped = TriageConfig.load()
+    private val shipped = SEEDED_CONFIG
 
     @Test
-    fun theShippedConfigLoadsFromTheClasspathUnderAVersion() {
-        assertThat(shipped.configVersion).isNotBlank()
+    fun theSeededConfigCarriesTheVersionItWasBuiltUnder() {
+        assertThat(shipped.configVersion).isEqualTo("triage-v1")
         assertThat(shipped.bands).isNotEmpty()
-        assertThat(shipped.baseScores).isNotEmpty()
+        assertThat(shipped.ruleTriage).isNotEmpty()
     }
 
     @Test
-    fun theShippedConfigGivesEveryWhitelistedRuleABaseScore() {
-        assertThat(shipped.autoCloseWhitelist).isNotEmpty()
-        assertThat(shipped.baseScores.keys).containsAll(shipped.autoCloseWhitelist)
+    fun theSeededConfigScoresEveryAutoCloseableRule() {
+        // The old invariant — 'every whitelisted rule needs a base score' — is now structural: the flag and the score
+        // are one row, so a rule cannot be marked closeable without being scored. This pins that they travel together.
+        val closeable = shipped.ruleTriage.filterValues { it.autoCloseable }
+        assertThat(closeable).isNotEmpty()
+        assertThat(closeable.values.map { it.baseScore }).allMatch { it in 0..TriageConfig.MAX_SCORE }
     }
 
     @Test
-    fun theShippedConfigGivesEveryPepImplyingRuleABaseScore() {
-        assertThat(shipped.pepImpliedByRules).isNotEmpty()
-        assertThat(shipped.baseScores.keys).containsAll(shipped.pepImpliedByRules)
+    fun theSeededConfigScoresEveryPepImplyingRule() {
+        val pepImplying = shipped.ruleTriage.filterValues { it.impliesPep }
+        assertThat(pepImplying).isNotEmpty()
+        assertThat(pepImplying.values.map { it.baseScore }).allMatch { it in 0..TriageConfig.MAX_SCORE }
     }
 
     @Test
-    fun theShippedConfigCoversTheWholeScoreRangeInStrictlyIncreasingBands() {
+    fun theSeededConfigCoversTheWholeScoreRangeInStrictlyIncreasingBands() {
         assertThat(shipped.bands.map { it.maxScore }).isSorted()
         assertThat(shipped.bands.last().maxScore).isGreaterThanOrEqualTo(TriageConfig.MAX_SCORE)
     }
 
     @Test
-    fun theShippedConfigOrdersAmountBandsFromTheLargestThresholdDown() {
+    fun theSeededConfigOrdersAmountBandsFromTheLargestThresholdDown() {
         assertThat(shipped.amountBands.zipWithNext().all { (a, b) -> a.from > b.from }).isTrue()
         shipped.intensityBands.forEach { (alertType, bands) ->
             assertThat(bands.zipWithNext().all { (a, b) -> a.fromHits > b.fromHits }).describedAs(alertType).isTrue()
@@ -43,34 +54,29 @@ class TriageConfigTest {
     }
 
     @Test
-    fun theShippedConfigScoresAnUnbaselinedClient() {
+    fun theSeededConfigScoresAnUnbaselinedClient() {
         assertThat(shipped.factors.unbaselinedClient).isPositive()
     }
 
     @Test
-    fun theShippedConfigHoldsAnUnbaselinedClientBackFromAnAutoClose() {
+    fun theSeededConfigHoldsAnUnbaselinedClientBackFromAnAutoClose() {
         val floor = shipped.floors.single { it.condition == FloorCondition.CLIENT_UNBASELINED }
         assertThat(floor.minDisposition).isGreaterThan(Disposition.AUTO_CLOSE)
     }
 
     @Test
-    fun theShippedConfigLeavesTheHighRiskCountryListToBeInjectedAtRuntime() {
+    fun theSeededConfigLeavesTheHighRiskCountryListToBeInjectedAtRuntime() {
         assertThat(shipped.highRiskCountries).isEmpty()
     }
 
     @Test
-    fun theShippedConfigLeavesTheAlertTypeNamesToBeInjectedAtRuntime() {
+    fun theSeededConfigLeavesTheAlertTypeNamesToBeInjectedAtRuntime() {
         assertThat(shipped.alertTypeNames).isEmpty()
     }
 
     @Test
-    fun theShippedConfigLeavesTheRuleNamesToBeInjectedAtRuntime() {
+    fun theSeededConfigLeavesTheRuleNamesToBeInjectedAtRuntime() {
         assertThat(shipped.ruleNames).isEmpty()
-    }
-
-    @Test
-    fun loadingAConfigThatIsNotOnTheClasspathFails() {
-        assertThatThrownBy { TriageConfig.load("/triage/nope.json") }.isInstanceOf(IllegalStateException::class.java)
     }
 
     @Test
@@ -139,23 +145,14 @@ class TriageConfigTest {
     }
 
     @Test
-    fun aWhitelistedRuleWithoutABaseScoreIsRejected() {
-        assertThatThrownBy { valid().copy(autoCloseWhitelist = setOf("NOPE")) }
-            .isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessageContaining("NOPE")
-    }
-
-    @Test
-    fun aPepImplyingRuleWithoutABaseScoreIsRejected() {
-        assertThatThrownBy { valid().copy(pepImpliedByRules = setOf("NOPE")) }
-            .isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessageContaining("NOPE")
-    }
-
-    @Test
     fun scoresOutsideTheScoreRangeAreRejected() {
         assertThatThrownBy { valid().copy(unknownRuleScore = 101) }.isInstanceOf(IllegalArgumentException::class.java)
-        assertThatThrownBy { valid().copy(baseScores = mapOf("W1" to -1)) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { valid().copy(ruleTriage = mapOf("W1" to RuleTriage(-1, autoCloseable = true, impliesPep = true))) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("base score")
+        assertThatThrownBy { valid().copy(ruleTriage = mapOf("W1" to RuleTriage(101, autoCloseable = false, impliesPep = false))) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("base score")
     }
 
     @Test
@@ -175,7 +172,7 @@ class TriageConfigTest {
 
     private fun valid() = TriageConfig(
         configVersion = "config-test",
-        baseScores = mapOf("W1" to 5),
+        ruleTriage = mapOf("W1" to RuleTriage(baseScore = 5, autoCloseable = true, impliesPep = true)),
         unknownRuleScore = 70,
         perExtraRule = 3,
         extraRuleMax = 6,
@@ -193,11 +190,71 @@ class TriageConfigTest {
         ),
         amountBands = listOf(AmountBand(1_000_000.0, 15), AmountBand(250_000.0, 8)),
         intensityBands = mapOf("A" to listOf(IntensityBand(60, 10), IntensityBand(45, 5))),
-        pepImpliedByRules = setOf("W1"),
         bands = listOf(Band(24, Disposition.AUTO_CLOSE), Band(100, Disposition.ESCALATE)),
-        autoCloseWhitelist = setOf("W1"),
         requiredFields = listOf(RequiredField.CLIENT_RISK),
         floors = listOf(Floor(FloorCondition.UNKNOWN_RULE, null, Disposition.ESCALATE)),
         highRiskCountries = setOf("IR"),
     )
+
+    companion object {
+        /** The six `triage_rule` rows the migration seeds. */
+        val SEEDED_RULES: Map<String, RuleTriage> = mapOf(
+            "A1" to RuleTriage(baseScore = 8, autoCloseable = true, impliesPep = false),
+            "A2" to RuleTriage(baseScore = 8, autoCloseable = true, impliesPep = false),
+            "A3" to RuleTriage(baseScore = 12, autoCloseable = true, impliesPep = false),
+            "B1" to RuleTriage(baseScore = 40, autoCloseable = false, impliesPep = false),
+            "B2" to RuleTriage(baseScore = 35, autoCloseable = false, impliesPep = true),
+            "C1" to RuleTriage(baseScore = 45, autoCloseable = false, impliesPep = false),
+        )
+
+        /**
+         * Version 1 of the policy as a value: the config the engine used to carry on its classpath, value for value.
+         * The repository test asserts the seeded rows load back to exactly this.
+         */
+        val SEEDED_CONFIG = TriageConfig(
+            configVersion = TriageConfigRepository.configVersion(1),
+            ruleTriage = SEEDED_RULES,
+            unknownRuleScore = 70,
+            perExtraRule = 3,
+            extraRuleMax = 6,
+            factors = Factors(
+                riskPoints = mapOf("low" to 0, "medium" to 10, "high" to 20),
+                pep = 15,
+                highRiskCountry = 10,
+                staticCap = 25,
+                channelPoints = mapOf("in person" to 0, "distant form" to 5),
+                unbaselinedClient = 10,
+                tenureUnder90Days = 10,
+                tenureUnder365Days = 5,
+                perExtraAlertType = 10,
+                extraAlertTypeMax = 20,
+            ),
+            amountBands = listOf(AmountBand(1_000_000.0, 15), AmountBand(250_000.0, 8), AmountBand(50_000.0, 3)),
+            intensityBands = mapOf(
+                "A" to listOf(IntensityBand(60, 10), IntensityBand(45, 5)),
+                "C" to listOf(IntensityBand(3, 10), IntensityBand(2, 5)),
+            ),
+            bands = listOf(
+                Band(24, Disposition.AUTO_CLOSE),
+                Band(44, Disposition.REVIEW_LOW),
+                Band(64, Disposition.REVIEW_MEDIUM),
+                Band(84, Disposition.REVIEW_HIGH),
+                Band(100, Disposition.ESCALATE),
+            ),
+            requiredFields = listOf(
+                RequiredField.CLIENT_RISK,
+                RequiredField.CLIENT_COUNTRY,
+                RequiredField.CLIENT_EXPECTED_VOLUME,
+                RequiredField.ALERT_AMOUNT,
+            ),
+            floors = listOf(
+                Floor(FloorCondition.UNKNOWN_RULE, null, Disposition.REVIEW_HIGH),
+                Floor(FloorCondition.PEP_AND_HIGH_RISK_COUNTRY, null, Disposition.REVIEW_HIGH),
+                Floor(FloorCondition.ALERT_TYPE, "B", Disposition.REVIEW_MEDIUM),
+                Floor(FloorCondition.ALERT_TYPE, "C", Disposition.REVIEW_MEDIUM),
+                Floor(FloorCondition.CLIENT_UNBASELINED, null, Disposition.REVIEW_LOW),
+            ),
+            highRiskCountries = emptySet(),
+        )
+    }
 }

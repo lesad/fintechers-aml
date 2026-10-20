@@ -31,21 +31,25 @@ Detection itself (rules, CEL conditions, variables, parameters, layers, versions
 
 Every step is code. AI comes after: it writes the reviewer's summary from `llm_context` and the log, and drafts rule proposals for the engine. A proposal goes through the engine's checks and a person's approval, like any rule version.
 
-## Rules are configured, triage is not
+## Rules are configured, and so is triage policy
 
-A rule can be added, replaced or suppressed at runtime under any alert type. So triage must never test a rule key ("if A3 fired"). It reads:
+A rule can be added, replaced or suppressed at runtime under any alert type. Triage's **logic** must never test a rule key ("if A3 fired") — no branch in the code names one. Its **data** does: a rule key's base score, whether it may auto-close and whether it implies a PEP are per-key rows in `triage_rule`, keyed to a version of the triage config (ADR-0048). That is not resolved, it is moved: the scores are still keyed by rule key, but they are versioned configuration a reviewer edits through `/api/triage`, not values compiled into the decision. A rule with no row is not a crash and not a hidden default — it scores `unknownRuleScore` and the `UNKNOWN_RULE` floor keeps the alert in review until someone scores it, and `GET /api/triage/coverage` lists the rules waiting for that.
+
+So the logic reads:
 
 - the alert type and its alert unit;
 - the hits: how many, and how many distinct rules;
 - the **evidence contract** of the alert type: the fields every rule of that type puts in its evidence;
-- the client's fields.
+- the client's fields;
+- the active triage config: the policy's scalars and bands, and the scored keys, all as data in its own tables.
 
-A new rule only has to meet its type's evidence contract to be triaged correctly. Each alert-type spec lists its contract and what `llm_context` must add.
+A new rule only has to meet its type's evidence contract to be triaged safely, and a `triage_rule` row to be triaged at its true weight. Each alert-type spec lists its contract and what `llm_context` must add.
 
 ## How to change something
 
 - **A threshold or a rule:** in the engine, as a new rule version or parameter override, through its checks and approval. Note the change and its counts in the alert type's change log here.
 - **An interpretation** (prorating, a window's start, what counts as outflow): here first, then in the engine's seed rules.
+- **A triage weight, band, floor or a rule's base score:** a new triage config version through `/api/triage` (insert-only, `draft → active`); it applies to the next run, and nothing re-triages what is already decided.
 - **Triage, priority, route, reason:** here, then in the second-layer code.
 - **A mentor answer:** write it in [mentor-questions.md](../challenge/mentor-questions.md) and in the spec it settles.
 

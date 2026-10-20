@@ -14,7 +14,7 @@ object Triage {
     fun decide(input: TriageInput, config: TriageConfig): TriageDecision {
         val reasons = mutableListOf<Reason>()
         val ruleKeys = input.hits.map { it.ruleKey }.distinct().sorted()
-        val unknownRules = ruleKeys.filterNot { it in config.baseScores }
+        val unknownRules = ruleKeys.filterNot { it in config.ruleTriage }
 
         base(input, config, ruleKeys, unknownRules, reasons)
         factors(input, config, ruleKeys, reasons)
@@ -26,8 +26,8 @@ object Triage {
         var disposition = band(score, config)
 
         // Step 4: a score low enough to close only closes if the rules that fired are all allowed to be closed.
-        if (disposition == Disposition.AUTO_CLOSE && !ruleKeys.all { it in config.autoCloseWhitelist }) {
-            val blocking = ruleKeys.filterNot { it in config.autoCloseWhitelist }
+        if (disposition == Disposition.AUTO_CLOSE && !ruleKeys.all { config.ruleTriage[it]?.autoCloseable == true }) {
+            val blocking = ruleKeys.filterNot { config.ruleTriage[it]?.autoCloseable == true }
             disposition = Disposition.REVIEW_LOW
             reasons += Reason(
                 "AUTO_CLOSE_BLOCKED",
@@ -62,7 +62,7 @@ object Triage {
 
     /** Step 1. An unrecognised rule is never ignored: it takes the fail-safe score and can only raise the base. */
     private fun base(input: TriageInput, config: TriageConfig, ruleKeys: List<String>, unknownRules: List<String>, reasons: MutableList<Reason>) {
-        val known = ruleKeys.mapNotNull { config.baseScores[it] }.maxOrNull() ?: 0
+        val known = ruleKeys.mapNotNull { config.ruleTriage[it]?.baseScore }.maxOrNull() ?: 0
         when {
             input.hits.isEmpty() ->
                 reasons += Reason("RULE_NONE", "the alert carries no rule hit; scored as unrecognised", config.unknownRuleScore)
@@ -89,7 +89,7 @@ object Triage {
         reasons += Reason("CLIENT_RISK", "client AML rating '${input.client.risk ?: "unknown"}'", risk)
 
         // A rule that already requires PEP status has priced it in; scoring it again counts one fact twice.
-        val pepImplied = ruleKeys.isNotEmpty() && ruleKeys.all { it in config.pepImpliedByRules }
+        val pepImplied = ruleKeys.isNotEmpty() && ruleKeys.all { config.ruleTriage[it]?.impliesPep == true }
         val pep = if (input.client.pep == true && !pepImplied) f.pep else 0
         reasons += Reason(
             "CLIENT_PEP",

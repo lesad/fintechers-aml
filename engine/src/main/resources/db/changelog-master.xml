@@ -26,4 +26,5 @@
     <include file="db/migrations/0020-ai-result.sql" />
     <include file="db/migrations/0021-import-job.sql" />
     <include file="db/migrations/0022-rule-approval.sql" />
+    <include file="db/migrations/0023-triage-config.sql" />
 </databaseChangeLog>

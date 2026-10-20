@@ -113,6 +113,28 @@ Runs and results:
 - `rule_hit` — run, rule version, client, grain key (transaction id, day, or anchor transaction id), `evidence` jsonb (every variable and resolved parameter value, plus the triggering transaction ids).
 - `alert` — run, alert type, client, transaction (B only), created_at, `status` (`NEW`/`ESCALATED`/`FALSE_POSITIVE`/`REPORTED`, default `NEW`; migration 0011). `alert_hit` links alerts to hits. Later steps add triage, score, reason and escalation columns or tables here.
 
+Triage policy (ADR-0048, migration `0023`) — insert-only and versioned the same way `rule` is: never edited, never deleted, a change is a new version, and code assigns the version number (`max + 1`):
+
+The policy is **normalized** — real columns and child tables, not one `jsonb` document — so a UI edit sends one field instead of re-sending the whole config (two reviewers editing a document clobber each other silently), and so the range and ordering invariants are `check` constraints alongside `TriageConfig`'s Kotlin `init` block. The cost is eight tables and one query per child table on read.
+
+- `triage_config` — one row per config version. `id`, `version` (unique), `status` (`draft`/`approved`/`active`/`retired`), `author`, `approver`, `created_at`, `approved_at`, and the flat policy as columns: `unknown_rule_score` (0–100), `per_extra_rule`, `extra_rule_max`, `factor_pep`, `factor_high_risk_country`, `factor_static_cap`, `factor_unbaselined_client`, `factor_tenure_under_90_days`, `factor_tenure_under_365_days`, `factor_per_extra_alert_type`, `factor_extra_alert_type_max`. A partial unique index on `status` where `status = 'active'` allows one active version. The decision's `config_version` string is derived, not stored: `triage-v<version>`.
+- `triage_rule` — per-rule triage policy for one config version. `config_id`, `rule_key`, `base_score` (0–100), `auto_closeable`, `implies_pep`; primary key `(config_id, rule_key)`. A live rule with no row here scores `unknownRuleScore`; `GET /api/triage/coverage` reports those and the scores no live rule uses.
+- `triage_risk_point` — `config_id`, `rating` (lowercased: `low`/`medium`/`high`), `points`; primary key `(config_id, rating)`.
+- `triage_channel_point` — `config_id`, `channel` (lowercased, e.g. `in person`, `distant form`), `points`; primary key `(config_id, channel)`.
+- `triage_amount_band` — `config_id`, `position`, `from_amount` (double, CZK, ≥ 0), `points`; primary key `(config_id, position)`.
+- `triage_intensity_band` — `config_id`, `alert_type`, `position`, `from_hits`, `points`; primary key `(config_id, alert_type, position)`.
+- `triage_band` — the score-to-disposition ladder. `config_id`, `position`, `max_score` (0–100), `disposition` (checked against the five); primary key `(config_id, position)`.
+- `triage_required_field` — `config_id`, `position`, `field` (checked: `client.risk`, `client.country`, `client.expected_monthly_volume`, `alert.amount`); primary key `(config_id, position)`, unique `(config_id, field)`.
+- `triage_floor` — `config_id`, `position`, `condition` (`UNKNOWN_RULE`/`PEP_AND_HIGH_RISK_COUNTRY`/`ALERT_TYPE`/`CLIENT_UNBASELINED`), `alert_type`, `min_disposition`; primary key `(config_id, position)`, with `check ((condition = 'ALERT_TYPE') = (alert_type is not null))` — the SQL twin of the Kotlin `require`.
+
+Notes on the shape:
+
+- **`position` preserves the authored order.** The five ordered children (`triage_amount_band`, `triage_intensity_band`, `triage_band`, `triage_required_field`, `triage_floor`) carry it, the pattern `rule_variable` already uses; it is what the old JSON array order meant. Children are read back `order by config_id, position`, which is what keeps behaviour identical — including the order of the `FLOOR_` and `DATA_MISSING` reason lines.
+- **Keyed on `config_id`**, not on a rule key or a band name, for the reason migration `0012` moved `rule_param` onto `rule_id`: a version is then a closed, self-describing set. Rows are never deleted, so no cascade is declared.
+- **No foreign key from `triage_rule.rule_key` to `rule`**: `rule` has no primary key on `key` alone, and a retired config version must stay readable after its key leaves the live set.
+- **`highRiskCountries` has no table.** It is not policy stored here — `TriageService` overlays it from `reference_list` at decision time, and the repository returns an empty set.
+- **Editing.** `POST /api/triage/config` writes a whole new draft. `PATCH /api/triage/config/rules/{ruleKey}` and `PATCH /api/triage/config/factors` send one field: the repository copies the active version into the next draft entirely in SQL (`insert into <child> (config_id, …) select <newId>, … where config_id = ?`), applies the change, reloads it so `TriageConfig`'s `init` validates it, and activates it — one transaction, so an invalid patch rolls back and the previously active version is still active. A patch is therefore still a new immutable version. Collection edits (bands, floors, required fields) stay on the whole-document `POST`.
+
 ## Rule language
 
 A rule is a CEL `condition` evaluated once per **grain row**, plus named **variables** computed by SQL for that row.

@@ -6,15 +6,16 @@ import org.springframework.transaction.annotation.Transactional
 /**
  * Triages a finished run: one decision per alert, written to `alert_triage`.
  *
- * The only moving part is the data — the config is loaded once, the high-risk list comes from `reference_list`,
+ * The only moving part is the data — the active config version is loaded once, the high-risk list comes from `reference_list`,
  * and the date relationships are measured against is the run's own period end. Nothing reads a clock, so running
  * the same run twice produces the same hashes and the same verdicts.
  */
 @Service
-class TriageService(private val repository: TriageRepository) {
+class TriageService(private val repository: TriageRepository, private val configs: TriageConfigRepository) {
     @Transactional
     fun triageRun(runId: Long): List<TriageDecision> {
-        val config = TriageConfig.load().copy(
+        val stored = configs.active()
+        val config = stored.config.copy(
             highRiskCountries = repository.highRiskCountries(),
             alertTypeNames = repository.alertTypeNames(),
             ruleNames = repository.ruleNames(),

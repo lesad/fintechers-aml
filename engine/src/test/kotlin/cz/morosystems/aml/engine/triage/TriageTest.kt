@@ -191,6 +191,42 @@ class TriageTest {
             .isEqualTo("unrecognised rule(s) ZZ; fail-safe base score")
     }
 
+    // ---- rules the active config carries no triage row for ------------------------------------------------------
+
+    @Test
+    fun aRuleWithNoTriageRowTakesTheFailSafeScoreAndIsFlooredToAHighReview() {
+        val decision = Triage.decide(input(hits = listOf(hit("NEW1"))), CONFIG)
+        assertThat(CONFIG.ruleTriage).describedAs("the config must not score this rule").doesNotContainKey("NEW1")
+        assertThat(reasonOf(decision, "RULE_UNKNOWN").points).isEqualTo(CONFIG.unknownRuleScore)
+        assertThat(decision.disposition).isEqualTo(Disposition.REVIEW_HIGH)
+
+        // Even with the fail-safe score dialled to nothing, the floor alone still holds the alert at a high review.
+        val unscored = Triage.decide(input(hits = listOf(hit("NEW1"))), CONFIG.copy(unknownRuleScore = 0))
+        assertThat(unscored.reasons.map { it.code }).contains("FLOOR_UNKNOWN_RULE")
+        assertThat(unscored.disposition).isEqualTo(Disposition.REVIEW_HIGH)
+    }
+
+    @Test
+    fun aRuleWithNoTriageRowBlocksTheAutoCloseEvenAlongsideCloseableOnes() {
+        // The fail-safe score alone would lift this out of the auto-close band, so it is dialled away: what is
+        // asserted here is the gate, not the score.
+        val quiet = CONFIG.copy(unknownRuleScore = 0, floors = emptyList())
+        val closeable = Triage.decide(input(hits = listOf(hit("W1"), hit("W2"))), quiet)
+        assertThat(closeable.disposition).describedAs("both rules are closeable").isEqualTo(Disposition.AUTO_CLOSE)
+
+        val mixed = Triage.decide(input(hits = listOf(hit("W1"), hit("NEW1"))), quiet)
+        assertThat(mixed.disposition).isEqualTo(Disposition.REVIEW_LOW)
+        // Spelled out in full rather than as contains/doesNotContain: "W1" is a substring of "NEW1", so only an exact
+        // match can say that the closeable rule is not among the blockers.
+        assertThat(reasonOf(mixed, "AUTO_CLOSE_BLOCKED").description).isEqualTo("rule(s) NEW1 are not on the auto-close whitelist")
+    }
+
+    @Test
+    fun aRuleWithNoTriageRowNeverImpliesPepStatus() {
+        val decision = Triage.decide(input(hits = listOf(hit("NEW1")), pep = true), CONFIG)
+        assertThat(reasonOf(decision, "CLIENT_PEP").points).isEqualTo(CONFIG.factors.pep)
+    }
+
     private fun reasonOf(decision: TriageDecision, code: String): Reason =
         decision.reasons.firstOrNull { it.code == code } ?: error("no '$code' reason in ${decision.reasons.map { it.code }}")
 
@@ -203,7 +239,15 @@ class TriageTest {
         /** A fixed config, deliberately independent of the shipped JSON. */
         val CONFIG = TriageConfig(
             configVersion = "triage-test",
-            baseScores = mapOf("Z0" to 0, "W1" to 5, "W2" to 5, "N1" to 10, "M1" to 20, "P1" to 30, "BIG" to 80),
+            ruleTriage = mapOf(
+                "Z0" to RuleTriage(baseScore = 0, autoCloseable = true, impliesPep = false),
+                "W1" to RuleTriage(baseScore = 5, autoCloseable = true, impliesPep = false),
+                "W2" to RuleTriage(baseScore = 5, autoCloseable = true, impliesPep = false),
+                "N1" to RuleTriage(baseScore = 10, autoCloseable = false, impliesPep = false),
+                "M1" to RuleTriage(baseScore = 20, autoCloseable = true, impliesPep = false),
+                "P1" to RuleTriage(baseScore = 30, autoCloseable = false, impliesPep = true),
+                "BIG" to RuleTriage(baseScore = 80, autoCloseable = false, impliesPep = false),
+            ),
             unknownRuleScore = 70,
             perExtraRule = 3,
             extraRuleMax = 6,
@@ -224,7 +268,6 @@ class TriageTest {
                 "A" to listOf(IntensityBand(60, 10), IntensityBand(45, 5)),
                 "C" to listOf(IntensityBand(3, 10), IntensityBand(2, 5)),
             ),
-            pepImpliedByRules = setOf("P1"),
             bands = listOf(
                 Band(24, Disposition.AUTO_CLOSE),
                 Band(44, Disposition.REVIEW_LOW),
@@ -232,7 +275,6 @@ class TriageTest {
                 Band(84, Disposition.REVIEW_HIGH),
                 Band(100, Disposition.ESCALATE),
             ),
-            autoCloseWhitelist = setOf("Z0", "W1", "W2", "M1"),
             requiredFields = listOf(RequiredField.CLIENT_RISK, RequiredField.CLIENT_COUNTRY, RequiredField.ALERT_AMOUNT),
             floors = listOf(
                 Floor(FloorCondition.UNKNOWN_RULE, null, Disposition.REVIEW_HIGH),

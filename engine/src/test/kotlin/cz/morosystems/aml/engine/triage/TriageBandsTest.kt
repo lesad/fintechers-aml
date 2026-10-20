@@ -70,7 +70,7 @@ class TriageBandsTest {
         /** Scores nothing but the dialled amount and floors nothing, so the score is set directly. */
         val CONFIG = TriageConfig(
             configVersion = "bands-test",
-            baseScores = mapOf("Z0" to 0),
+            ruleTriage = mapOf("Z0" to RuleTriage(baseScore = 0, autoCloseable = true, impliesPep = false)),
             unknownRuleScore = 0,
             perExtraRule = 0,
             extraRuleMax = 0,
@@ -88,7 +88,6 @@ class TriageBandsTest {
             ),
             amountBands = DIAL,
             intensityBands = emptyMap(),
-            pepImpliedByRules = emptySet(),
             bands = listOf(
                 Band(24, Disposition.AUTO_CLOSE),
                 Band(44, Disposition.REVIEW_LOW),
@@ -96,7 +95,6 @@ class TriageBandsTest {
                 Band(84, Disposition.REVIEW_HIGH),
                 Band(100, Disposition.ESCALATE),
             ),
-            autoCloseWhitelist = setOf("Z0"),
             requiredFields = emptyList(),
             floors = emptyList(),
             highRiskCountries = emptySet(),
