@@ -156,6 +156,95 @@ class RuleControllerTest {
     }
 
     @Test
+    fun backtestsADraftStoresItApartAndPagesItsRows() {
+        // A PEP: 150,000 CZK out trips B2 v1 (limit 100,000), 50,000 does not; v2 at 40,000 flags both.
+        jdbc.sql("truncate run, transaction, client cascade").update()
+        jdbc.sql(
+            """
+            insert into client (id, country, contract_date, pep, type, channel, risk, expected_monthly_volume, q2_volume, q2_tx_count, q2_max_tx, q2_days)
+            values ('K1', 'CZ', '2026-06-01', true, 'legal entity', 'in person', 'low', 100000000, 0, 0, 0, 91)
+            """,
+        ).update()
+        for ((id, ts, amount) in listOf(Triple("T1", "2026-07-10 09:00", 150_000), Triple("T2", "2026-07-11 09:00", 50_000))) {
+            jdbc.sql(
+                """
+                insert into transaction (id, client_id, ts, amount, volume, currency, fx_rate, payer_country, payee_country, payer_account, payee_account, type, direction)
+                values (?, 'K1', ?::timestamp, ?, ?, 'CZK', 1, 'CZ', 'CZ', 'K1', 'ACZ9', 'outgoing payment', 'out')
+                """,
+            ).params(id, ts, amount, amount).update()
+        }
+        val draft = Regex("\"id\":(\\d+)").find(post(b2Body(pepMin = 40_000.0)).exchange().response.contentAsString)!!.groupValues[1]
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatus(HttpStatus.NOT_FOUND)
+
+        val started = assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-07-01&to=2026-07-31")).hasStatus(HttpStatus.ACCEPTED).bodyJson()
+        started.extractingPath("$.ruleKey").isEqualTo("B2")
+        started.extractingPath("$.activeVersion").isEqualTo(1)
+        started.extractingPath("$.status").isEqualTo("RUNNING")
+        awaitBacktest(draft)
+        val run = assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatusOk().bodyJson()
+        run.extractingPath("$.status").isEqualTo("DONE")
+        run.extractingPath("$.transactions").isEqualTo(2)
+        run.extractingPath("$.newCount").isEqualTo(1)
+        run.extractingPath("$.unchangedCount").isEqualTo(1)
+        // No production run is left, and the result is kept apart.
+        assertThat(count("run")).isZero()
+        assertThat(count("backtest_row")).isEqualTo(2)
+
+        val all = assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?size=1")).hasStatusOk().bodyJson()
+        all.extractingPath("$.total").isEqualTo(2)
+        all.extractingPath("$.items[*].id").asArray().containsExactly("T2")
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?size=1&page=1")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T1")
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?view=new")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].change").asArray().containsExactly("NEW")
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest/rows?view=sideways")).hasStatus(HttpStatus.BAD_REQUEST)
+
+        // A new backtest replaces the old one; a week with no data replays nothing.
+        assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-10-01&to=2026-10-07")).hasStatus(HttpStatus.ACCEPTED)
+        awaitBacktest(draft)
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatusOk().bodyJson().extractingPath("$.transactions").isEqualTo(0)
+        assertThat(count("backtest")).isEqualTo(1)
+        assertThat(count("backtest_row")).isZero()
+
+        // Another draft's backtest deletes every stored one.
+        val other = Regex("\"id\":(\\d+)").find(post(b2Body(key = "B9")).exchange().response.contentAsString)!!.groupValues[1]
+        assertThat(mvc.post().uri("/api/rules/$other/backtest?from=2026-10-01&to=2026-10-07")).hasStatus(HttpStatus.ACCEPTED)
+        awaitBacktest(other)
+        assertThat(mvc.get().uri("/api/rules/$draft/backtest")).hasStatus(HttpStatus.NOT_FOUND)
+        assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-10-01&to=2026-10-07")).hasStatus(HttpStatus.ACCEPTED)
+        awaitBacktest(draft)
+
+        val active = jdbc.sql("select id from rule where key = 'B2' and status = 'active'").query(Long::class.java).single()
+        assertThat(mvc.post().uri("/api/rules/$active/backtest?from=2026-07-01&to=2026-07-31")).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-07-31&to=2026-07-01")).hasStatus(HttpStatus.BAD_REQUEST)
+
+        // Deleting the draft takes its backtest along.
+        assertThat(mvc.delete().uri("/api/rules/$draft")).hasStatus(HttpStatus.NO_CONTENT)
+        assertThat(count("backtest")).isZero()
+    }
+
+    @Test
+    fun anApprovedVersionLosesItsBacktestButAPendingOneKeepsIt() {
+        val draft = Regex("\"id\":(\\d+)").find(post(b2Body(pepMin = 40_000.0)).exchange().response.contentAsString)!!.groupValues[1].toLong()
+        assertThat(mvc.post().uri("/api/rules/$draft/backtest?from=2026-07-01&to=2026-07-31")).hasStatus(HttpStatus.ACCEPTED)
+        awaitBacktest(draft)
+
+        jdbc.sql("update rule set status = 'pending' where id = ?").param(draft).update()
+        assertThat(count("backtest")).isEqualTo(1)
+        jdbc.sql("update rule set status = 'approved', approved_at = now() where id = ?").param(draft).update()
+        assertThat(count("backtest")).isZero()
+    }
+
+    private fun count(table: String) = jdbc.sql("select count(*) from $table").query(Long::class.java).single()
+
+    /** Waits for the draft's backtest, which runs in the background, to leave RUNNING. */
+    private fun awaitBacktest(draft: Any) {
+        val status = { jdbc.sql("select status from backtest where rule_id = ?").param(draft.toString().toLong()).query(String::class.java).single() }
+        repeat(300) { if (status() != "RUNNING") return else Thread.sleep(100) }
+        error("backtest of $draft still running")
+    }
+
+    @Test
     fun unknownIdIs404() {
         assertThat(mvc.get().uri("/api/rules/999999")).hasStatus(HttpStatus.NOT_FOUND)
     }

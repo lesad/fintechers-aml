@@ -34,7 +34,8 @@ select,input{font-family:inherit}
       <span style="position:absolute;right:8px;font-size:11px;color:{{ jumpHintColor }};pointer-events:none;">{{ jumpHint }}</span>
     </form>
     <div style="flex:1 1 0;display:flex;align-items:center;justify-content:flex-end;gap:12px;white-space:nowrap;">
-      
+      <a href="AML Data Import.dc.html" title="Data import" aria-label="Data import" style="width:28px;height:28px;box-sizing:border-box;border:1px solid transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#d3d4da;" style-hover="color:#ffdc3c;border-color:#51526b;background:#2f3152"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></a>
+      <button onClick="{{ openRules }}" title="Rules" aria-label="Rules" style="width:28px;height:28px;padding:0;box-sizing:border-box;border:1px solid {{ rulesBorder }};border-radius:6px;display:flex;align-items:center;justify-content:center;color:{{ rulesColor }};background:{{ rulesBg }};cursor:pointer;" style-hover="color:#ffdc3c;border-color:#51526b;background:#2f3152"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.730.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.730l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:12px;color:#d3d4da;">J. Novák</span>
         <div style="width:26px;height:26px;border-radius:999px;background:#51526b;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;">JN</div>
@@ -52,7 +53,9 @@ select,input{font-family:inherit}
       <div role="tab" title="{{ tab.title }}" onClick="{{ tab.activate }}" onAuxClick="{{ tab.close }}" style="flex:none;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;min-width:150px;cursor:pointer;border-right:1px solid var(--border);background:{{ tab.bg }};box-shadow:{{ tab.shadow }};color:{{ tab.color }};">
         <sc-if value="{{ tab.isTx }}" hint-placeholder-val="{{ true }}"><span style="width:7px;height:7px;border-radius:2px;background:{{ tab.dot }};flex:none;"></span></sc-if>
         <sc-if value="{{ tab.isAudit }}" hint-placeholder-val="{{ false }}"><span style="flex:none;width:10px;height:12px;border:1.5px solid currentColor;border-radius:2px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:0 1.5px;"><span style="height:1.5px;background:currentColor;"></span><span style="height:1.5px;background:currentColor;"></span></span></sc-if>
-        <span style="flex:1;white-space:nowrap;"><sc-if value="{{ tab.isAudit }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;">Audit · </span></sc-if><span style="font-family:var(--ms-font-mono);font-size:12px;">{{ tab.txid }}</span></span>
+        <sc-if value="{{ tab.isRules }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></sc-if>
+        <sc-if value="{{ tab.isBt }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg></sc-if>
+        <span style="flex:1;white-space:nowrap;"><span style="font-size:12px;font-weight:600;">{{ tab.prefix }}</span><span style="font-family:var(--ms-font-mono);font-size:12px;">{{ tab.txid }}</span></span>
         <button aria-label="Close tab" onClick="{{ tab.close }}" style="width:20px;height:20px;border:0;background:transparent;color:var(--fg-subtle);border-radius:4px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;" style-hover="background:var(--border-soft);color:var(--fg)">&#215;</button>
       </div>
     </sc-for>
@@ -131,6 +134,86 @@ select,input{font-family:inherit}
         </table>
         <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
           <div style="padding:40px 16px;color:var(--fg-subtle);">No transactions match these filters.</div>
+        </sc-if>
+      </div>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ rulesOpened }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;display:{{ rulesDisp }};flex-direction:column;">
+      <dc-import name="AML Rules" embedded="{{ true }}" on-backtest="{{ onBacktest }}" hint-size="100%,100%" style="flex:1;min-height:0;width:100%;"></dc-import>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isBt }}" hint-placeholder-val="{{ false }}">
+    <main style="flex:1;min-height:0;display:flex;flex-direction:column;">
+      <div style="flex:none;display:flex;align-items:stretch;padding:12px 0;overflow-x:auto;position:relative;z-index:1;background:var(--bg);box-shadow:0 2px 6px -2px rgba(37,39,70,.14);">
+        <div style="display:flex;flex-direction:column;gap:4px;padding:0 24px 0 16px;flex:none;max-width:320px;">
+          <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Backtest</span>
+          <span style="display:flex;align-items:baseline;gap:8px;line-height:1.2;white-space:nowrap;"><span style="font-family:var(--ms-font-mono);font-size:18px;font-weight:700;">{{ bt.ruleId }}</span><span style="font-size:13px;font-weight:600;">{{ bt.verLine }}</span></span>
+          <span title="{{ bt.ruleName }}" style="font-size:12px;color:var(--fg-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ bt.ruleName }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;padding:0 24px;border-left:1px solid var(--border-soft);flex:none;">
+          <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Period</span>
+          <span style="font-size:18px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;">{{ bt.days }}</span>
+          <span style="font-size:12px;color:var(--fg-muted);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ bt.range }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;padding:0 24px;border-left:1px solid var(--border-soft);flex:none;">
+          <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-subtle);">Impact</span>
+          <span style="display:flex;align-items:baseline;gap:16px;font-size:18px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;">
+            <span style="display:flex;align-items:baseline;gap:5px;">{{ bt.newN }}<span style="font-size:12px;font-weight:400;color:var(--fg-muted);">new</span></span>
+            <span style="display:flex;align-items:baseline;gap:5px;color:var(--fg-subtle);">{{ bt.dropN }}<span style="font-size:12px;font-weight:400;">dropped</span></span>
+            <span style="display:flex;align-items:baseline;gap:5px;">{{ bt.chgN }}<span style="font-size:12px;font-weight:400;color:var(--fg-muted);">rating changed</span></span>
+          </span>
+          <span style="font-size:12px;color:var(--fg-muted);white-space:nowrap;font-variant-numeric:tabular-nums;">{{ bt.sameN }} unchanged · {{ bt.evaluated }} transactions replayed</span>
+        </div>
+      </div>
+
+      <div style="flex:none;display:flex;align-items:center;gap:8px 12px;padding:10px 16px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap;">
+        <div role="tablist" style="display:flex;padding:2px;border:1px solid var(--border);border-radius:6px;background:var(--bg-sub);gap:2px;">
+          <sc-for list="{{ bt.filters }}" as="f" hint-placeholder-count="4">
+            <button role="tab" onClick="{{ f.select }}" style="height:22px;padding:0 8px;border:0;border-radius:4px;background:{{ f.bg }};box-shadow:{{ f.shadow }};color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;"><span>{{ f.label }}</span><span style="font-weight:400;color:var(--fg-muted);font-variant-numeric:tabular-nums;">{{ f.n }}</span></button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:0;overflow:auto;">
+        <table style="width:100%;min-width:960px;border-collapse:collapse;table-layout:fixed;">
+          <thead>
+            <tr style="height:34px;text-align:left;color:var(--fg-muted);font-size:12px;">
+              <th style="box-sizing:border-box;width:140px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px 0 16px;font-weight:600;">Transaction</th>
+              <th style="box-sizing:border-box;width:96px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;">Client</th>
+              <th style="box-sizing:border-box;width:130px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;text-align:right;">Amount (CZK)</th>
+              <th style="box-sizing:border-box;width:132px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;">Date and time</th>
+              <th style="box-sizing:border-box;width:120px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;">Before · v{{ bt.fromN }}</th>
+              <th style="box-sizing:border-box;width:28px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);"></th>
+              <th style="box-sizing:border-box;width:120px;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 12px;font-weight:600;">After · v{{ bt.toN }}</th>
+              <th style="box-sizing:border-box;position:sticky;top:0;background:var(--bg-sub);border-bottom:1px solid var(--border);padding:0 16px 0 12px;font-weight:600;">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ bt.rows }}" as="r" hint-placeholder-count="8">
+              <tr onClick="{{ r.open }}" title="{{ r.title }}" style="height:{{ rowH }};cursor:{{ r.cursor }};border-bottom:1px solid var(--border-soft);color:{{ r.fg }};" style-hover="background:var(--hover)">
+                <td style="padding:0 12px 0 16px;font-family:var(--ms-font-mono);font-size:12px;white-space:nowrap;">{{ r.id }}</td>
+                <td style="padding:0 12px;font-family:var(--ms-font-mono);font-size:12px;white-space:nowrap;color:{{ r.fgMuted }};">{{ r.client }}</td>
+                <td style="padding:0 12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">{{ r.amount }}</td>
+                <td style="padding:0 12px;font-variant-numeric:tabular-nums;white-space:nowrap;color:{{ r.fgMuted }};">{{ r.date }}</td>
+                <td style="padding:0 12px;white-space:nowrap;">
+                  <sc-if value="{{ r.hasBefore }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ r.bBg }};color:{{ r.bFg }};font-size:12px;font-weight:700;box-sizing:border-box;"><span style="width:7px;height:7px;border-radius:2px;background:{{ r.bDot }};"></span>{{ r.before }}</span></sc-if>
+                  <sc-if value="{{ r.noBefore }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--fg-subtle);">No alert</span></sc-if>
+                </td>
+                <td style="color:var(--fg-subtle);text-align:center;">→</td>
+                <td style="padding:0 12px;white-space:nowrap;">
+                  <sc-if value="{{ r.hasAfter }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;background:{{ r.aBg }};color:{{ r.aFg }};font-size:12px;font-weight:700;box-sizing:border-box;"><span style="width:7px;height:7px;border-radius:2px;background:{{ r.aDot }};"></span>{{ r.after }}</span></sc-if>
+                  <sc-if value="{{ r.noAfter }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--fg-subtle);">No alert</span></sc-if>
+                </td>
+                <td style="padding:4px 16px 4px 12px;"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;line-height:1.3;"><span style="font-weight:{{ r.chgWeight }};white-space:nowrap;">{{ r.change }}</span><span style="font-size:12px;color:var(--fg-subtle);">{{ r.note }}</span></div></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <sc-if value="{{ bt.empty }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:40px 16px;color:var(--fg-subtle);">No transactions in this view.</div>
         </sc-if>
       </div>
     </main>
@@ -293,6 +376,42 @@ select,input{font-family:inherit}
           </div>
 
           <div style="position:sticky;top:12px;display:flex;flex-direction:column;gap:12px;">
+            <section style="border:0;border-radius:8px;background:var(--bg);padding:12px 14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--ms-shadow-md);">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:12px;font-weight:600;color:var(--fg-muted);">Assignee</span>
+                <button onClick="{{ det.asg.toggle }}" style="height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;" style-hover="border-color:var(--fg)">{{ det.asg.toggleLabel }}</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <sc-if value="{{ det.asg.has }}" hint-placeholder-val="{{ true }}">
+                  <span style="flex:none;width:30px;height:30px;border-radius:999px;background:#8250be;color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:0.02em;">{{ det.asg.ini }}</span>
+                </sc-if>
+                <sc-if value="{{ det.asg.none }}" hint-placeholder-val="{{ false }}">
+                  <span style="flex:none;width:30px;height:30px;border-radius:999px;border:1.5px dashed var(--border);box-sizing:border-box;"></span>
+                </sc-if>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0;flex:1;">
+                  <span style="font-size:13px;font-weight:600;color:var(--fg);">{{ det.asg.name }}</span>
+                  <sc-if value="{{ det.asg.has }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:var(--fg-subtle);">{{ det.asg.role }}</span></sc-if>
+                  <sc-if value="{{ det.asg.none }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--fg-subtle);">Nobody is working on this alert</span></sc-if>
+                </div>
+                <sc-if value="{{ det.asg.notMe }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ det.asg.assignMe }}" style="flex:none;height:26px;padding:0 10px;border:0;border-radius:4px;background:var(--fg);color:var(--bg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;" style-hover="opacity:0.9">Assign to me</button>
+                </sc-if>
+              </div>
+              <sc-if value="{{ det.asg.open }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:2px;padding-top:8px;border-top:1px solid var(--border-soft);">
+                  <sc-for list="{{ det.asg.people }}" as="p" hint-placeholder-count="5">
+                    <button onClick="{{ p.pick }}" style="display:flex;align-items:center;gap:8px;padding:5px 6px;border:0;border-radius:4px;background:{{ p.bg }};color:var(--fg);font:inherit;font-size:13px;text-align:left;cursor:pointer;" style-hover="background:var(--sel)">
+                      <span style="flex:none;width:22px;height:22px;border-radius:999px;background:var(--border-soft);color:var(--fg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">{{ p.ini }}</span>
+                      <span style="flex:1;min-width:0;font-weight:{{ p.weight }};">{{ p.name }} <span style="color:var(--fg-subtle);font-weight:400;">{{ p.you }}</span></span>
+                      <span style="font-size:11px;color:var(--fg-subtle);">{{ p.role }}</span>
+                    </button>
+                  </sc-for>
+                  <sc-if value="{{ det.asg.has }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ det.asg.unassign }}" style="align-self:flex-start;margin-top:4px;padding:4px 6px;border:0;background:transparent;color:var(--fg-muted);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline;">Unassign</button>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </section>
             <section style="border:0;border-radius:8px;background:var(--bg);padding:12px 14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--ms-shadow-md);">
               <div style="display:flex;align-items:center;justify-content:space-between;">
                 <span style="font-size:12px;font-weight:600;color:var(--fg-muted);">Client</span>
@@ -577,7 +696,26 @@ select,input{font-family:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;standard&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;standard&quot;,&quot;tsType&quot;:&quot;'standard'|'compact'&quot;}}">
 class Component extends DCLogic {
-  state = { prioFor: null, decisions: this.seedDec(), decLog: this.seedLog(), auditOpen: {}, auditRaw: {}, drafts: {}, jump: '', jumpMiss: false, theme: null, query: '', rating: 'all', status: 'all', tabs: [], active: 'overview' };
+  team = [
+    ['M. Svobodová', 'L1 analyst'], ['J. Novák', 'L2 analyst'], ['P. Král', 'L2 analyst'], ['T. Dvořák', 'L1 analyst'], ['E. Horáková', 'Compliance officer'],
+  ];
+  me = 'J. Novák';
+  seedAsg() { return { TX000123456: 'J. Novák', TX000004790: 'P. Král', TX000004760: 'M. Svobodová', TX000004801: 'M. Svobodová', TX000004870: 'T. Dvořák', TX000004822: 'T. Dvořák' }; }
+  asgFor(d, s) {
+    const name = s.assignees[d.id] || null, open = s.asgOpen === d.id;
+    const ini = n => n.replace('.', '').split(/\s+/).map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const role = name ? (this.team.find(t => t[0] === name) || [, 'Analyst'])[1] : '';
+    const set = v => this.setState(st => ({ assignees: { ...st.assignees, [d.id]: v }, asgOpen: null }));
+    return {
+      has: !!name, none: !name, name: name || 'Unassigned', ini: name ? ini(name) : '', role, isMe: name === this.me,
+      notMe: name !== this.me, open, closed: !open, toggleLabel: open ? 'Done' : name ? 'Change' : 'Pick',
+      toggle: () => this.setState(st => ({ asgOpen: st.asgOpen === d.id ? null : d.id })),
+      assignMe: () => set(this.me), unassign: () => set(null),
+      people: this.team.map(([n, r]) => ({ name: n, role: r, ini: ini(n), you: n === this.me ? '(you)' : '', on: n === name,
+        bg: n === name ? 'var(--sel)' : 'transparent', weight: n === name ? 700 : 500, pick: () => set(n) })),
+    };
+  }
+  state = { assignees: this.seedAsg(), asgOpen: null, prioFor: null, decisions: this.seedDec(), decLog: this.seedLog(), auditOpen: {}, auditRaw: {}, drafts: {}, jump: '', jumpMiss: false, theme: null, query: '', rating: 'all', status: 'all', tabs: [], active: 'overview', backtests: {}, btFilter: {} };
 
   data = [
     ['TX000004812','K003797','High','Cash deposits split below reporting threshold, 6× in 48 h','High','Pattern consistent with structuring; counterparties are new',248900,'2026-10-16 09:12','In review','2026-10-16T09:14'],
@@ -606,6 +744,74 @@ class Component extends DCLogic {
       }
     };
     window.addEventListener('keydown', this._onKey);
+    const m = /#backtest=(.+)$/.exec(location.hash);
+    if (m) { try { this.openBacktest(JSON.parse(decodeURIComponent(m[1]))); history.replaceState(null, '', location.pathname); } catch (e) {} }
+  }
+  openBacktest(cfg) {
+    const id = 'bt:' + cfg.ruleId + ':' + cfg.toN + ':' + cfg.from + ':' + cfg.to;
+    this.setState(s => ({ backtests: { ...s.backtests, [id]: { ...cfg, ranAt: this.ts().slice(0, 16) } }, tabs: s.tabs.includes(id) ? s.tabs : [...s.tabs, id], active: id }));
+  }
+  hsh(str) { return [...str].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7); }
+  backtestFor(id, s, data, byId, risk) {
+    const cfg = s.backtests[id], filt = s.btFilter[id] || 'all';
+    const day = x => x.slice(0, 10), inP = x => day(x) >= cfg.from && day(x) <= cfg.to;
+    const up = { Low: 'Medium', Medium: 'High', High: 'High' }, down = { High: 'Medium', Medium: 'Low', Low: 'Low' };
+    const firedOf = r => r.id === 'TX000004822' ? ['A1', 'A2', 'A3'] : [this.alertMap[r.id][1]];
+    const items = data.filter(r => inP(r.date)).map(r => {
+      const fired = firedOf(r), hit = fired.includes(cfg.ruleId), others = fired.filter(x => x !== cfg.ruleId), k = this.hsh(r.id + cfg.toN);
+      let after = r.rule, kind = 'same', note = '';
+      if (hit && cfg.fromN) {
+        const drop = cfg.dir > 0 ? r.rule !== 'High' : cfg.dir === 0 && k % 3 === 0;
+        if (drop && others.length) { kind = 'still'; note = 'still flagged by ' + others.join(', '); }
+        else if (drop) { after = null; kind = 'dropped'; note = cfg.ruleId + ' no longer fires'; }
+        else if (cfg.dir > 0) { after = down[r.rule]; kind = 'lowered'; }
+        else if (cfg.dir < 0 && r.rule === 'Low' && k % 2 === 0) { after = up[r.rule]; kind = 'raised'; }
+      }
+      return { id: r.id, client: r.client, amount: r.amount, date: r.date, before: r.rule, after, kind, note, real: true };
+    });
+    const nNew = !cfg.fromN || cfg.dir < 0 ? 3 : cfg.dir === 0 ? 1 : 0;
+    const days = ['2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18', '2026-10-19'].filter(inP);
+    const cl = cfg.ruleId === 'B2' ? ['K003797'] : Object.keys(this.clients);
+    const handNew = { B2: [['TX000005918', '2026-10-14 10:22', 64800, 'Medium'], ['TX000005987', '2026-10-16 16:05', 92300, 'Medium'], ['TX000006131', '2026-10-18 09:40', 57000, 'Low']] }[cfg.ruleId];
+    for (let i = 0; i < nNew && days.length; i++) {
+      const k = this.hsh(cfg.ruleId + cfg.toN + i), h = handNew && handNew[i];
+      if (h && !inP(h[1])) continue;
+      items.push({ id: h ? h[0] : 'TX00000' + (5900 + k % 900), client: cl[k % cl.length], amount: h ? h[2] : 20000 + (k % 180) * 1000,
+        date: h ? h[1] : days[k % days.length] + ' ' + this.pad(8 + k % 10) + ':' + this.pad(k % 60), before: null, after: h ? h[3] : i ? 'Low' : 'Medium', kind: 'new', note: 'not flagged in production', real: false });
+    }
+    const order = { new: 0, raised: 1, lowered: 2, dropped: 3, still: 4, same: 5 };
+    items.sort((a, b) => order[a.kind] - order[b.kind] || this.rank[a.after || a.before] - this.rank[b.after || b.before] || (a.date < b.date ? -1 : 1));
+    const cnt = f => items.filter(f).length;
+    const isChg = x => x.kind !== 'same' && x.kind !== 'still';
+    const fdefs = [['all', 'All', () => true], ['changed', 'Changed', isChg], ['new', 'New', x => x.kind === 'new'], ['dropped', 'Dropped', x => x.kind === 'dropped']];
+    const shown = items.filter(fdefs.find(f => f[0] === filt)[2]);
+    const label = { new: 'New alert', raised: 'Rating raised', lowered: 'Rating lowered', dropped: 'Dropped', still: 'Unchanged', same: 'Unchanged' };
+    const grey = { bg: 'var(--bg-sub)', fg: 'var(--fg-subtle)', dot: '#a3a4b3' };
+    const beforeN = cnt(x => x.before), afterN = cnt(x => x.after), dn = afterN - beforeN;
+    const nd = (new Date(cfg.to) - new Date(cfg.from)) / 86400000 + 1;
+    return {
+      ruleId: cfg.ruleId, ruleName: cfg.ruleName, toN: cfg.toN, fromN: cfg.fromN || '–',
+      verLine: cfg.fromN ? 'v' + cfg.fromN + ' active → v' + cfg.toN + ' draft' : 'v' + cfg.toN + ' draft · new rule',
+      days: nd + (nd === 1 ? ' day' : ' days'), range: cfg.from + ' → ' + cfg.to,
+      evaluated: (nd * 3140 + this.hsh(id) % 400).toLocaleString('en-US'),
+      beforeN, afterN, delta: (dn > 0 ? '+' : dn < 0 ? '−' : '±') + Math.abs(dn), deltaFg: dn > 0 ? 'var(--med)' : dn < 0 ? 'var(--low)' : 'var(--fg-muted)',
+      newN: cnt(x => x.kind === 'new'), dropN: cnt(x => x.kind === 'dropped'), chgN: cnt(x => x.kind === 'raised' || x.kind === 'lowered'), sameN: cnt(x => !isChg(x)),
+      ranAt: cfg.ranAt, changes: cfg.changes && cfg.changes.length ? cfg.changes : [{ name: cfg.fromN ? 'condition' : 'new rule', from: cfg.fromN ? 'v' + cfg.fromN : 'none', to: 'v' + cfg.toN }],
+      openRule: () => this.setState({ active: 'rules' }),
+      filters: fdefs.map(f => ({ label: f[1], n: cnt(f[2]), bg: f[0] === filt ? 'var(--bg)' : 'transparent', shadow: f[0] === filt ? '0 1px 2px rgba(37,39,70,.12), 0 0 0 1px var(--border)' : 'none',
+        select: () => this.setState(st => ({ btFilter: { ...st.btFilter, [id]: f[0] } })) })),
+      empty: shown.length === 0,
+      rows: shown.map(x => {
+        const off = x.kind === 'dropped', b = x.before ? (off ? grey : risk(x.before)) : {}, a = x.after ? risk(x.after) : {}, can = x.real && !!byId[x.id];
+        return { id: x.id, client: x.client, amount: x.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }), date: x.date,
+          before: x.before, hasBefore: !!x.before, noBefore: !x.before, bBg: b.bg, bFg: b.fg, bDot: b.dot,
+          after: x.after, hasAfter: !!x.after, noAfter: !x.after, aBg: a.bg, aFg: a.fg, aDot: a.dot,
+          change: label[x.kind], note: x.note, chgWeight: isChg(x) ? 600 : 400,
+          fg: off ? 'var(--fg-subtle)' : 'var(--fg)', fgMuted: off ? 'var(--fg-subtle)' : 'var(--fg-muted)',
+          cursor: can ? 'pointer' : 'default', title: can ? 'Open ' + x.id + ' — current processing' : 'Not flagged in production — no case to open',
+          open: can ? e => this.openTab(x.id, e.metaKey || e.ctrlKey) : undefined };
+      }),
+    };
   }
   componentWillUnmount() { window.removeEventListener('keydown', this._onKey); }
   rank = { High: 0, Medium: 1, Low: 2 };
@@ -911,7 +1117,7 @@ class Component extends DCLogic {
     const pc = pickBtn(draft.choice === 'close'), pe = pickBtn(draft.choice === 'escalate');
     const sd = new Date(day + 'T12:00');
     return {
-      id: d.id, status: d.status, age: this.age(d.flagged), date: d.date, client: d.client,
+      id: d.id, status: d.status, age: this.age(d.flagged), date: d.date, client: d.client, asg: this.asgFor(d, s),
       statusWeight: d.status === 'Escalated' ? 700 : 500, statusFill: d.status === 'New' ? 'transparent' : 'currentColor',
       amountFmt: this.money(d.amount, true), orig: t.cur ? t.cur + ' ' + this.money(t.orig, true) : '',
       dirLabel: dirLabel[t.dir], cp: t.cp, cpCountry: this.countries[t.cc],
@@ -1042,11 +1248,13 @@ class Component extends DCLogic {
 
     const activeShadow = 'inset 0 2px 0 #ffdc3c';
     const tabs = s.tabs.map(id => {
-      const on = s.active === id, isAudit = id.startsWith('audit:'), txid = isAudit ? id.slice(6) : id, row = byId[txid];
+      const on = s.active === id, isAudit = id.startsWith('audit:'), isBt = id.startsWith('bt:'), isRules = id === 'rules', isTx = !isAudit && !isBt && !isRules;
+      const cfg = isBt && s.backtests[id], txid = isAudit ? id.slice(6) : isTx ? id : isBt ? cfg.ruleId + ' v' + cfg.toN : '', row = byId[isAudit ? id.slice(6) : id];
       return {
-        id, txid, isAudit, isTx: !isAudit, title: (isAudit ? 'Audit trail · ' : '') + txid + ' · ' + row.client,
+        id, txid, isAudit, isTx, isBt, isRules, prefix: isAudit ? 'Audit · ' : isBt ? 'Backtest · ' : isRules ? 'Rules' : '',
+        title: isRules ? 'Rules' : isBt ? 'Backtest ' + txid + ' · ' + cfg.from + ' → ' + cfg.to : (isAudit ? 'Audit trail · ' : '') + txid + ' · ' + row.client,
         bg: on ? 'var(--bg)' : 'transparent', shadow: on ? activeShadow : 'none',
-        color: on ? 'var(--fg)' : 'var(--fg-muted)', dot: risk(row.rule).dot,
+        color: on ? 'var(--fg)' : 'var(--fg-muted)', dot: row ? risk(row.rule).dot : 'transparent',
         activate: () => this.setState({ active: id }),
         close: e => { e.stopPropagation(); this.closeTab(id); },
       };
@@ -1054,6 +1262,9 @@ class Component extends DCLogic {
 
     const isAudit = s.active.startsWith('audit:');
     const d = isAudit ? null : byId[s.active];
+    const isBt = s.active.startsWith('bt:') && !!s.backtests[s.active];
+    const bt = isBt ? this.backtestFor(s.active, s, data, byId, risk) : {};
+    const rulesOn = s.active === 'rules';
     const det = d ? this.detailFor(d, s, risk, byId) : {};
     const au = isAudit ? this.auditFor(byId[s.active.slice(6)], s, risk) : {};
     const hasFilters = !!q || s.rating !== 'all' || s.status !== 'all';
@@ -1062,7 +1273,11 @@ class Component extends DCLogic {
       theme, themeLabel: theme === 'dark' ? 'Light theme' : 'Dark theme',
       toggleTheme: () => this.setState({ theme: theme === 'dark' ? 'light' : 'dark' }),
       tabs, openCount: data.filter(r => r.status !== 'Closed').length,
-      isOverview: s.active === 'overview', isDetail: !!d, isAudit, au,
+      isOverview: s.active === 'overview', isDetail: !!d, isAudit, au, isBt, bt,
+      rulesOpened: s.tabs.includes('rules'), rulesDisp: rulesOn ? 'flex' : 'none',
+      rulesBorder: rulesOn ? '#ffdc3c' : 'transparent', rulesColor: rulesOn ? '#ffdc3c' : '#d3d4da', rulesBg: rulesOn ? 'rgba(255,220,60,.12)' : 'transparent',
+      openRules: () => this.openTab('rules'),
+      onBacktest: cfg => this.openBacktest(cfg),
       prioModal: (() => { const pd = s.prioFor && byId[s.prioFor]; if (!pd) return { open: false };
         const a = this.auditFor(pd, s, risk), mx = Math.max(...a.prioFactors.map(x => Math.abs(x[1])), 1);
         const pos = a.prioFactors.filter(x => x[1] > 0).sort((p, q) => q[1] - p[1]), neg = a.prioFactors.filter(x => x[1] < 0);

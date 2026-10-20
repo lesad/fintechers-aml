@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/morosystems-design-system-019dfcd2-98f0-72d3-bc6d-511625fb6bba/colors_and_type.css">
+<script src="_ds/morosystems-design-system-019dfcd2-98f0-72d3-bc6d-511625fb6bba/_ds_bundle.js"></script>
+<style>
+html,body{margin:0;padding:0}
+a{color:#252746;text-decoration:underline}a:hover{color:#8250be}
+.rt{--bg:#ffffff;--bg-sub:#f6f6f8;--fg:#252746;--fg-muted:#51526b;--fg-subtle:#6f7085;--border:#d3d4da;--border-soft:#e8e8ed;--hover:#f3f3f6;--high:#b8322b;--high-bg:#fbe6e4;--high-dot:#d4453d;--med:#a8430f;--med-bg:#ffebe0;--med-dot:#ff6e32;--low:#23784f;--low-bg:#e2f2ea;--low-dot:#2f9e6b;--sel:#fff8d8;--ai-bg:#efe8f7;--ai-fg:#5e3592;--ai-line:#cdb9e5}
+input{font-family:inherit}
+</style>
+</helmet>
+<div class="rt" style="height:{{ rootH }};position:relative;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font-family:var(--ms-font-body);font-size:13px;line-height:1.4;">
+
+  <sc-if value="{{ showHeader }}" hint-placeholder-val="{{ false }}">
+  <header style="height:44px;flex:none;display:flex;align-items:center;gap:16px;padding:0 16px;background:linear-gradient(90deg, #252746 0%, #2b2c55 55%, #3a2e66 100%);color:#ffffff;">
+    <div style="flex:1 1 0;display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;">
+      <img src="assets/aml-spotter-logo-white.png" alt="AML spotter" style="flex:none;height:28px;width:auto;display:block;">
+      <div style="flex:1 1 auto;justify-content:center;display:flex;align-items:center;gap:10px;font-size:12px;color:#d3d4da;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:0;overflow:hidden;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:2px;background:#f0675e;"></span><b style="color:#ffffff;">699</b> High</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:2px;background:#ff8048;"></span><b style="color:#ffffff;">1842</b> Medium</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:2px;background:#45c086;"></span><b style="color:#ffffff;">3822</b> Low</span>
+      </div>
+    </div>
+    <div style="flex:0 1 420px;min-width:200px;position:relative;display:flex;align-items:center;">
+      <span style="position:absolute;left:10px;color:#ffdc3c;font-weight:700;pointer-events:none;">→</span>
+      <input placeholder="Open transaction by ID" style="width:100%;box-sizing:border-box;height:28px;padding:0 48px 0 28px;border:1px solid #51526b;border-radius:6px;background:#2f3152;color:#ffffff;font-size:13px;outline:none;font-family:var(--ms-font-mono);" style-focus="border-color:#ffdc3c;background:#1c1d36">
+      <span style="position:absolute;right:8px;font-size:11px;color:#8b8ca3;pointer-events:none;">⌘K</span>
+    </div>
+    <div style="flex:1 1 0;display:flex;align-items:center;justify-content:flex-end;gap:8px;white-space:nowrap;">
+      <a href="AML Data Import.dc.html" title="Data import" aria-label="Data import" style="width:28px;height:28px;box-sizing:border-box;border:1px solid transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#d3d4da;" style-hover="color:#ffdc3c;border-color:#51526b;background:#2f3152"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></a>
+      <a href="AML Rules.dc.html" title="Rules" aria-label="Rules" aria-current="page" style="width:28px;height:28px;margin-right:4px;box-sizing:border-box;border:1px solid #ffdc3c;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#ffdc3c;background:rgba(255,220,60,.12);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></a>
+      <span style="font-size:12px;color:#d3d4da;">J. Novák</span>
+      <div style="width:26px;height:26px;border-radius:999px;background:#51526b;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;">JN</div>
+    </div>
+  </header>
+  </sc-if>
+
+
+  <div style="flex:1;min-height:0;display:flex;">
+    <aside style="width:280px;flex:none;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--bg);">
+      <div style="flex:none;display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--border-soft);">
+        <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Filter rules" style="flex:1;min-width:0;box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+        <button style="flex:none;height:28px;padding:0 10px;border:0;border-radius:4px;background:#252746;color:#ffffff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;" onClick="{{ startNew }}" style-hover="background:#3a3c63">+ New rule</button>
+      </div>
+      <div style="flex:1;min-height:0;overflow:auto;">
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+          <div style="padding:10px 12px 4px;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-subtle);">{{ g.label }}</div>
+          <sc-for list="{{ g.rules }}" as="r" hint-placeholder-count="2">
+            <div onClick="{{ r.select }}" style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:0 8px;align-items:center;padding:6px 12px 6px 9px;cursor:pointer;border-left:3px solid {{ r.edge }};background:{{ r.bg }};" style-hover="background:var(--hover)">
+              <span style="font-family:var(--ms-font-mono);font-size:13px;font-weight:700;">{{ r.id }}</span>
+              <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span>
+              <span></span>
+              <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--fg-subtle);">
+                <span>{{ r.verLabel }}</span>
+                <sc-if value="{{ r.hasDraft }}" hint-placeholder-val="{{ false }}"><span style="padding:0 6px;border-radius:3px;background:var(--sel);color:#7a5c00;border:1px solid #f0d36a;font-weight:600;font-size:11px;">draft v{{ r.draftV }}</span></sc-if>
+              </span>
+            </div>
+          </sc-for>
+        </sc-for>
+        <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:24px 16px;color:var(--fg-subtle);">No rules match “{{ query }}”.</div>
+        </sc-if>
+      </div>
+    </aside>
+
+    <main style="flex:1;min-width:0;overflow:auto;">
+      <sc-if value="{{ isEditing }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:100%;display:flex;flex-direction:column;">
+        <div style="flex:1;max-width:1040px;width:100%;box-sizing:border-box;padding:16px 24px 24px;display:flex;flex-direction:column;gap:18px;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:12px;color:var(--fg-subtle);">{{ edEyebrow }}</div>
+            <h1 style="margin:0;font-family:var(--ms-font-body);font-size:18px;font-weight:600;line-height:1.25;">{{ edTitle }}</h1>
+          </div>
+
+          <section style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+              <sc-if value="{{ edIsNew }}" hint-placeholder-val="{{ false }}">
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:var(--fg-muted);">Rule code
+                  <input value="{{ ed.code }}" onChange="{{ onCode }}" placeholder="e.g. C2" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);width:110px;font-weight:700;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                </label>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:var(--fg-muted);"><span style="display:flex;gap:8px;align-items:center;">Alert type <sc-if value="{{ chg.type }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 6px;border-radius:3px;background:var(--sel);border:1px solid #f0d36a;color:#7a5c00;font-size:11px;font-weight:600;">changed from v{{ ed.baseN }}</span></sc-if></span><div style="display:flex;padding:2px;border:1px solid var(--border);border-radius:6px;background:var(--bg-sub);gap:2px;align-self:flex-start;flex-wrap:wrap;">
+              <sc-for list="{{ typeOpts }}" as="o" hint-placeholder-count="3">
+                <button onClick="{{ o.select }}" style="height:24px;padding:0 10px;border:0;border-radius:4px;background:{{ o.bg }};box-shadow:{{ o.shadow }};color:var(--fg);font:inherit;font-size:13px;font-weight:600;cursor:pointer;">{{ o.label }}</button>
+              </sc-for>
+            </div></div>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;color:var(--fg-muted);"><span style="display:flex;gap:8px;align-items:center;">Name <sc-if value="{{ chg.name }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 6px;border-radius:3px;background:var(--sel);border:1px solid #f0d36a;color:#7a5c00;font-size:11px;font-weight:600;">changed from v{{ ed.baseN }}</span></sc-if></span>
+              <input value="{{ ed.name }}" onChange="{{ onName }}" placeholder="Short description of the pattern" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;width:100%;font-size:13px;font-weight:400;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+            </label>
+            <sc-for list="{{ idIssues }}" as="i" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:{{ i.color }};"><span style="width:6px;height:6px;border-radius:999px;background:{{ i.color }};flex:none;"></span><span>{{ i.text }}</span><sc-if value="{{ i.hasFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ i.fix }}" style="height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;" style-hover="border-color:#252746">{{ i.fixLabel }}</button></sc-if></div>
+            </sc-for>
+          </section>
+
+          <section style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Evaluated</h2><sc-if value="{{ chg.evalType }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 6px;border-radius:3px;background:var(--sel);border:1px solid #f0d36a;color:#7a5c00;font-size:11px;font-weight:600;">changed from v{{ ed.baseN }}</span></sc-if></div>
+            <div style="display:flex;padding:2px;border:1px solid var(--border);border-radius:6px;background:var(--bg-sub);gap:2px;align-self:flex-start;flex-wrap:wrap;">
+              <sc-for list="{{ evalOpts }}" as="o" hint-placeholder-count="3">
+                <button onClick="{{ o.select }}" style="height:24px;padding:0 10px;border:0;border-radius:4px;background:{{ o.bg }};box-shadow:{{ o.shadow }};color:var(--fg);font:inherit;font-size:13px;font-weight:600;cursor:pointer;">{{ o.label }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ edIsAnchor }}" hint-placeholder-val="{{ false }}">
+              <label style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--fg-muted);">at each transaction where
+                <input value="{{ ed.anchor }}" onChange="{{ onAnchor }}" placeholder="tx.direction == &quot;in&quot;" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);flex:1;min-width:240px;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+              </label>
+            </sc-if>
+          </section>
+
+          <section style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Condition</h2><sc-if value="{{ chg.cond }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 6px;border-radius:3px;background:var(--sel);border:1px solid #f0d36a;color:#7a5c00;font-size:11px;font-weight:600;">changed from v{{ ed.baseN }}</span></sc-if></div>
+            <div style="position:relative;border-radius:6px;background:#252746;">
+              <pre aria-hidden="true" style="margin:0;padding:10px 12px;min-height:60px;box-sizing:border-box;font-family:var(--ms-font-mono);font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;"><sc-for list="{{ edTokens }}" as="tk" hint-placeholder-count="0"><span style="color:{{ tk.c }};text-decoration:{{ tk.d }};">{{ tk.t }}</span></sc-for></pre>
+              <textarea value="{{ ed.cond }}" onChange="{{ onCond }}" spellcheck="false" placeholder="e.g. tx.amount > p.min_amount" style="position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;margin:0;padding:10px 12px;border:0;border-radius:6px;background:transparent;color:transparent;caret-color:#ffdc3c;font-family:var(--ms-font-mono);font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;resize:none;overflow:hidden;outline:none;" style-focus="box-shadow:0 0 0 2px #ffdc3c"></textarea>
+            </div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--fg-subtle);">
+              <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#ffdc3c;"></span>parameter</span>
+              <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#cdb9e5;"></span>variable</span>
+              <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#ffffff;border:1px solid var(--border);box-sizing:border-box;"></span>data field</span>
+              <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#ff9a6e;"></span>constant</span>
+              <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;border-bottom:2px wavy #ff6e32;"></span>unknown</span>
+            </div>
+            <sc-for list="{{ condIssues }}" as="i" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:{{ i.color }};"><span style="width:6px;height:6px;border-radius:999px;background:{{ i.color }};flex:none;"></span><span>{{ i.text }}</span><sc-if value="{{ i.hasFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ i.fix }}" style="height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;" style-hover="border-color:#252746">{{ i.fixLabel }}</button></sc-if></div>
+            </sc-for>
+          </section>
+
+          <section style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Parameters</h2><sc-if value="{{ chg.params }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 6px;border-radius:3px;background:var(--sel);border:1px solid #f0d36a;color:#7a5c00;font-size:11px;font-weight:600;">changed from v{{ ed.baseN }}</span></sc-if><span style="font-size:12px;color:var(--fg-subtle);">Referenced as p.name</span></div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <sc-for list="{{ edParams }}" as="p" hint-placeholder-count="1">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 160px 40px 28px;gap:6px;align-items:center;padding:4px 6px;border-radius:6px;background:{{ p.bg }};">
+                  <input value="{{ p.name }}" onChange="{{ p.onName }}" placeholder="name" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);width:100%;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                  <input value="{{ p.value }}" onChange="{{ p.onValue }}" placeholder="value" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);width:100%;text-align:right;font-weight:700;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                  <span style="font-size:12px;color:var(--fg-subtle);">{{ p.unit }}</span>
+                  <button aria-label="Remove parameter" onClick="{{ p.remove }}" style="width:28px;height:28px;border:0;border-radius:4px;background:transparent;color:var(--fg-subtle);font-size:15px;cursor:pointer;" style-hover="background:var(--border-soft);color:var(--fg)">&#215;</button>
+                </div>
+              </sc-for>
+              <button onClick="{{ addParam }}" style="align-self:flex-start;height:26px;padding:0 10px;border:1px dashed var(--border);border-radius:4px;background:transparent;color:var(--fg-muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="border-color:#252746;color:var(--fg)">+ Add parameter</button>
+            </div>
+            <sc-for list="{{ paramIssues }}" as="i" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:{{ i.color }};"><span style="width:6px;height:6px;border-radius:999px;background:{{ i.color }};flex:none;"></span><span>{{ i.text }}</span><sc-if value="{{ i.hasFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ i.fix }}" style="height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;" style-hover="border-color:#252746">{{ i.fixLabel }}</button></sc-if></div>
+            </sc-for>
+          </section>
+
+          <section style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Variables</h2><sc-if value="{{ chg.vars }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 6px;border-radius:3px;background:var(--sel);border:1px solid #f0d36a;color:#7a5c00;font-size:11px;font-weight:600;">changed from v{{ ed.baseN }}</span></sc-if><span style="font-size:12px;color:var(--fg-subtle);">Aggregates over the client’s transactions</span></div>
+            <sc-for list="{{ edVars }}" as="x" hint-placeholder-count="1">
+              <div style="display:flex;flex-direction:column;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:{{ x.bg }};">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <input value="{{ x.name }}" onChange="{{ x.onName }}" placeholder="name" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);width:160px;font-weight:700;color:var(--ai-fg);" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                  <span style="color:var(--fg-subtle);">=</span>
+                  <select value="{{ x.agg }}" onChange="{{ x.onAgg }}" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);padding:0 6px;"><option value="sum">sum</option><option value="count">count</option><option value="set">set</option></select>
+                  <span style="color:var(--fg-subtle);">of</span>
+                  <input value="{{ x.field }}" onChange="{{ x.onField }}" placeholder="amount" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);width:150px;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                  <span style="flex:1;"></span>
+                  <button aria-label="Remove variable" onClick="{{ x.remove }}" style="width:28px;height:28px;border:0;border-radius:4px;background:transparent;color:var(--fg-subtle);font-size:15px;cursor:pointer;" style-hover="background:var(--border-soft);color:var(--fg)">&#215;</button>
+                </div>
+                <label style="display:flex;gap:8px;align-items:center;color:var(--fg-subtle);">where
+                  <input value="{{ x.filter }}" onChange="{{ x.onFilter }}" placeholder="true" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);flex:1;min-width:0;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                </label>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--fg-subtle);">window
+                  <select value="{{ x.wtype }}" onChange="{{ x.onWtype }}" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);padding:0 6px;"><option value="day">day</option><option value="relative">relative</option></select>
+                  <sc-if value="{{ x.isRelative }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:flex;gap:6px;align-items:center;">from <input type="number" value="{{ x.from }}" onChange="{{ x.onFrom }}" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);width:76px;text-align:right;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)"> h to <input type="number" value="{{ x.to }}" onChange="{{ x.onTo }}" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-family:var(--ms-font-mono);width:76px;text-align:right;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)"> h</span>
+                    <span style="font-size:12px;">relative to the anchor transaction</span>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+            <button onClick="{{ addVar }}" style="align-self:flex-start;height:26px;padding:0 10px;border:1px dashed var(--border);border-radius:4px;background:transparent;color:var(--fg-muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="border-color:#252746;color:var(--fg)">+ Add variable</button>
+            <sc-for list="{{ varIssues }}" as="i" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:{{ i.color }};"><span style="width:6px;height:6px;border-radius:999px;background:{{ i.color }};flex:none;"></span><span>{{ i.text }}</span><sc-if value="{{ i.hasFix }}" hint-placeholder-val="{{ false }}"><button onClick="{{ i.fix }}" style="height:22px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;" style-hover="border-color:#252746">{{ i.fixLabel }}</button></sc-if></div>
+            </sc-for>
+          </section>
+
+          <section style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">What it flags</h2><sc-if value="{{ chg.summary }}" hint-placeholder-val="{{ false }}"><span style="padding:1px 6px;border-radius:3px;background:var(--sel);border:1px solid #f0d36a;color:#7a5c00;font-size:11px;font-weight:600;">changed from v{{ ed.baseN }}</span></sc-if><span style="font-size:12px;color:var(--fg-subtle);">Plain language, shown to reviewers</span></div>
+            <textarea value="{{ ed.summary }}" onChange="{{ onSummary }}" rows="3" placeholder="Flags when…" style="box-sizing:border-box;width:100%;padding:10px 12px;border:1px solid var(--ai-line);border-radius:6px;background:var(--ai-bg);color:var(--fg);font:inherit;font-size:14px;line-height:1.5;resize:vertical;outline:none;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)"></textarea>
+          </section>
+        </div>
+
+        <div style="position:sticky;bottom:0;flex:none;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 24px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid var(--border);">
+          <span style="display:flex;align-items:center;gap:8px;font-weight:600;color:{{ statusColor }};"><span style="width:8px;height:8px;border-radius:999px;background:{{ statusColor }};"></span>{{ statusText }}</span>
+          <span style="flex:1;"></span>
+          <button onClick="{{ cancelEdit }}" style="height:28px;padding:0 12px;border:0;border-radius:4px;background:transparent;color:var(--fg-muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="color:var(--fg);background:var(--hover)">Cancel</button>
+          <button onClick="{{ saveDraft }}" disabled="{{ saveDisabled }}" style="height:28px;padding:0 14px;border:0;border-radius:4px;background:{{ saveBg }};color:#ffffff;font:inherit;font-size:13px;font-weight:600;cursor:{{ saveCursor }};">{{ saveLabel }}</button>
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isView }}" hint-placeholder-val="{{ true }}">
+      <div style="max-width:1040px;padding:16px 24px 32px;display:flex;flex-direction:column;gap:16px;">
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--fg-subtle);">
+            <span>Alert type {{ rule.type }}</span><span>·</span><span>{{ rule.scope }}</span><span>·</span><span>{{ rule.window }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:260px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+              <span style="font-family:var(--ms-font-mono);font-size:18px;font-weight:700;">{{ rule.id }}</span>
+              <h1 style="margin:0;font-family:var(--ms-font-body);font-size:18px;font-weight:600;line-height:1.25;text-wrap:pretty;">{{ rule.name }}</h1>
+            </div>
+            <div style="flex:none;display:flex;gap:8px;white-space:nowrap;">
+              <sc-if value="{{ v.isDraft }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ askDelete }}" style="height:28px;padding:0 12px;border:0;border-radius:4px;background:transparent;color:var(--high);font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:var(--high-bg)">Delete</button>
+                <button onClick="{{ askBacktest }}" style="height:28px;padding:0 12px;border:1px solid #252746;border-radius:4px;background:#ffffff;color:#252746;font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:#252746;color:#ffffff">Backtest…</button>
+                <button onClick="{{ activate }}" style="height:28px;padding:0 12px;border:0;border-radius:4px;background:#252746;color:#ffffff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:#3a3c63">Activate v{{ v.n }}</button>
+              </sc-if>
+              <sc-if value="{{ canBranch }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ newVersion }}" style="height:28px;padding:0 12px;border:1px solid #252746;border-radius:4px;background:#ffffff;color:#252746;font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:#252746;color:#ffffff">New version from v{{ v.n }}</button>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div role="tablist" style="display:flex;padding:2px;border:1px solid var(--border);border-radius:6px;background:var(--bg-sub);gap:2px;">
+              <sc-for list="{{ versionTabs }}" as="t" hint-placeholder-count="1">
+                <button role="tab" onClick="{{ t.select }}" style="height:22px;padding:0 8px;border:0;border-radius:4px;background:{{ t.bg }};box-shadow:{{ t.shadow }};color:var(--fg);font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                  <span>v{{ t.n }}</span><span style="width:6px;height:6px;border-radius:999px;background:{{ t.dot }};"></span><span style="font-weight:400;color:var(--fg-muted);">{{ t.status }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <span style="font-size:12px;color:var(--fg-subtle);">{{ v.byline }}</span>
+          </div>
+        </div>
+
+        <sc-if value="{{ v.isDraft }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid #f0d36a;border-radius:6px;background:var(--sel);">
+            <div style="font-weight:600;">Draft — not evaluating transactions yet</div>
+            <div style="color:var(--fg-muted);">Compared with v{{ activeN }} active:</div>
+            <sc-for list="{{ changes }}" as="c" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:8px;font-family:var(--ms-font-mono);font-size:12px;flex-wrap:wrap;">
+                <span>{{ c.name }}</span>
+                <span style="padding:1px 6px;border-radius:3px;background:var(--high-bg);color:var(--high);text-decoration:line-through;">{{ c.from }}</span>
+                <span style="color:var(--fg-subtle);">→</span>
+                <span style="padding:1px 6px;border-radius:3px;background:var(--low-bg);color:var(--low);font-weight:700;">{{ c.to }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ v.isRetired }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-sub);color:var(--fg-muted);">Retired {{ v.retired }}. Kept for audit of cases flagged while it was active.</div>
+        </sc-if>
+
+        <section style="padding:12px 16px;border-radius:6px;background:var(--ai-bg);display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--ai-fg);">What it flags</div>
+          <p style="margin:0;font-size:14px;line-height:1.5;text-wrap:pretty;">{{ v.summary }}</p>
+        </section>
+
+        <section style="display:flex;flex-direction:column;gap:6px;">
+          <h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Condition</h2>
+          <sc-if value="{{ hasAnchor }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--fg-muted);">Evaluated at each transaction where <code style="font-family:var(--ms-font-mono);font-size:12px;padding:2px 6px;border-radius:3px;background:var(--bg-sub);border:1px solid var(--border-soft);color:var(--fg);">{{ rule.anchor }}</code></div>
+          </sc-if>
+          <div style="padding:10px 12px;border-radius:6px;background:#252746;font-family:var(--ms-font-mono);font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-x:auto;"><sc-for list="{{ tokens }}" as="tk" hint-placeholder-count="0"><span style="color:{{ tk.c }};font-weight:{{ tk.w }};text-decoration:{{ tk.d }};">{{ tk.t }}</span></sc-for></div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--fg-subtle);">
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#ffdc3c;"></span>parameter</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#cdb9e5;"></span>variable</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#ffffff;border:1px solid var(--border);box-sizing:border-box;"></span>data field</span>
+            <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:2px;background:#ff9a6e;"></span>constant</span>
+          </div>
+        </section>
+
+        <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Parameters</h2>
+            <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+              <sc-for list="{{ params }}" as="p" hint-placeholder-count="1">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:7px 12px;border-top:{{ p.border }};background:{{ p.bg }};">
+                  <span style="justify-self:start;font-family:var(--ms-font-mono);font-size:13px;font-weight:700;padding:1px 6px;border-radius:3px;background:#ffdc3c;color:#252746;">{{ p.name }}</span>
+                  <span style="font-family:var(--ms-font-mono);font-size:13px;font-weight:700;text-align:right;">{{ p.value }}<span style="font-weight:400;color:var(--fg-subtle);font-size:12px;"> {{ p.unit }}</span></span>
+                  
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Variables</h2>
+            <sc-if value="{{ noVars }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 14px;border:1px dashed var(--border);border-radius:6px;color:var(--fg-subtle);">None</div></sc-if>
+            <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+              <sc-for list="{{ vars }}" as="x" hint-placeholder-count="1">
+                <div style="display:flex;flex-direction:column;gap:2px;padding:7px 12px;border-top:{{ x.border }};">
+                  <span style="font-family:var(--ms-font-mono);font-size:13px;font-weight:700;color:var(--ai-fg);">{{ x.name }}</span>
+                  <span style="font-family:var(--ms-font-mono);font-size:12px;">{{ x.def }}</span>
+                  <span style="font-size:12px;color:var(--fg-muted);">window: <span style="font-family:var(--ms-font-mono);">{{ x.window }}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </section>
+
+        <section style="display:flex;flex-direction:column;gap:6px;">
+          <h2 style="margin:0;font-family:var(--ms-font-body);font-size:13px;font-weight:600;">Version history</h2>
+          <div style="display:flex;flex-direction:column;">
+            <sc-for list="{{ history }}" as="h" hint-placeholder-count="1">
+              <div onClick="{{ h.select }}" style="display:grid;grid-template-columns:16px 56px minmax(0,1fr) auto;gap:10px;align-items:start;padding:6px 10px;border-radius:4px;cursor:pointer;background:{{ h.bg }};" style-hover="background:var(--hover)">
+                <span style="margin-top:5px;width:9px;height:9px;border-radius:999px;background:{{ h.dot }};"></span>
+                <span style="font-family:var(--ms-font-mono);font-weight:700;">v{{ h.n }}</span>
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+                  <span style="font-weight:600;">{{ h.status }}</span>
+                  <span style="color:var(--fg-muted);text-wrap:pretty;">{{ h.note }}</span>
+                </span>
+                <span style="font-size:12px;color:var(--fg-subtle);text-align:right;white-space:nowrap;">{{ h.author }}<br>{{ h.date }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+      </sc-if>
+    </main>
+  </div>
+
+  <sc-if value="{{ modal.open }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:absolute;inset:0;z-index:30;background:rgba(37,39,70,.32);display:flex;align-items:flex-start;justify-content:center;padding-top:12vh;">
+      <div onClick="{{ stop }}" role="dialog" style="width:min(460px, calc(100% - 32px));box-sizing:border-box;background:#ffffff;border-radius:8px;box-shadow:0 12px 32px rgba(37,39,70,.24);display:flex;flex-direction:column;">
+        <sc-if value="{{ modal.isDelete }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 18px 12px;display:flex;flex-direction:column;gap:6px;">
+            <h2 style="margin:0;font-family:var(--ms-font-body);font-size:15px;font-weight:600;">Delete draft {{ rule.id }} v{{ v.n }}?</h2>
+            <p style="margin:0;color:var(--fg-muted);text-wrap:pretty;">{{ modal.delText }}</p>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;padding:10px 18px;border-top:1px solid var(--border-soft);">
+            <button onClick="{{ closeModal }}" style="height:28px;padding:0 12px;border:0;border-radius:4px;background:transparent;color:var(--fg-muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="color:var(--fg);background:var(--hover)">Cancel</button>
+            <button onClick="{{ deleteDraft }}" style="height:28px;padding:0 14px;border:0;border-radius:4px;background:#b8322b;color:#ffffff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:#9c2a24">Delete draft</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ modal.isBt }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 18px 14px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <h2 style="margin:0;font-family:var(--ms-font-body);font-size:15px;font-weight:600;">Backtest {{ rule.id }} v{{ v.n }}</h2>
+              <p style="margin:0;color:var(--fg-muted);text-wrap:pretty;">{{ modal.btText }}</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;font-weight:600;color:var(--fg-muted);">Period</span>
+              <div style="display:flex;padding:2px;border:1px solid var(--border);border-radius:6px;background:var(--bg-sub);gap:2px;align-self:flex-start;flex-wrap:wrap;">
+                <sc-for list="{{ modal.presets }}" as="o" hint-placeholder-count="4">
+                  <button onClick="{{ o.select }}" style="height:24px;padding:0 10px;border:0;border-radius:4px;background:{{ o.bg }};box-shadow:{{ o.shadow }};color:var(--fg);font:inherit;font-size:13px;font-weight:600;cursor:pointer;">{{ o.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <input type="date" value="{{ modal.from }}" max="{{ modal.to }}" onChange="{{ modal.onFrom }}" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-variant-numeric:tabular-nums;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                <span style="color:var(--fg-subtle);">→</span>
+                <input type="date" value="{{ modal.to }}" max="{{ modal.today }}" onChange="{{ modal.onTo }}" style="box-sizing:border-box;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--fg);font-size:13px;outline:none;font-variant-numeric:tabular-nums;" style-focus="border-color:#8250be;box-shadow:0 0 0 2px rgba(130,80,190,.25)">
+                <span style="font-size:12px;color:{{ modal.infoColor }};">{{ modal.info }}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;padding:10px 18px;border-top:1px solid var(--border-soft);">
+            <button onClick="{{ closeModal }}" style="height:28px;padding:0 12px;border:0;border-radius:4px;background:transparent;color:var(--fg-muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;" style-hover="color:var(--fg);background:var(--hover)">Cancel</button>
+            <button onClick="{{ runBacktest }}" disabled="{{ modal.invalid }}" style="height:28px;padding:0 14px;border:0;border-radius:4px;background:{{ modal.runBg }};color:#ffffff;font:inherit;font-size:13px;font-weight:600;cursor:{{ modal.runCursor }};">Run backtest →</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CZK = v => (v / 100).toLocaleString('cs-CZ').replace(/\u00a0/g, ' ');
+const PMETA = {
+  projected_pct: ['%', "Share of the client's expected monthly volume allowed in one day.", v => v],
+  avg_multiple: ['×', "Multiple of the client's average daily volume in Q2.", v => v],
+  max_multiple: ['×', "Multiple of the client's largest single transaction in Q2.", v => v],
+  country_min: ['CZK', 'Minimum amount for the high-risk country check.', CZK],
+  pep_min: ['CZK', 'Minimum outgoing amount for a PEP client.', CZK],
+  min_inflow: ['CZK', 'Minimum incoming volume within 24 h.', CZK],
+  forward_pct: ['%', 'Share of the inflow that must be forwarded.', v => v],
+};
+const P = (name, raw) => ({ name, value: PMETA[name][2](raw), unit: PMETA[name][0], desc: PMETA[name][1] });
+const WIN = { client_day: 'Per client day', transaction: 'Per transaction', client_anchor: 'Per incoming payment' };
+const DAY = 'day';
+const V_INFLOW = { name: 'inflow', def: 'sum of amount where tx.direction == "in"', window: 'relative · −24 h → 0 h' };
+const V_PAYERS = { name: 'payers', def: 'set of payer_account where tx.direction == "in"', window: 'relative · −24 h → 0 h' };
+const RULES = [
+  { id: 'A1', type: 'A', name: 'Daily volume above the projected share of expected monthly volume', scope: 'Company-wide', window: WIN.client_day,
+    versions: [{ n: 2, status: 'draft', author: 'J. Novák', date: '2026-10-19 18:50',
+      summary: "Flags when the client's total transaction volume for the day is more than 40% of their expected monthly volume.",
+      cond: 'day_volume * 100 > p.projected_pct * client.expected_monthly_volume',
+      params: [P('projected_pct', 40)],
+      vars: [{ name: 'day_volume', def: 'sum of amount where true', window: DAY }] },
+      { n: 1, status: 'active', author: 'finreg-brief', date: '2026-10-19 16:42',
+      summary: "Flags when the client's total transaction volume for the day is more than 25% of their expected monthly volume.",
+      cond: 'day_volume * 100 > p.projected_pct * client.expected_monthly_volume',
+      params: [P('projected_pct', 25)],
+      vars: [{ name: 'day_volume', def: 'sum of amount where true', window: DAY }] }] },
+  { id: 'A2', type: 'A', name: 'Daily volume above a multiple of the Q2 daily average', scope: 'Company-wide', window: WIN.client_day,
+    versions: [{ n: 1, status: 'active', author: 'finreg-brief', date: '2026-10-19 16:42',
+      summary: "Flags when the day's total volume is more than 3 times the client's average daily volume in Q2.",
+      cond: 'client.q2_tx_count > 0 && day_volume * client.q2_days > p.avg_multiple * client.q2_volume',
+      params: [P('avg_multiple', 3)],
+      vars: [{ name: 'day_volume', def: 'sum of amount where true', window: DAY }] }] },
+  { id: 'A3', type: 'A', name: 'Single transaction above a multiple of the Q2 maximum', scope: 'Company-wide', window: WIN.transaction,
+    versions: [{ n: 1, status: 'active', author: 'finreg-brief', date: '2026-10-19 16:42',
+      summary: "Flags a transaction whose amount is more than 2 times the client's largest single transaction in Q2.",
+      cond: 'client.q2_tx_count > 0 && tx.amount > p.max_multiple * client.q2_max_tx',
+      params: [P('max_multiple', 2)], vars: [] }] },
+  { id: 'B1', type: 'B', name: 'Transaction touching a high-risk country', scope: 'Company-wide', window: WIN.transaction,
+    versions: [{ n: 1, status: 'active', author: 'finreg-brief', date: '2026-10-19 16:42',
+      summary: "Flags a transaction of more than 10,000 CZK when either party's country or the client's home country is on the high-risk list.",
+      cond: 'tx.amount > p.country_min && (tx.payer_country in lists.high_risk || tx.payee_country in lists.high_risk || client.country in lists.high_risk)',
+      params: [P('country_min', 1000000)], vars: [] }] },
+  { id: 'B2', type: 'B', name: 'PEP outgoing payment above the limit', scope: 'Company-wide', window: WIN.transaction,
+    versions: [
+      { n: 2, status: 'draft', author: 'J. Novák', date: '2026-10-19 19:19',
+        summary: 'Flags outgoing or unknown-direction transactions of more than 50,000 CZK when the client is a politically exposed person.',
+        cond: 'client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]',
+        params: [P('pep_min', 5000000)], vars: [] },
+      { n: 1, status: 'active', author: 'finreg-brief', date: '2026-10-19 16:42',
+        summary: 'Flags outgoing or unknown-direction transactions of more than 100,000 CZK when the client is a politically exposed person.',
+        cond: 'client.pep && tx.amount > p.pep_min && tx.direction in ["out", "unknown"]',
+        params: [P('pep_min', 10000000)], vars: [] }] },
+  { id: 'C1', type: 'C', name: 'Flow-through: inflow forwarded within hours', scope: 'Company-wide', window: WIN.client_anchor, anchor: 'tx.direction == "in"',
+    versions: [
+      { n: 2, status: 'active', author: 'docs-rules', date: '2026-10-19 17:04',
+        summary: 'Flags when the client receives more than 100,000 CZK in incoming payments within 24 hours, and then forwards at least 80% of that amount within 6 hours through outgoing payments or remittances to accounts other than those that paid them.',
+        cond: 'inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow',
+        params: [P('min_inflow', 10000000), P('forward_pct', 80)],
+        vars: [V_INFLOW, V_PAYERS, { name: 'outflow', def: 'sum of amount where tx.direction in ["out", "unknown"] && !(tx.payee_account in payers)', window: 'relative · 0 h → +6 h' }] },
+      { n: 1, status: 'retired', retired: '2026-10-19 17:04', author: 'finreg-brief', date: '2026-10-19 16:42',
+        summary: 'Flags when a client receives more than 100,000 CZK in incoming payments within 24 hours and then, within the following 6 hours, sends out at least 80% of that inflow to accounts other than those who paid in.',
+        cond: 'inflow > p.min_inflow && outflow * 100 >= p.forward_pct * inflow',
+        params: [P('min_inflow', 10000000), P('forward_pct', 80)],
+        vars: [V_INFLOW, V_PAYERS, { name: 'outflow', def: 'sum of amount where tx.direction == "out" && !(tx.payee_account in payers)', window: 'relative · 0 h → +6 h' }] }] },
+];
+const KW = new Set(['in', 'where', 'of', 'sum', 'set', 'true', 'false']);
+const GROUP = { A: 'Alert type A', B: 'Alert type B', C: 'Alert type C' };
+const STATUS_DOT = { active: '#2f9e6b', draft: '#e0b400', retired: '#a3a4b3' };
+
+class Component extends DCLogic {
+  state = { sel: 'A1', ver: null, query: '', ed: null, modal: null };
+
+  modalVals(rule, v, active, changes) {
+    const M = this.state.modal, TODAY = '2026-10-19';
+    const close = () => this.setState({ modal: null });
+    const base = { closeModal: close, stop: e => e.stopPropagation(),
+      askDelete: () => this.setState({ modal: { kind: 'delete' } }),
+      askBacktest: () => this.setState({ modal: { kind: 'bt', preset: '7d', from: '2026-10-13', to: TODAY } }) };
+    if (!M) return { ...base, modal: { open: false } };
+    const hasPrev = active && active !== v;
+    const deleteDraft = () => {
+      rule.versions.splice(rule.versions.indexOf(v), 1);
+      if (!rule.versions.length) { RULES.splice(RULES.indexOf(rule), 1); this.setState({ sel: RULES[0].id, ver: null, modal: null }); }
+      else this.setState({ ver: null, modal: null });
+    };
+    const presets = [['7d', 'Last 7 days', '2026-10-13'], ['30d', 'Last 30 days', '2026-09-20'], ['mtd', 'This month', '2026-10-01'], ['custom', 'Custom', null]];
+    const set = patch => this.setState(s => ({ modal: { ...s.modal, ...patch } }));
+    const nd = M.from && M.to ? (new Date(M.to) - new Date(M.from)) / 86400000 + 1 : 0;
+    const err = !M.from || !M.to ? 'Pick both dates' : M.from > M.to ? 'Start is after end' : M.to > TODAY ? 'End is in the future' : '';
+    const num = x => Number(String(x).replace(/[\s,]/g, ''));
+    const runBacktest = () => {
+      if (err) return;
+      let dir = 0;
+      if (hasPrev && v.cond === active.cond && JSON.stringify(v.vars) === JSON.stringify(active.vars)) {
+        const sg = v.params.map(p => { const o = active.params.find(x => x.name === p.name); return o ? Math.sign(num(p.value) - num(o.value)) : 0; }).filter(Boolean);
+        dir = sg.length && sg.every(x => x < 0) ? -1 : sg.length && sg.every(x => x > 0) ? 1 : 0;
+      }
+      const cfg = { ruleId: rule.id, ruleName: (v.meta && v.meta.name) || rule.name, fromN: hasPrev ? active.n : null, toN: v.n, changes, dir, from: M.from, to: M.to };
+      this.setState({ modal: null });
+      if (this.props.onBacktest) this.props.onBacktest(cfg);
+      else window.location.href = 'AML Review Queue.dc.html#backtest=' + encodeURIComponent(JSON.stringify(cfg));
+    };
+    return { ...base, deleteDraft, runBacktest, modal: {
+      open: true, isDelete: M.kind === 'delete', isBt: M.kind === 'bt',
+      delText: hasPrev ? 'The draft is removed. v' + active.n + ' stays active. This cannot be undone.' : rule.id + ' has no other version, so the rule is removed too. This cannot be undone.',
+      btText: (hasPrev ? 'Replays production transactions from the period with v' + v.n + ' in place of v' + active.n + '.' : 'Replays production transactions from the period with v' + v.n + ' added.') + ' Results open in a new tab; no cases are created.',
+      from: M.from, to: M.to, today: TODAY,
+      onFrom: e => set({ from: e.target.value, preset: 'custom' }), onTo: e => set({ to: e.target.value, preset: 'custom' }),
+      presets: presets.map(([k, label, from]) => ({ label, bg: k === M.preset ? '#ffffff' : 'transparent', shadow: k === M.preset ? '0 1px 2px rgba(37,39,70,.12), 0 0 0 1px var(--border)' : 'none',
+        select: () => set(from ? { preset: k, from, to: TODAY } : { preset: k }) })),
+      info: err || nd + (nd === 1 ? ' day' : ' days'), infoColor: err ? '#c4531c' : 'var(--fg-subtle)',
+      invalid: !!err, runBg: err ? '#a3a4b3' : '#252746', runCursor: err ? 'not-allowed' : 'pointer',
+    } };
+  }
+
+  tokenize(src, varNames, pNames) {
+    const out = [];
+    const re = /(p\.\w+)|("[^"]*")|([a-z_][\w.]*)|(\d[\d.]*)|(\s+)|(&&|\|\||==|>=|<=|.)/gi;
+    let m;
+    while ((m = re.exec(src))) {
+      const t = m[0];
+      let c = '#d3d4da', w = 400, bad = false;
+      if (m[1]) { c = '#ffdc3c'; w = 700; bad = !!pNames && !pNames.has(t.slice(2)); }
+      else if (m[2] || m[4]) c = '#ff9a6e';
+      else if (m[3]) {
+        if (KW.has(t)) c = '#8b8ca3';
+        else if (varNames.has(t)) { c = '#cdb9e5'; w = 700; }
+        else { c = '#ffffff'; bad = !!pNames && !/^(tx|client|lists)\./.test(t); }
+      }
+      out.push({ t, c, w, bad, d: bad ? 'underline wavy #ff6e32' : 'none' });
+    }
+    return out;
+  }
+
+  openEditor(mode, rule, v) {
+    const parseVar = x => {
+      if (x.agg) return { name: x.name, agg: x.agg, field: x.field, filter: x.filter, wtype: x.wtype, from: x.from, to: x.to };
+      const m = /^(\w+) of (\w+) where (.*)$/.exec(x.def) || [];
+      const w = x.window.replace(/−/g, '-').replace(/\+/g, '');
+      const r = /(-?\d+) h → (-?\d+) h/.exec(w);
+      return { name: x.name, agg: m[1] || 'sum', field: m[2] || '', filter: m[3] || '', wtype: r ? 'relative' : 'day', from: r ? +r[1] : -24, to: r ? +r[2] : 0 };
+    };
+    const mt = (v && v.meta) || {};
+    const ed = mode === 'new'
+      ? { mode, code: '', type: 'A', name: '', evalType: 'transaction', anchor: '', cond: '', summary: '', params: [], vars: [] }
+      : { mode, ruleId: rule.id, baseN: v.n, baseStatus: v.status, type: mt.type || rule.type, name: mt.name || rule.name,
+          evalType: Object.keys(WIN).find(k => WIN[k] === (mt.window || rule.window)) || 'transaction',
+          anchor: mt.anchor || rule.anchor || '', cond: v.cond, summary: v.summary,
+          params: v.params.map(p => ({ name: p.name, value: String(p.value) })), vars: v.vars.map(parseVar) };
+    if (mode !== 'new') ed.base = JSON.parse(JSON.stringify(ed));
+    this.setState({ ed });
+  }
+
+  editorVals() {
+    const ed = this.state.ed;
+    if (!ed) return { isEditing: false, isView: true, ed: {}, chg: {} };
+    const set = patch => this.setState(s => ({ ed: { ...s.ed, ...patch } }));
+    const setRow = (key, i, patch) => this.setState(s => { const a = s.ed[key].slice(); a[i] = { ...a[i], ...patch }; return { ed: { ...s.ed, [key]: a } }; });
+    const delRow = (key, i) => this.setState(s => ({ ed: { ...s.ed, [key]: s.ed[key].filter((_, j) => j !== i) } }));
+    const push = (key, row) => this.setState(s => ({ ed: { ...s.ed, [key]: [...s.ed[key], row] } }));
+    const newVar = n => ({ name: n, agg: 'sum', field: 'amount', filter: 'true', wtype: 'day', from: -24, to: 0 });
+    const val = e => e.target.value;
+    const isNew = ed.mode === 'new';
+    const pNames = new Set(ed.params.map(p => p.name.trim()).filter(Boolean));
+    const vNames = new Set(ed.vars.map(x => x.name.trim()).filter(Boolean));
+    const isAnchor = ed.evalType === 'client_anchor';
+    const srcs = [ed.cond, isAnchor ? ed.anchor : '', ...ed.vars.map(x => x.filter)].join(' ');
+    const refP = [...new Set([...srcs.matchAll(/p\.(\w+)/g)].map(m => m[1]))];
+    const toks = this.tokenize(ed.cond, vNames, pNames).map(t => ({ ...t, w: 400 }));
+    const unknown = [...new Set(toks.filter(t => t.bad && !t.t.startsWith('p.')).map(t => t.t))];
+    const ERR = '#c4531c', WARN = 'var(--fg-subtle)';
+    const issue = (text, color, fix, fixLabel) => ({ text, color, hasFix: !!fix, fix, fixLabel });
+    const idIssues = [];
+    if (isNew) {
+      const code = ed.code.trim().toUpperCase();
+      if (!code) idIssues.push(issue('Rule code is required.', ERR));
+      else if (RULES.some(r => r.id === code)) idIssues.push(issue(code + ' already exists — open it and create a new version instead.', ERR));
+    }
+    if (!ed.name.trim()) idIssues.push(issue('Name is required.', ERR));
+    const condIssues = [];
+    if (!ed.cond.trim()) condIssues.push(issue('Condition is required.', ERR));
+    unknown.forEach(n => condIssues.push(issue(n + ' is not a variable, parameter or data field (tx., client., lists.).', ERR, () => push('vars', newVar(n)), 'Add as variable')));
+    const paramIssues = [];
+    refP.filter(n => !pNames.has(n)).forEach(n => paramIssues.push(issue('p.' + n + ' is used but not defined.', ERR, () => push('params', { name: n, value: '' }), 'Add p.' + n)));
+    ed.params.forEach(p => { const n = p.name.trim(); if (!n) return; if (!refP.includes(n)) paramIssues.push(issue('p.' + n + ' is defined but not used.', WARN)); if (!String(p.value).trim()) paramIssues.push(issue('p.' + n + ' has no value.', ERR)); });
+    const varIssues = [];
+    ed.vars.forEach(x => { const n = x.name.trim(); if (!n) varIssues.push(issue('A variable has no name.', ERR)); else if (!new RegExp('(^|[^\\w.])' + n + '(?![\\w])').test(srcs)) varIssues.push(issue(n + ' is defined but not used.', WARN)); if (!x.field.trim()) varIssues.push(issue((n || 'Variable') + ' needs a field.', ERR)); });
+    const errors = [...idIssues, ...condIssues, ...paramIssues, ...varIssues].filter(i => i.color === ERR).length;
+    const b = ed.base;
+    const J = x => JSON.stringify(x);
+    const chg = b ? { type: ed.type !== b.type, name: ed.name !== b.name, evalType: ed.evalType !== b.evalType || (isAnchor && ed.anchor !== b.anchor), cond: ed.cond !== b.cond, params: J(ed.params) !== J(b.params), vars: J(ed.vars) !== J(b.vars), summary: ed.summary !== b.summary } : {};
+    const nChg = Object.values(chg).filter(Boolean).length;
+    const rule = !isNew && RULES.find(r => r.id === ed.ruleId);
+    const nextN = rule ? Math.max(...rule.versions.map(x => x.n)) + 1 : 1;
+    const seg = (opts, cur, key) => opts.map(([k, label]) => ({ label, bg: k === cur ? '#ffffff' : 'transparent', shadow: k === cur ? '0 1px 2px rgba(37,39,70,.12), 0 0 0 1px var(--border)' : 'none', select: () => set({ [key]: k }) }));
+    let statusText, statusColor;
+    if (errors) { statusText = errors + (errors === 1 ? ' issue' : ' issues') + ' to fix'; statusColor = ERR; }
+    else if (b && !nChg) { statusText = 'No changes from v' + ed.baseN + ' yet'; statusColor = 'var(--fg-subtle)'; }
+    else { statusText = b ? nChg + (nChg === 1 ? ' section' : ' sections') + ' changed · ready to save' : 'Ready to save'; statusColor = 'var(--low)'; }
+    const disabled = errors > 0 || (!!b && !nChg);
+    const fmtW = x => x.wtype === 'day' ? 'day' : 'relative · ' + [x.from, x.to].map(n => +n < 0 ? '−' + Math.abs(n) : +n > 0 ? '+' + n : '0').join(' h → ') + ' h';
+    return {
+      isEditing: true, isView: false, ed, chg, edIsNew: isNew, edIsAnchor: isAnchor,
+      edEyebrow: isNew ? 'New rule · saved as draft v1' : ed.ruleId + ' · based on v' + ed.baseN + ' ' + ed.baseStatus,
+      edTitle: isNew ? 'New rule' : ed.ruleId + ' · new version v' + nextN,
+      onCode: e => set({ code: val(e).toUpperCase() }), onName: e => set({ name: val(e) }), onAnchor: e => set({ anchor: val(e) }),
+      onCond: e => set({ cond: val(e) }), onSummary: e => set({ summary: val(e) }),
+      typeOpts: seg([['A', 'A'], ['B', 'B'], ['C', 'C']], ed.type, 'type'),
+      evalOpts: seg([['client_day', 'Per client day'], ['transaction', 'Per transaction'], ['client_anchor', 'Per anchor transaction']], ed.evalType, 'evalType'),
+      edTokens: [...toks, { t: '\n ', c: 'transparent', d: 'none' }],
+      idIssues, condIssues, paramIssues, varIssues,
+      edParams: ed.params.map((p, i) => {
+        const bp = b && b.params.find(o => o.name === p.name);
+        return { ...p, unit: (PMETA[p.name.trim()] || [''])[0], bg: b && (!bp || bp.value !== p.value) ? 'var(--sel)' : 'var(--bg-sub)',
+          onName: e => setRow('params', i, { name: val(e).replace(/\s/g, '') }), onValue: e => setRow('params', i, { value: val(e) }), remove: () => delRow('params', i) };
+      }),
+      addParam: () => push('params', { name: '', value: '' }),
+      edVars: ed.vars.map((x, i) => {
+        const bx = b && b.vars.find(o => o.name === x.name);
+        return { ...x, isRelative: x.wtype === 'relative', bg: b && (!bx || J(bx) !== J(x)) ? 'var(--sel)' : '#ffffff',
+          onName: e => setRow('vars', i, { name: val(e).replace(/\s/g, '') }), onAgg: e => setRow('vars', i, { agg: val(e) }),
+          onField: e => setRow('vars', i, { field: val(e) }), onFilter: e => setRow('vars', i, { filter: val(e) }),
+          onWtype: e => setRow('vars', i, { wtype: val(e) }), onFrom: e => setRow('vars', i, { from: val(e) }), onTo: e => setRow('vars', i, { to: val(e) }),
+          remove: () => delRow('vars', i) };
+      }),
+      addVar: () => push('vars', newVar('')),
+      statusText, statusColor, saveDisabled: disabled, saveBg: disabled ? '#a3a4b3' : '#252746', saveCursor: disabled ? 'not-allowed' : 'pointer',
+      saveLabel: 'Save as draft v' + nextN,
+      cancelEdit: () => this.setState({ ed: null }),
+      saveDraft: () => {
+        if (disabled) return;
+        const meta = { type: ed.type, name: ed.name.trim(), window: WIN[ed.evalType], anchor: isAnchor ? ed.anchor : '' };
+        const nv = { n: nextN, status: 'draft', author: 'J. Novák', date: '2026-10-19 19:30', summary: ed.summary.trim(), cond: ed.cond.trim(),
+          params: ed.params.filter(p => p.name.trim()).map(p => { const pm = PMETA[p.name.trim()]; return { name: p.name.trim(), value: p.value, unit: pm ? pm[0] : '' }; }),
+          vars: ed.vars.map(x => ({ ...x, def: x.agg + ' of ' + x.field + ' where ' + (x.filter.trim() || 'true'), window: fmtW(x) })) };
+        if (isNew) {
+          const id = ed.code.trim().toUpperCase();
+          RULES.push({ id, scope: 'Company-wide', ...meta, versions: [nv] });
+          this.setState({ sel: id, ver: 1, ed: null, query: '' });
+        } else {
+          nv.meta = meta;
+          rule.versions.unshift(nv);
+          this.setState({ ver: nextN, ed: null });
+        }
+      },
+    };
+  }
+
+  renderVals() {
+    const { sel, query } = this.state;
+    const rule = RULES.find(r => r.id === sel);
+    const active = rule.versions.find(v => v.status === 'active') || rule.versions[rule.versions.length - 1];
+    const v = rule.versions.find(x => x.n === this.state.ver) || active;
+    const meta = { ...rule, ...(v.meta || {}) };
+    const q = query.trim().toLowerCase();
+    const filtered = RULES.filter(r => !q || (r.id + ' ' + r.name).toLowerCase().includes(q));
+    const groups = ['A', 'B', 'C'].map(k => ({
+      label: GROUP[k],
+      rules: filtered.filter(r => r.type === k).map(r => {
+        const draft = r.versions.find(x => x.status === 'draft');
+        const on = r.id === sel;
+        return {
+          id: r.id, name: r.name,
+          verLabel: (r.versions.find(x => x.status === 'active') ? 'v' + r.versions.find(x => x.status === 'active').n + ' active' : 'no active version'),
+          hasDraft: !!draft, draftV: draft && draft.n,
+          bg: on ? 'var(--sel)' : 'transparent', edge: on ? '#ffdc3c' : 'transparent',
+          select: () => this.setState({ sel: r.id, ver: null, ed: null }),
+        };
+      }),
+    })).filter(g => g.rules.length);
+
+    const changes = v.status === 'draft' ? v.params.map(p => {
+      const old = active.params.find(o => o.name === p.name);
+      return old && String(old.value) !== String(p.value) ? { name: p.name, from: old.value + ' ' + old.unit, to: p.value + ' ' + p.unit } : null;
+    }).filter(Boolean) : [];
+    const changed = new Set(changes.map(c => c.name));
+    const varNames = new Set(v.vars.map(x => x.name));
+    const label = { active: 'active', draft: 'draft', retired: 'retired' };
+    const byline = v.status === 'draft' ? `Drafted by ${v.author}, ${v.date}`
+      : v.status === 'retired' ? `Active ${v.date} – ${v.retired} · by ${v.author}`
+      : `Active since ${v.date} · by ${v.author}`;
+
+    const embedded = !!this.props.embedded;
+    return {
+      ...this.editorVals(), ...this.modalVals(rule, v, active, changes), startNew: () => this.openEditor('new'),
+      showHeader: !embedded, rootH: embedded ? '100%' : '100vh',
+      query, onQuery: e => this.setState({ query: e.target.value }),
+      noResults: groups.length === 0,
+      groups,
+      rule: meta, hasAnchor: !!meta.anchor,
+      v: { n: v.n, summary: v.summary, isDraft: v.status === 'draft', isRetired: v.status === 'retired', retired: v.retired, byline },
+      activeN: active.n,
+      canBranch: !rule.versions.some(x => x.status === 'draft'),
+      changes,
+      noVars: v.vars.length === 0,
+      tokens: this.tokenize(v.cond, varNames),
+      params: v.params.map((p, i) => ({ ...p, border: i ? '1px solid var(--border-soft)' : '0', bg: changed.has(p.name) ? 'var(--sel)' : 'transparent' })),
+      vars: v.vars.length ? v.vars.map((x, i) => ({ ...x, border: i ? '1px solid var(--border-soft)' : '0' }))
+        : [],
+      versionTabs: rule.versions.map(x => ({
+        n: x.n, status: label[x.status], dot: STATUS_DOT[x.status],
+        bg: x.n === v.n ? '#ffffff' : 'transparent', shadow: x.n === v.n ? '0 1px 2px rgba(37,39,70,.12), 0 0 0 1px var(--border)' : 'none',
+        select: () => this.setState({ ver: x.n }),
+      })),
+      history: rule.versions.map(x => ({
+        n: x.n, status: x.status[0].toUpperCase() + x.status.slice(1), note: x.summary, author: x.author, date: x.date,
+        dot: STATUS_DOT[x.status], bg: x.n === v.n ? 'var(--bg-sub)' : 'transparent',
+        select: () => this.setState({ ver: x.n }),
+      })),
+      activate: () => {
+        const cur = rule.versions.find(x => x.status === 'active'); if (cur && cur !== v) { cur.status = 'retired'; cur.retired = '2026-10-19 19:30'; } v.status = 'active';
+        this.setState({ ver: v.n });
+      },
+      newVersion: () => this.openEditor('version', rule, v),
+    };
+  }
+}
+</script>
+</body>
+</html>
+

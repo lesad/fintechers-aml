@@ -2,6 +2,7 @@ package cz.morosystems.aml.engine.run
 
 import cz.morosystems.aml.engine.EngineProperties
 import cz.morosystems.aml.engine.cel.RuleCompiler
+import cz.morosystems.aml.engine.rules.RuleDefinition
 import cz.morosystems.aml.engine.rules.RuleRepository
 import cz.morosystems.aml.engine.rules.RuleResolver
 import cz.morosystems.aml.engine.sql.Period
@@ -27,9 +28,13 @@ class RunService(
 ) {
     private val json = JsonMapper()
 
+    /**
+     * [ruleSet] replaces the active rules (a backtest runs a draft in place of its active version); [export] writes
+     * the alerts CSV.
+     */
     @Transactional
-    fun run(period: Period = Period.JULY_2026): RunReport {
-        val active = rules.activeRules()
+    fun run(period: Period = Period.JULY_2026, ruleSet: List<RuleDefinition>? = null, export: Boolean = true): RunReport {
+        val active = ruleSet ?: rules.activeRules()
         val compiled = active.associateWith { rule -> compiler.compile(rule, rule.params.keys) }
         val clientRows = clients.findAll()
         val resolved = resolver.resolve(active, rules.segments(), clientRows)
@@ -51,8 +56,7 @@ class RunService(
         val alerts = AlertGrouper.group(withIds, clients.alertUnits()).map { it.copy(transactionId = picker.pick(it)) }
         val stored = alerts.map { insertAlert(runId, it) to it }
         val decisions = triage.triageRun(runId).associateBy { it.alertId }
-        val csv = props.outDir.resolve("alerts-$runId.csv")
-        CsvExporter.write(csv, stored, decisions)
+        val csv = if (export) props.outDir.resolve("alerts-$runId.csv").also { CsvExporter.write(it, stored, decisions) } else null
 
         val report = RunReport(
             runId = runId,
