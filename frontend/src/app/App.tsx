@@ -37,7 +37,7 @@ export function App() {
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const [users, setUsers] = useState<User[]>([]);
   const [user, setUser] = useState<User | null>(savedUser);
-  const role: Role = user?.role === "MANAGER" ? "Manager" : "Reviewer";
+  const role: Role = user?.role ?? "ANALYST";
   const chooseUser = (next: User) => {
     // Saved before the state changes, so the queue reload it triggers already carries the new user.
     saveUser(next);
@@ -63,7 +63,8 @@ export function App() {
     query: filter.query,
     rating: filter.rating,
     status: statusParam(filter.status),
-    assignee: user?.id,
+    // The compliance manager oversees every case; the others work the cases assigned to them.
+    assignee: role === "COMPLIANCE_MANAGER" ? undefined : user?.id,
     aiOnly: filter.aiOnly,
   });
   const items = review.apply(queue.items);
@@ -91,7 +92,6 @@ export function App() {
         }}
         importOpen={importOpen}
         onToggleImport={toggleImport}
-        rulesActive={tabs.active === RULES_TAB}
         onRules={() => tabs.openTab(RULES_TAB)}
         onHome={() => tabs.select(null)}
       />
@@ -167,7 +167,8 @@ export function App() {
       return (
         <RulesPage
           author={user?.name ?? ""}
-          manager={user?.role === "MANAGER"}
+          user={user}
+          users={users}
           onBacktest={(draft) => {
             const tab = backtestTab(draft.id);
             setBtLabels((l) => ({ ...l, [tab]: `${draft.key} v${draft.version}` }));
@@ -191,8 +192,8 @@ export function App() {
           // The case may have left this user's queue (escalated); the engine's list says.
           queue.reload();
         }}
-        onAcceptSuggestion={async (rule) =>
-          (await saveRule({ ...rule, author: user?.name ?? "" })).id
+        onAcceptSuggestion={async (rule, changeReason) =>
+          (await saveRule({ ...rule, author: user?.name ?? "", changeReason })).id
         }
         onOpen={tabs.openTab}
       />

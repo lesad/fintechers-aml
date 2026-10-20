@@ -10,11 +10,15 @@ import { RuleForm } from "./RuleForm";
 import { RuleList } from "./RuleList";
 import { useRules } from "./use-rules";
 
+import type { User } from "@/user";
+
 type RulesPageProps = {
   /** Recorded as the author of every saved version. */
   author: string;
-  /** Only a manager approves or rejects a pending version. */
-  manager: boolean;
+  /** The signed-in user; null before one is picked. */
+  user: User | null;
+  /** Everyone an author can send a draft to, among others. */
+  users: User[];
   /** Opens the backtest just started for [draft] in its own tab. */
   onBacktest: (draft: RuleVersion) => void;
 };
@@ -29,7 +33,7 @@ type Mode =
 
 const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg hover:bg-hover";
 
-export function RulesPage({ author, manager, onBacktest }: RulesPageProps) {
+export function RulesPage({ author, user, users, onBacktest }: RulesPageProps) {
   const rules = useRules();
   const { selectedKey, setSelectedKey, selectedId, setSelectedId } = useSelection();
   const [mode, setMode] = useState<Mode>({ kind: "view" });
@@ -81,7 +85,8 @@ export function RulesPage({ author, manager, onBacktest }: RulesPageProps) {
               siblings={group?.versions ?? []}
               keys={groups.map((g) => g.key)}
               author={author}
-              manager={manager}
+              user={user}
+              users={users}
               onMode={setMode}
               onDialog={setDialog}
               onSelectVersion={setSelectedId}
@@ -197,7 +202,8 @@ type PanelProps = {
   /** Every rule key, so a new rule cannot reuse one. */
   keys: string[];
   author: string;
-  manager: boolean;
+  user: User | null;
+  users: User[];
   onMode: (mode: Mode) => void;
   onDialog: (dialog: Dialog) => void;
   onSelectVersion: (id: number) => void;
@@ -211,7 +217,8 @@ function Panel({
   siblings,
   keys,
   author,
-  manager,
+  user,
+  users,
   onMode,
   onDialog,
   onSelectVersion,
@@ -244,7 +251,8 @@ function Panel({
       onSelectVersion={onSelectVersion}
       onNewVersion={() => onMode({ kind: "form", from: version })}
       onEditDraft={() => onMode({ kind: "form", from: version, edit: true })}
-      manager={manager}
+      user={user}
+      users={users}
       onStatusChanged={onSaved}
       onDelete={() => onDialog("delete")}
       onBacktest={() => onDialog("backtest")}

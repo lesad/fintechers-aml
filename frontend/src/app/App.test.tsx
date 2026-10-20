@@ -304,15 +304,16 @@ afterEach(() => {
 });
 
 const users = [
-  { id: 1, name: "J. Novák", role: "REVIEWER" },
-  { id: 2, name: "M. Svobodová", role: "MANAGER" },
+  { id: 1, name: "J. Novák", role: "ANALYST" },
+  { id: 2, name: "M. Svobodová", role: "COMPLIANCE_OFFICER" },
+  { id: 3, name: "P. Dvořák", role: "COMPLIANCE_MANAGER" },
 ];
 
 /** Opens the avatar menu and signs in as `name`, once the users have loaded. */
 const switchUser = async (name: string) => {
   fireEvent.click(screen.getByRole("button", { name: "Switch user" }));
   const list = screen.getByRole("radiogroup", { name: "Signed in as" });
-  await waitFor(() => expect(within(list).getAllByRole("radio")).toHaveLength(2));
+  await waitFor(() => expect(within(list).getAllByRole("radio")).toHaveLength(3));
   fireEvent.click(within(list).getByRole("radio", { name: new RegExp(name) }));
 };
 
@@ -337,6 +338,43 @@ describe("App", () => {
     await switchUser("M. Svobodová");
     await waitFor(() => expect(lastParams().get("assignee")).toBe("2"));
     expect(lastParams().get("status")).toBe("ESCALATED");
+  });
+
+  it("shows the compliance manager every case, to oversee and not to decide", async () => {
+    detailStatus = "ESCALATED";
+    assignee = users[1] ?? null;
+    render(<App />);
+    await switchUser("P. Dvořák");
+    await waitFor(() =>
+      expect(
+        new URL(String(lastQueueCall()?.[0]), "http://test").searchParams.has("assignee"),
+      ).toBe(false),
+    );
+    fireEvent.click(await screen.findByText("TX1"));
+    expect(await screen.findByText(/you oversee/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Report" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "False positive" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Change" })).not.toBeInTheDocument();
+  });
+
+  it("opens the FAÚ report for the compliance officer, never for the analyst", async () => {
+    detailStatus = "REPORTED";
+    log = [
+      {
+        at: "2026-10-20T09:00:00Z",
+        action: "REPORTED",
+        actor: "M. Svobodová",
+        reason: "Příjem přeposlán dál.",
+        assignee: null,
+      },
+    ];
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    expect(await screen.findByText("Příjem přeposlán dál.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "FAÚ report (PDF)" })).not.toBeInTheDocument();
+
+    await switchUser("M. Svobodová");
+    expect(await screen.findByRole("button", { name: "FAÚ report (PDF)" })).toBeInTheDocument();
   });
 
   it("loads the queue from the engine and the next page when the list end comes into view", async () => {
@@ -368,9 +406,11 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Switch user" }));
     const list = screen.getByRole("radiogroup", { name: "Signed in as" });
-    await waitFor(() => expect(within(list).getAllByRole("radio")).toHaveLength(2));
+    await waitFor(() => expect(within(list).getAllByRole("radio")).toHaveLength(3));
     expect(within(list).getByRole("radio", { name: /J\. Novák/ })).toBeChecked();
-    expect(within(list).getByRole("radio", { name: /M\. Svobodová · Manager/ })).not.toBeChecked();
+    expect(
+      within(list).getByRole("radio", { name: /M\. Svobodová · Compliance officer/ }),
+    ).not.toBeChecked();
   });
 
   it("closes the user panel on a click elsewhere or Escape, not on the avatar's own click", async () => {
@@ -401,15 +441,13 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
     const cog = screen.getByRole("button", { name: "Rules" });
-    expect(cog).toHaveAttribute("aria-pressed", "false");
+    expect(cog).not.toHaveAttribute("aria-pressed");
 
     fireEvent.click(cog);
-    expect(cog).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Rules");
     expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /TX1/ }));
-    expect(cog).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(cog);
     expect(screen.getAllByRole("tab", { name: /Rules/ })).toHaveLength(1);
   });
@@ -468,13 +506,11 @@ describe("App", () => {
 
   it("opens the rules page straight from /rules and sends an unknown path back to the overview", async () => {
     const { unmount } = render(<App />, { route: "/rules" });
-    expect(screen.getByRole("button", { name: "Rules" })).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByRole("tab", { selected: true })).toHaveTextContent("Rules");
     unmount();
 
     render(<App />, { route: "/nowhere" });
     expect(await screen.findByRole("tab", { name: /Review queue/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Rules" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("opens a row as a detail tab with the rule's parameters as stored", async () => {
@@ -591,7 +627,7 @@ describe("App", () => {
         "Reassigned → M. SvobodováJ. Novák",
       ),
     );
-    expect(screen.getByText("Manager", { selector: "span" })).toBeInTheDocument();
+    expect(screen.getByText("Compliance officer", { selector: "span" })).toBeInTheDocument();
   });
 
   it("offers no reassignment on a closed case", async () => {
@@ -599,15 +635,46 @@ describe("App", () => {
     assignee = users[1] ?? null;
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
-    expect(await screen.findByText("Manager", { selector: "span" })).toBeInTheDocument();
+    expect(await screen.findByText("Compliance officer", { selector: "span" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change" })).not.toBeInTheDocument();
+  });
+
+  it("lets a manager report a new case straight away, without escalating it", async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByText("TX1"));
+    expect(await screen.findByRole("button", { name: "Escalate" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Report" })).not.toBeInTheDocument();
+
+    await switchUser("M. Svobodová");
+    expect(screen.queryByRole("button", { name: "Escalate" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Report" }));
+    fireEvent.change(screen.getByPlaceholderText(/goes into the FAÚ report/), {
+      target: { value: "Příjem přeposlán dál." },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "Execute it" }));
+    fireEvent.click(screen.getByRole("button", { name: "Report transaction" }));
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(fetch)
+          .mock.calls.findLast(
+            ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+          )?.[1],
+      ).toMatchObject({
+        body: JSON.stringify({
+          status: "REPORTED",
+          reason: "Příjem přeposlán dál.",
+          postponed: false,
+        }),
+      }),
+    );
   });
 
   it("leaves an escalated case to the manager: no decision for a reviewer, false positive or report for a manager", async () => {
     detailStatus = "ESCALATED";
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
-    expect(await screen.findByText(/A manager decides now/)).toBeInTheDocument();
+    expect(await screen.findByText(/The compliance officer decides now/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Report" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "False positive" })).not.toBeInTheDocument();
 
@@ -702,6 +769,7 @@ describe("App", () => {
       name: "PEP outgoing payment above the limit (client K1)",
       replacesKey: "B2",
       author: "J. Novák",
+      changeReason: "False positive on TX1: Monthly supplier payment.",
     });
   });
 

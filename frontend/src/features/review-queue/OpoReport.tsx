@@ -141,7 +141,7 @@ function Grounds({ facts, flagged }: { facts: HitFacts; flagged: string }) {
   );
 }
 
-/** § 20: whether the manager held the client's order; a report saved before the question existed has no answer. */
+/** § 20: whether the compliance officer held the client's order; a report saved before the question existed has no answer. */
 function Execution({ postponed, ts }: { postponed: boolean | null | undefined; ts: string }) {
   if (postponed === true)
     return (
@@ -191,7 +191,7 @@ type OpoReportProps = { detail: TransactionDetail; onClose: () => void };
  * template, printed to PDF.
  *
  * @remarks Never names who detected or escalated the case (§ 18(3)): the decision log stays out, and the
- * only person named is the contact person, the manager who filed the report. Grounds are the hits whose rule
+ * only person named is the contact person, the compliance officer who filed the report. Grounds are the hits whose rule
  * window holds the reported transaction; the client's other hits go under further information.
  */
 export function OpoReport({ detail, onClose }: OpoReportProps) {

@@ -106,7 +106,7 @@ const rows = (url: URL) => {
 describe("a draft's delete and backtest", () => {
   it("deletes a draft after confirming, and the active version stays", async () => {
     const fetch = engine({ "DELETE /api/rules/12": () => new Response(null, { status: 204 }) });
-    render(<RulesPage author="J. Novák" manager={false} onBacktest={() => {}} />);
+    render(<RulesPage author="J. Novák" user={null} users={[]} onBacktest={() => {}} />);
     await openDraft();
     expect(screen.queryByRole("button", { name: /New version from/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -128,7 +128,7 @@ describe("a draft's delete and backtest", () => {
       "POST /api/rules/12/backtest": () => json({ ...SUMMARY, status: "RUNNING" }, 202),
     });
     const onBacktest = vi.fn();
-    render(<RulesPage author="J. Novák" manager={false} onBacktest={onBacktest} />);
+    render(<RulesPage author="J. Novák" user={null} users={[]} onBacktest={onBacktest} />);
     await openDraft();
     fireEvent.click(screen.getByRole("button", { name: "Backtest" }));
 
@@ -155,7 +155,7 @@ describe("a draft's delete and backtest", () => {
       "POST /api/rules/12/backtest": () => json({ detail: "only a draft can be backtested" }, 400),
     });
     const onBacktest = vi.fn();
-    render(<RulesPage author="J. Novák" manager={false} onBacktest={onBacktest} />);
+    render(<RulesPage author="J. Novák" user={null} users={[]} onBacktest={onBacktest} />);
     await openDraft();
     fireEvent.click(screen.getByRole("button", { name: "Backtest" }));
     const dialog = screen.getByRole("dialog", { name: "Backtest B2 v2" });

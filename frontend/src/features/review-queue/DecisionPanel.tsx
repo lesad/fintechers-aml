@@ -119,14 +119,41 @@ type DecisionPanelProps = {
   onFauReport: () => void;
 };
 
+/** What the user sees in place of the choices: the case is closed, or it is not theirs to decide. */
+function notice(saved: CaseStatus, role: Role) {
+  if (saved === "False Positive" || saved === "Reported")
+    return (
+      <>
+        Resolved as <b className="text-fg">{saved}</b>.
+      </>
+    );
+  if (role === "COMPLIANCE_MANAGER")
+    return (
+      <>
+        <b className="text-fg">{saved}</b>. The analyst and the compliance officer decide; you
+        oversee.
+      </>
+    );
+  if (saved === "Escalated" && role === "ANALYST")
+    return (
+      <>
+        <b className="text-fg">Escalated</b>. The compliance officer decides now: false positive or
+        report.
+      </>
+    );
+  return null;
+}
+
 /**
- * New cases: false positive or escalate. Escalated cases belong to the manager (false positive or report);
- * a reviewer only sees that they wait. Every choice needs a reason. Below, the decision log: who routed, decided
- * or reassigned what and why.
+ * An analyst marks a case false positive or escalates it to the compliance officer; the compliance officer marks it
+ * false positive or reports it, escalated or new. An analyst only sees that an escalated case waits; the compliance
+ * manager oversees and decides nothing. Only the compliance officer and the compliance manager open the FAÚ report.
+ * Every choice needs a reason. Below, the decision log: who routed, decided or reassigned what and why.
  */
 export function DecisionPanel({ log, saved, role, onDecide, onFauReport }: DecisionPanelProps) {
   const choices: Choice[] =
-    saved === "Escalated" ? ["falsePositive", "report"] : ["falsePositive", "escalate"];
+    role === "COMPLIANCE_OFFICER" ? ["falsePositive", "report"] : ["falsePositive", "escalate"];
+  const fauReport = role === "ANALYST" ? undefined : onFauReport;
   const [choice, setChoice] = useState<Choice | null>(null);
   const [reasons, setReasons] = useState<Record<Choice, string>>({
     falsePositive: "",
@@ -134,7 +161,7 @@ export function DecisionPanel({ log, saved, role, onDecide, onFauReport }: Decis
     report: "",
   });
   const reason = choice ? reasons[choice].trim() : "";
-  // A report must say whether the client's order is held under §20; no default, the manager picks one.
+  // A report must say whether the client's order is held under §20; no default, the compliance officer picks one.
   const [postponed, setPostponed] = useState<boolean | null>(null);
   const ready = reason !== "" && (choice !== "report" || postponed !== null);
   const [saving, setSaving] = useState(false);
@@ -154,26 +181,13 @@ export function DecisionPanel({ log, saved, role, onDecide, onFauReport }: Decis
     </span>
   );
 
-  if (saved === "Escalated" && role !== "Manager") {
+  const status = notice(saved, role);
+  if (status) {
     return (
       <Card raised className="overflow-hidden pb-3.5">
         <span className="pt-0.5 text-sm font-bold text-fg">Decision</span>
-        <span className="text-[13px] text-fg-muted">
-          <b className="text-fg">Escalated</b>. A manager decides now: false positive or report.
-        </span>
-        <DecisionLog log={log} />
-      </Card>
-    );
-  }
-
-  if (saved === "False Positive" || saved === "Reported") {
-    return (
-      <Card raised className="overflow-hidden pb-3.5">
-        <span className="pt-0.5 text-sm font-bold text-fg">Decision</span>
-        <span className="text-[13px] text-fg-muted">
-          Resolved as <b className="text-fg">{saved}</b>.
-        </span>
-        <DecisionLog log={log} onFauReport={onFauReport} />
+        <span className="text-[13px] text-fg-muted">{status}</span>
+        <DecisionLog log={log} onFauReport={fauReport} />
       </Card>
     );
   }

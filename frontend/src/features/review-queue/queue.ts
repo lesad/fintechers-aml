@@ -2,6 +2,7 @@ import { rulesSummary } from "./rules";
 
 import type { AlertStatus, Disposition, FlaggedTransaction } from "./api";
 import type { AiStatus, CaseStatus, RiskLevel } from "@/components";
+import type { User } from "@/user";
 
 export type QueueItem = {
   id: string;
@@ -68,7 +69,7 @@ export const STATUS_CODE: Record<CaseStatus, AlertStatus> = {
   Reported: "REPORTED",
 };
 
-export type Role = "Reviewer" | "Manager";
+export type Role = User["role"];
 
 /** Every case status, in workflow order: the status filter offers these. */
 export const CASE_STATUSES: CaseStatus[] = ["New", "Escalated", "False Positive", "Reported"];

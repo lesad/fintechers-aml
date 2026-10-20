@@ -1,10 +1,13 @@
 import { z } from "zod";
 
-/** A person who works the queue (`GET /api/users`): a reviewer takes the first line, a manager the escalations. */
+/**
+ * A person in the app (`GET /api/users`, ADR-0051): an analyst works the queue and escalates, the compliance officer
+ * decides escalated cases, reports and approves rules, the compliance manager oversees without deciding.
+ */
 export const userSchema = z.object({
   id: z.number(),
   name: z.string(),
-  role: z.enum(["REVIEWER", "MANAGER"]),
+  role: z.enum(["ANALYST", "COMPLIANCE_OFFICER", "COMPLIANCE_MANAGER"]),
 });
 
 export type User = z.infer<typeof userSchema>;
@@ -19,8 +22,9 @@ export const initials = (name: string) =>
     .slice(0, 2);
 
 export const ROLE_LABEL: Record<User["role"], string> = {
-  REVIEWER: "Reviewer",
-  MANAGER: "Manager",
+  ANALYST: "Analyst",
+  COMPLIANCE_OFFICER: "Compliance officer",
+  COMPLIANCE_MANAGER: "Compliance manager",
 };
 
 const KEY = "aml.user";

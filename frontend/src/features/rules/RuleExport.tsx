@@ -137,6 +137,16 @@ function RuleSection({ span, history }: { span: LiveSpan; history: LiveSpan[] })
         <Fact label="Created">{shortDate(v.createdAt)}</Fact>
       </Facts>
 
+      {v.version > 1 && (
+        <Block title="Why this change">
+          {v.changeReason ?? (
+            <span className="text-fg-subtle italic">
+              Not recorded: saved before a reason was required.
+            </span>
+          )}
+        </Block>
+      )}
+
       <Block title="What it flags">
         {v.explanation ?? <span className="text-fg-subtle italic">No explanation recorded.</span>}
         {v.explanationModel && (

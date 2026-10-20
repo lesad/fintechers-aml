@@ -85,6 +85,7 @@ export function RuleForm({
 }: RuleFormProps) {
   const [base] = useState(() => (from ? draftFrom(from) : null));
   const [draft, setDraft] = useState(() => draftFrom(from));
+  const why = useChangeReason(from, edit);
   const [saving, setSaving] = useState(false);
   const [rejected, setRejected] = useState<string | null>(null);
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
@@ -110,7 +111,10 @@ export function RuleForm({
     setSaving(true);
     setRejected(null);
     try {
-      const body = toNewRule(draft, from, author);
+      const body = {
+        ...toNewRule(draft, from, author),
+        changeReason: why.sent,
+      };
       onSaved(await (edit && from ? updateRule(from.id, body) : saveRule(body)));
     } catch (err) {
       setRejected(err instanceof Error ? err.message : String(err));
@@ -176,17 +180,57 @@ export function RuleForm({
           <SectionTitle title="What it flags" hint="Plain language, shown to reviewers" />
           <ExplanationPreview rule={toNewRule(draft, from, author)} blocked={errors > 0} />
         </section>
+
+        <ChangeReason why={why} />
       </div>
 
       <Footer
         status={statusOf({ shown, hidden: errors - shown, changed: changed.size }, baseVersion)}
         saving={saving}
-        disabled={saving || errors > 0 || (base !== null && changed.size === 0)}
+        disabled={saving || errors > 0 || why.blocks(base !== null && changed.size === 0)}
         saveLabel={edit && from ? `Save draft v${from.version}` : `Save as draft v${nextVersion}`}
         onCancel={onCancel}
         onSave={save}
       />
     </div>
+  );
+}
+
+/**
+ * Why the version is proposed (ADR-0053), asked only when it changes an earlier version of the key: a new version
+ * starts empty, an edited draft keeps its own. `blocks` holds the save back without a reason, or when nothing changed
+ * and the reason did not either.
+ */
+function useChangeReason(from: RuleVersion | null, edit: boolean) {
+  const asked = from !== null && (!edit || from.version > 1);
+  const saved = (edit && from?.changeReason) || "";
+  const [value, set] = useState(saved);
+  const blocks = (unchanged: boolean) =>
+    asked && (value.trim() === "" || (unchanged && value.trim() === saved));
+  return { asked, value, set, blocks, sent: asked ? value.trim() : null };
+}
+
+/** Why the version is proposed: required, shown with the version and in the regulator export. */
+function ChangeReason({ why }: { why: ReturnType<typeof useChangeReason> }) {
+  if (!why.asked) return null;
+  return (
+    <section className={section}>
+      <label className="flex flex-col gap-1.5">
+        <span className="flex items-baseline gap-2 text-sm font-bold">
+          Why this change
+          <span className="text-xs font-normal text-fg-subtle">
+            required · what prompted it and what it should achieve
+          </span>
+        </span>
+        <textarea
+          rows={3}
+          value={why.value}
+          onChange={(e) => why.set(e.target.value)}
+          placeholder="e.g. PEP outflows between 30k and 50k CZK went unflagged in the July review"
+          className="resize-y rounded border border-border bg-bg px-2.5 py-2 text-[13px] leading-[1.45] text-fg outline-none focus:border-purple focus:ring-2 focus:ring-purple/25"
+        />
+      </label>
+    </section>
   );
 }
 

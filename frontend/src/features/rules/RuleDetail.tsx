@@ -1,7 +1,8 @@
 import { cva } from "class-variance-authority";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import { ConditionCode, ConditionLegend, Icon } from "@/components";
+import { ConditionCode, ConditionLegend, Icon, Popover } from "@/components";
+import { ROLE_LABEL, type User } from "@/user";
 
 import { changeRuleStatus, type RuleVersion } from "./api";
 import { grainLabel, paramParts, paramText, scopeLabel, shortDate, windowShort } from "./format";
@@ -15,8 +16,10 @@ type RuleDetailProps = {
   onSelectVersion: (id: number) => void;
   onNewVersion: () => void;
   onEditDraft: () => void;
-  /** Only a manager approves or rejects a pending version. */
-  manager: boolean;
+  /** The signed-in user; null before one is picked. */
+  user: User | null;
+  /** Everyone an author can send a draft to, among others. */
+  users: User[];
   onStatusChanged: (changed: RuleVersion) => void;
   /** Draft only: delete it, or replay a period with it. */
   onDelete: () => void;
@@ -80,16 +83,38 @@ export function RuleDetail(props: RuleDetailProps) {
           Retired. Kept for audit of cases flagged while it was active.
         </div>
       )}
-      <section className="flex flex-col gap-1 rounded-md bg-ai-bg px-4 py-3">
-        <div className="text-[11px] font-bold tracking-[0.06em] text-ai-fg uppercase">
-          What it flags
-        </div>
-        {v.explanation ? (
-          <p className="text-sm leading-normal text-pretty">{v.explanation}</p>
-        ) : (
-          <p className="text-sm leading-normal text-fg-subtle italic">No explanation yet</p>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-4">
+        <section className="flex flex-col gap-1 rounded-md bg-ai-bg px-4 py-3">
+          <div className="text-[11px] font-bold tracking-[0.06em] text-ai-fg uppercase">
+            What it flags
+          </div>
+          {v.explanation ? (
+            <p className="text-sm leading-normal text-pretty">{v.explanation}</p>
+          ) : (
+            <p className="text-sm leading-normal text-fg-subtle italic">No explanation yet</p>
+          )}
+        </section>
+        {/* A first version changes nothing, so it has no reason to show. */}
+        {v.version > 1 && (
+          <section
+            aria-label="Why this change"
+            className="flex flex-col gap-1 rounded-md border border-border px-4 py-3"
+          >
+            <div className="text-[11px] font-bold tracking-[0.06em] text-fg-subtle uppercase">
+              Why this change
+            </div>
+            {v.changeReason ? (
+              <p className="text-sm leading-normal whitespace-pre-line text-pretty">
+                {v.changeReason}
+              </p>
+            ) : (
+              <p className="text-sm leading-normal text-fg-subtle italic">
+                Not recorded: saved before a reason was required
+              </p>
+            )}
+          </section>
         )}
-      </section>
+      </div>
       <Condition version={v} />
       <section className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-4">
         <Parameters version={v} />
@@ -105,7 +130,8 @@ function Header({
   onSelectVersion,
   onNewVersion,
   onEditDraft,
-  manager,
+  user,
+  users,
   onStatusChanged,
   onDelete,
   onBacktest,
@@ -118,9 +144,13 @@ function Header({
         {v.replacesKey && ` · replaces ${v.replacesKey}`}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex min-w-[260px] flex-1 flex-wrap items-baseline gap-2.5">
-          <span className="font-mono text-lg font-bold">{v.key}</span>
-          {name && <h1 className="text-lg leading-tight font-semibold text-pretty">{name}</h1>}
+        <div className="flex min-w-[260px] flex-1 items-baseline gap-2.5">
+          <span className="flex-none font-mono text-lg font-bold">{v.key}</span>
+          {name && (
+            <h1 title={name} className="min-w-0 truncate text-lg leading-tight font-semibold">
+              {name}
+            </h1>
+          )}
         </div>
         {v.status === "draft" && (
           <>
@@ -140,7 +170,13 @@ function Header({
             Edit
           </button>
         )}
-        <StatusActions key={v.id} version={v} manager={manager} onStatusChanged={onStatusChanged} />
+        <StatusActions
+          key={v.id}
+          version={v}
+          user={user}
+          users={users}
+          onStatusChanged={onStatusChanged}
+        />
         {/* A draft or pending version is still being decided: edit it instead of stacking a new version on it. */}
         {(v.status === "active" || v.status === "retired") && (
           <button type="button" onClick={onNewVersion} className={secondary}>
@@ -176,16 +212,96 @@ function Header({
   );
 }
 
-type StatusActionsProps = Pick<RuleDetailProps, "version" | "manager" | "onStatusChanged">;
+const sendMain =
+  "inline-flex h-7 items-center gap-1.5 rounded-l bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
+const sendMore =
+  "inline-flex h-7 items-center rounded-r border-l border-white/30 bg-indigo px-1.5 text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
+const sendOption =
+  "flex w-full cursor-pointer items-baseline gap-1 rounded px-2 py-1.5 text-left text-[13px] hover:bg-hover";
 
-function StatusActions({ version: v, manager, onStatusChanged }: StatusActionsProps) {
+type SendForApprovalProps = {
+  /** Who the main button sends to: the first eligible compliance officer, else the first eligible approver. */
+  fallback: User | undefined;
+  eligible: User[];
+  busy: boolean;
+  onSend: (approverId: number) => void;
+};
+
+/** A split button: the main part sends to the default approver, the arrow picks another eligible one and sends. */
+function SendForApproval({ fallback, eligible, busy, onSend }: SendForApprovalProps) {
+  const [open, setOpen] = useState(false);
+  const more = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        disabled={busy || !fallback}
+        onClick={() => fallback && onSend(fallback.id)}
+        className={sendMain}
+      >
+        <Icon name="check" />
+        {fallback ? `Send to ${fallback.name}` : "No approver available"}
+      </button>
+      <button
+        ref={more}
+        type="button"
+        aria-label="Choose approver"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={busy || eligible.length === 0}
+        onClick={() => setOpen(!open)}
+        className={sendMore}
+      >
+        <Icon name="chevronDown" />
+      </button>
+      {open && (
+        <Popover
+          anchor={more}
+          onClose={() => setOpen(false)}
+          className="w-max min-w-56 gap-0 p-1.5"
+        >
+          <span className="px-2 pb-1 text-[11px] text-fg-subtle">Send for approval to</span>
+          <div role="menu" aria-label="Approvers" className="flex flex-col">
+            {eligible.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  onSend(u.id);
+                }}
+                className={sendOption}
+              >
+                {u.name}
+                <span className="text-fg-subtle">· {ROLE_LABEL[u.role]}</span>
+              </button>
+            ))}
+          </div>
+        </Popover>
+      )}
+    </div>
+  );
+}
+
+/** Four eyes (ADR-0052): the compliance officer's level and above approve what someone else wrote. */
+const APPROVERS = new Set<User["role"]>(["COMPLIANCE_OFFICER", "COMPLIANCE_MANAGER"]);
+
+type StatusActionsProps = Pick<RuleDetailProps, "version" | "user" | "users" | "onStatusChanged">;
+
+function StatusActions({ version: v, user, users, onStatusChanged }: StatusActionsProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const run = async (action: Parameters<typeof changeRuleStatus>[1]) => {
+  // Four eyes: neither the author nor whoever sends it approves it.
+  const eligible = users.filter(
+    (u) => APPROVERS.has(u.role) && u.name !== v.author && u.name !== user?.name,
+  );
+  const fallback = eligible.find((u) => u.role === "COMPLIANCE_OFFICER") ?? eligible[0];
+  const run = async (action: Parameters<typeof changeRuleStatus>[1], approverId?: number) => {
     setBusy(true);
     setError(null);
     try {
-      onStatusChanged(await changeRuleStatus(v.id, action));
+      onStatusChanged(await changeRuleStatus(v.id, action, approverId));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -201,14 +317,23 @@ function StatusActions({ version: v, manager, onStatusChanged }: StatusActionsPr
     return (
       <>
         {failure}
-        <button type="button" disabled={busy} onClick={() => run("submit")} className={primary}>
-          <Icon name="check" />
-          Send for approval
-        </button>
+        <SendForApproval
+          fallback={fallback}
+          eligible={eligible}
+          busy={busy}
+          onSend={(id) => run("submit", id)}
+        />
       </>
     );
   }
-  if (v.status !== "pending" || !manager) return null;
+  if (v.status !== "pending" || !user || !APPROVERS.has(user.role)) return null;
+  if (v.author === user.name)
+    return (
+      <span className="text-xs text-fg-muted">
+        You wrote this version; {v.assignee ?? "another approver"} decides it.
+      </span>
+    );
+  if (user.role === "COMPLIANCE_MANAGER" && v.assignee !== user.name) return null;
   return (
     <>
       {failure}
@@ -237,7 +362,7 @@ function DraftNote({ draft, active }: { draft: RuleVersion; active: RuleVersion 
     <div className="flex flex-col gap-1 rounded-md border border-draft-line bg-sel px-3 py-2.5">
       <div className="font-semibold">
         {draft.status === "pending"
-          ? `Waiting for approval by ${draft.assignee ?? "a manager"} — not evaluating transactions yet`
+          ? `Waiting for approval by ${draft.assignee ?? "a compliance officer"} — not evaluating transactions yet`
           : "Draft — not evaluating transactions yet"}
       </div>
       {active && changes.length > 0 && (

@@ -20,8 +20,6 @@ type HeaderProps = {
   /** The data import page is open instead of the review overview; its button shows as active. */
   importOpen: boolean;
   onToggleImport: () => void;
-  /** The rules tab is the one shown; the cog shows as active. */
-  rulesActive: boolean;
   onRules: () => void;
   /** The logo: back to the review queue tab. */
   onHome: () => void;
@@ -63,7 +61,6 @@ export function Header({
   onUser,
   importOpen,
   onToggleImport,
-  rulesActive,
   onRules,
   onHome,
 }: HeaderProps) {
@@ -177,9 +174,8 @@ export function Header({
           type="button"
           aria-label="Rules"
           title="Rules"
-          aria-pressed={rulesActive}
           onClick={onRules}
-          className={cn(pageButton({ active: rulesActive }), "mr-1")}
+          className={cn(pageButton({ active: false }), "mr-1")}
         >
           <svg
             aria-hidden="true"

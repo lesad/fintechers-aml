@@ -29,8 +29,8 @@ type TransactionDetailProps = {
   users: User[];
   /** Saves the status on the engine, then records the decision; `postponed` comes with a report only. */
   onDecide: (d: Pick<Decision, "action" | "reason"> & { postponed?: boolean }) => Promise<void>;
-  /** Saves an accepted rule suggestion as a draft and returns the new version's id. */
-  onAcceptSuggestion: (rule: SuggestedRule) => Promise<number>;
+  /** Saves an accepted rule suggestion as a draft, with why it changes, and returns the new version's id. */
+  onAcceptSuggestion: (rule: SuggestedRule, changeReason: string) => Promise<number>;
   onOpen: (id: string, background: boolean) => void;
 };
 
@@ -103,6 +103,8 @@ function DetailView({
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [toast, setToast] = useState<{ message: string; ruleId?: number } | null>(null);
   const [opo, setOpo] = useState(false);
+  // The false-positive reason the suggestion came from: it says why the rule changes.
+  const [fpReason, setFpReason] = useState("");
 
   // A false positive first asks for a rule change, then records the decision (and with it the alert status) whatever
   // the answer: a suggestion opens the modal, no suggestion or a failure only confirms the decision.
@@ -111,6 +113,7 @@ function DetailView({
       alertId === undefined ? null : await fetchSuggestion(alertId, reason).catch(() => undefined);
     await onDecide({ action: "False Positive", reason });
     void reload();
+    setFpReason(reason);
     if (result?.kind === "rule_version") setSuggestion(result);
     else if (result === undefined)
       setToast({ message: "Marked as false positive. The rule suggestion failed." });
@@ -118,7 +121,7 @@ function DetailView({
   };
 
   const acceptSuggestion = async (rule: SuggestedRule) => {
-    const ruleId = await onAcceptSuggestion(rule);
+    const ruleId = await onAcceptSuggestion(rule, `False positive on ${tx.id}: ${fpReason}`);
     setSuggestion(null);
     setToast({ message: `Draft rule ${rule.key} saved.`, ruleId });
   };
@@ -198,7 +201,11 @@ function DetailView({
               <AssigneeCard
                 assignee={detail.assignee}
                 users={users}
-                closed={state.saved === "False Positive" || state.saved === "Reported"}
+                closed={
+                  role === "COMPLIANCE_MANAGER" ||
+                  state.saved === "False Positive" ||
+                  state.saved === "Reported"
+                }
                 onAssign={async (u) => {
                   await assign(tx.id, u.id);
                   await reload();

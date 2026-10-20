@@ -37,7 +37,7 @@ export function UserMenu({
         {user ? initials(user.name) : "?"}
       </button>
       {open && (
-        <Popover anchor={avatar} onClose={() => setOpen(false)} className="w-56">
+        <Popover anchor={avatar} onClose={() => setOpen(false)} className="w-max min-w-56">
           <span id={label} className="px-2 text-[11px] text-fg-subtle">
             Signed in as
           </span>

@@ -41,10 +41,12 @@ const ruleVersion = z.object({
   name: z.string().nullable(),
   status: z.enum(["draft", "pending", "approved", "active", "retired"]),
   author: z.string().nullable(),
+  /** Why the version was proposed; null on versions saved before a reason was required (ADR-0053). */
+  changeReason: z.string().nullish(),
   createdAt: z.string(),
   explanation: z.string().nullable(),
   explanationModel: z.string().nullable(),
-  /** The manager a `pending` version waits for. */
+  /** The compliance officer a `pending` version waits for. */
   assignee: z.string().nullable(),
   approver: z.string().nullable(),
   approvedAt: z.string().nullable(),
@@ -58,6 +60,8 @@ export type NewRule = z.infer<z.ZodObject<typeof ruleFields>> & {
   author: string;
   /** null keeps the name of the key's latest version. */
   name: string | null;
+  /** Why the version is proposed: the engine refuses to save one without it, a preview does not need it. */
+  changeReason?: string | null;
 };
 
 /** The engine refused a rule (400, 403, 409) or could not explain it (502); the message is its reason. */
@@ -83,7 +87,7 @@ export async function fetchRules(signal?: AbortSignal): Promise<RuleVersion[]> {
 /** Sends a rule; a 400, 403, 409 or 502 becomes a {@link RuleRejectedError} carrying the engine's reason. */
 async function postRule(
   path: string,
-  body: NewRule | null,
+  body: object | null,
   method: "POST" | "PUT" = "POST",
 ): Promise<unknown> {
   const res = await fetch(path, {
@@ -106,13 +110,19 @@ export const updateRule = async (id: number, body: NewRule): Promise<RuleVersion
   ruleVersion.parse(await postRule(`/api/rules/${id}`, body, "PUT"));
 
 /**
- * Moves a version along its approval: `submit` sends a draft to a manager, `approve` activates a pending one
- * and `reject` returns it to draft; the engine lets only a manager approve or reject.
+ * Moves a version along its approval: `submit` sends a draft to the approver its author picked, `approve` activates a
+ * pending one and `reject` returns it to draft (four eyes, ADR-0052).
+ *
+ * @param approverId - `submit` only: a compliance officer or compliance manager who did not write the version
  */
 export const changeRuleStatus = async (
   id: number,
   action: "submit" | "approve" | "reject",
-): Promise<RuleVersion> => ruleVersion.parse(await postRule(`/api/rules/${id}/${action}`, null));
+  approverId?: number,
+): Promise<RuleVersion> =>
+  ruleVersion.parse(
+    await postRule(`/api/rules/${id}/${action}`, approverId === undefined ? null : { approverId }),
+  );
 
 /** Deletes the draft [id]; the engine refuses any other status. */
 export async function deleteRule(id: number): Promise<void> {

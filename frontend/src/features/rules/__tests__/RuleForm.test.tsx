@@ -31,6 +31,10 @@ const form = (from: RuleVersion | null = B2) =>
   );
 
 const save = (version: number) => screen.getByRole("button", { name: `Save as draft v${version}` });
+const explain = (why: string) =>
+  fireEvent.change(screen.getByRole("textbox", { name: /Why this change/ }), {
+    target: { value: why },
+  });
 
 describe("RuleForm", () => {
   it("starts a new version from the one it is based on, amounts in CZK", () => {
@@ -51,7 +55,15 @@ describe("RuleForm", () => {
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "50000" } });
     expect(screen.getByText("1 section changed · ready to save")).toBeInTheDocument();
     expect(screen.getByText("changed from v1")).toBeInTheDocument();
+    expect(save(2)).toBeDisabled();
+
+    explain("PEP outflows between 50k and 100k went unflagged");
     expect(save(2)).toBeEnabled();
+  });
+
+  it("asks no reason for a first version, which changes nothing", () => {
+    form(null);
+    expect(screen.queryByRole("textbox", { name: /Why this change/ })).not.toBeInTheDocument();
   });
 
   it("a blank new rule shows no issues until the user types", () => {
@@ -208,7 +220,7 @@ describe("saving from the rules page", () => {
   };
 
   const openB2Form = async () => {
-    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} user={null} users={[]} />);
     fireEvent.click(
       within(await screen.findByRole("navigation", { name: "Rules" })).getByRole("button", {
         name: /B2/,
@@ -216,6 +228,7 @@ describe("saving from the rules page", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "New version from v1" }));
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "50000" } });
+    explain("PEP outflows between 50k and 100k went unflagged");
   };
 
   it('saving shows "Writing explanation…" then selects the new draft', async () => {
@@ -253,6 +266,7 @@ describe("saving from the rules page", () => {
       name: "PEP outgoing payment above the limit",
       author: "J. Novák",
       params: { pep_min: { value: 50_000, unit: "amount" } },
+      changeReason: "PEP outflows between 50k and 100k went unflagged",
     });
   });
 });
@@ -274,12 +288,14 @@ describe("editing a draft", () => {
         return json([...SEEDED, puts.length ? edited : B2_V2]);
       }),
     );
-    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />, {
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} user={null} users={[]} />, {
       route: `/rules?rule=${B2_V2.id}`,
     });
     fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("B2 · edit draft v2");
     fireEvent.change(screen.getByLabelText("Value of parameter 1"), { target: { value: "70000" } });
+    expect(screen.getByRole("button", { name: "Save draft v2" })).toBeDisabled();
+    explain("Raised after the backtest: 50k flagged too many salaries");
     fireEvent.click(screen.getByRole("button", { name: "Save draft v2" }));
 
     const detail = await screen.findByRole("region", { name: "B2 v2" });
@@ -290,6 +306,7 @@ describe("editing a draft", () => {
         body: expect.objectContaining({
           key: "B2",
           params: { pep_min: { value: 70_000, unit: "amount" } },
+          changeReason: "Raised after the backtest: 50k flagged too many salaries",
         }),
       },
     ]);
@@ -300,7 +317,7 @@ describe("editing a draft", () => {
       "fetch",
       vi.fn(async () => json(SEEDED)),
     );
-    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} user={null} users={[]} />);
     await screen.findByRole("button", { name: /New version from/ });
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   });
