@@ -3,8 +3,17 @@ package cz.morosystems.aml.engine.user
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 
-/** A person who works the queue: a reviewer takes the first line, a manager the escalated cases. */
+/**
+ * A person in the app (ADR-0051): an `ANALYST` works the queue and escalates, the `COMPLIANCE_OFFICER` decides
+ * escalated cases, files reports and approves rules and triage configs, the `COMPLIANCE_MANAGER` oversees.
+ */
 data class AppUser(val id: Long, val name: String, val role: String)
+
+const val COMPLIANCE_OFFICER = "COMPLIANCE_OFFICER"
+const val COMPLIANCE_MANAGER = "COMPLIANCE_MANAGER"
+
+/** The roles that may approve what someone else wrote: the compliance officer's level and above. */
+val APPROVER_ROLES = setOf(COMPLIANCE_OFFICER, COMPLIANCE_MANAGER)
 
 @Repository
 class UserRepository(private val jdbc: JdbcClient) {

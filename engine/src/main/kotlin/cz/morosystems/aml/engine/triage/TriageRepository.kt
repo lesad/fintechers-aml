@@ -191,7 +191,7 @@ class TriageRepository(private val jdbc: JdbcClient) {
                 from alert where run_id = :run and transaction_id is not null group by transaction_id
             )
             update alert a set assignee_id = (
-                select min(id) from app_user where role = case when r.escalated then 'MANAGER' else 'REVIEWER' end
+                select min(id) from app_user where role = case when r.escalated then 'COMPLIANCE_OFFICER' else 'ANALYST' end
             )
             from routed r
             where a.run_id = :run and a.transaction_id = r.transaction_id and a.assignee_id is null

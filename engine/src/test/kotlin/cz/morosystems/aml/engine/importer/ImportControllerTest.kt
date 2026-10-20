@@ -53,7 +53,7 @@ class ImportControllerTest {
         assertThat(job["alerts"] as Int).isPositive()
 
         // A manager reported it; the same file again keeps that, raises nothing new and overwrites the amount.
-        val manager = jdbc.sql("select id from app_user where role = 'MANAGER'").query(Long::class.java).single()
+        val manager = jdbc.sql("select id from app_user where role = 'COMPLIANCE_OFFICER'").query(Long::class.java).single()
         jdbc.sql("update alert set status = 'REPORTED', assignee_id = ? where transaction_id = 'U1'").param(manager).update()
         jdbc.sql(
             "insert into case_event (run_id, transaction_id, actor_id, action, reason) select max(id), 'U1', ?, 'REPORTED', 'layering' from run",

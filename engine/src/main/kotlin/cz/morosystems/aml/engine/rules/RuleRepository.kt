@@ -47,8 +47,8 @@ class RuleRepository(private val jdbc: JdbcClient) {
         val id = jdbc.sql(
             """
             insert into rule (key, version, alert_type, layer, scope_segment_id, scope_client_id, grain, anchor, condition,
-                              replaces_key, status, author, name)
-            select ?, coalesce(max(version), 0) + 1, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?,
+                              replaces_key, status, author, change_reason, name)
+            select ?, coalesce(max(version), 0) + 1, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?,
                    coalesce(?, (select name from rule where key = ? order by version desc limit 1))
             from rule where key = ?
             returning id
@@ -56,8 +56,8 @@ class RuleRepository(private val jdbc: JdbcClient) {
         ).params(
             listOf(
                 rule.key, rule.alertType, rule.layer.name.lowercase(), rule.scopeSegmentId, rule.scopeClientId,
-                rule.grain.name.lowercase(), rule.anchor, rule.condition, rule.replacesKey, rule.author, rule.name,
-                rule.key, rule.key,
+                rule.grain.name.lowercase(), rule.anchor, rule.condition, rule.replacesKey, rule.author, rule.changeReason,
+                rule.name, rule.key, rule.key,
             ),
         ).query(Long::class.java).single()
 
@@ -74,11 +74,12 @@ class RuleRepository(private val jdbc: JdbcClient) {
     fun updateDraft(id: Long, rule: NewRule): Boolean {
         val updated = jdbc.sql(
             """
-            update rule set grain = ?, anchor = ?, condition = ?, author = ?, name = coalesce(?, name),
+            update rule set grain = ?, anchor = ?, condition = ?, author = ?, change_reason = ?, name = coalesce(?, name),
                             explanation = null, explanation_model = null, explanation_prompt_hash = null
             where id = ? and key = ? and status = 'draft'
             """,
-        ).params(listOf(rule.grain.name.lowercase(), rule.anchor, rule.condition, rule.author, rule.name, id, rule.key)).update()
+        ).params(listOf(rule.grain.name.lowercase(), rule.anchor, rule.condition, rule.author, rule.changeReason, rule.name, id, rule.key))
+            .update()
         if (updated == 0) return false
         jdbc.sql("delete from rule_variable where rule_id = ?").param(id).update()
         jdbc.sql("delete from rule_param where rule_id = ?").param(id).update()
@@ -86,14 +87,10 @@ class RuleRepository(private val jdbc: JdbcClient) {
         return true
     }
 
-    /** Moves the draft [id] to `pending`, assigned to the first manager; false when [id] is no draft. */
-    fun submit(id: Long): Boolean =
-        jdbc.sql(
-            """
-            update rule set status = 'pending', assignee_id = (select min(id) from app_user where role = 'MANAGER')
-            where id = ? and status = 'draft'
-            """,
-        ).param(id).update() > 0
+    /** Moves the draft [id] to `pending`, assigned to [approverId]; false when [id] is no draft. */
+    fun submit(id: Long, approverId: Long): Boolean =
+        jdbc.sql("update rule set status = 'pending', assignee_id = ? where id = ? and status = 'draft'")
+            .params(approverId, id).update() > 0
 
     /** Deletes the draft [id] with its variables and parameters; false when [id] is not a draft. A draft never ran, so it has no hits. */
     @Transactional
@@ -176,7 +173,7 @@ class RuleRepository(private val jdbc: JdbcClient) {
         return jdbc.sql(
             """
             select r.id, r.key, r.version, r.alert_type, r.layer, r.scope_segment_id, r.scope_client_id, r.grain, r.anchor,
-                   r.condition, r.replaces_key, r.name, r.status, r.author, r.created_at, r.explanation, r.explanation_model,
+                   r.condition, r.replaces_key, r.name, r.status, r.author, r.change_reason, r.created_at, r.explanation, r.explanation_model,
                    u.name as assignee, r.approver, r.approved_at
             from rule r left join app_user u on u.id = r.assignee_id where $where order by r.key, r.version desc
             """,
@@ -201,6 +198,7 @@ class RuleRepository(private val jdbc: JdbcClient) {
                 name = rs.getString("name"),
                 status = rs.getString("status"),
                 author = rs.getString("author"),
+                changeReason = rs.getString("change_reason"),
                 createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
                 explanation = rs.getString("explanation"),
                 explanationModel = rs.getString("explanation_model"),

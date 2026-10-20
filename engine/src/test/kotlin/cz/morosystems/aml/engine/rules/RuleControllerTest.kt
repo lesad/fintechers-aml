@@ -64,11 +64,26 @@ class RuleControllerTest {
     }
 
     @Test
+    fun aVersionIsNotSavedWithoutSayingWhyItChanges() {
+        assertThat(post(b2Body(changeReason = " "))).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("changeReason is required")
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(put(idOf("B2", 2), b2Body(changeReason = ""))).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun aFirstVersionChangesNothingSoNeedsNoReason() {
+        assertThat(post(b2Body(key = "B9", changeReason = ""))).hasStatus(HttpStatus.CREATED)
+            .bodyJson().extractingPath("$.changeReason").isNull()
+    }
+
+    @Test
     fun savesADraftWithItsExplanation() {
         val saved = assertThat(post(b2Body(pepMin = 50_000.0))).hasStatus(HttpStatus.CREATED).bodyJson()
         saved.extractingPath("$.version").isEqualTo(2)
         saved.extractingPath("$.status").isEqualTo("draft")
         saved.extractingPath("$.author").isEqualTo("J. Novák")
+        saved.extractingPath("$.changeReason").isEqualTo("PEP payments under 50k were missed")
         saved.extractingPath("$.params.pep_min").isEqualTo(mapOf("value" to 50_000.0, "unit" to "amount"))
         saved.extractingPath("$.explanation").isEqualTo(LOWER_B2)
         saved.extractingPath("$.explanationModel").isEqualTo("eu.anthropic.claude-opus-4-5-20251101-v1:0")
@@ -357,10 +372,10 @@ class RuleControllerTest {
     }
 
     @Test
-    fun theManagerApprovesAndTheEarlierVersionRetires() {
+    fun theComplianceOfficerApprovesAnAnalystsDraftAndTheEarlierVersionRetires() {
         assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
         assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
-        val approved = assertThat(action(idOf("B2", 2), "approve", user = userId("MANAGER"))).hasStatusOk().bodyJson()
+        val approved = assertThat(action(idOf("B2", 2), "approve", user = userId("COMPLIANCE_OFFICER"))).hasStatusOk().bodyJson()
         approved.extractingPath("$.status").isEqualTo("active")
         approved.extractingPath("$.approver").isEqualTo("M. Svobodová")
         approved.extractingPath("$.assignee").isNull()
@@ -368,17 +383,57 @@ class RuleControllerTest {
     }
 
     @Test
-    fun aReviewerCannotApprove() {
+    fun onlyAComplianceOfficerApproves() {
         assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
         assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
-        assertThat(action(idOf("B2", 2), "approve", user = userId("REVIEWER"))).hasStatus(HttpStatus.FORBIDDEN)
-        assertThat(action(idOf("B2", 2), "reject", user = userId("REVIEWER"))).hasStatus(HttpStatus.FORBIDDEN)
+        for (role in listOf("ANALYST", "COMPLIANCE_MANAGER")) {
+            assertThat(action(idOf("B2", 2), "approve", user = userId(role))).hasStatus(HttpStatus.FORBIDDEN)
+            assertThat(action(idOf("B2", 2), "reject", user = userId(role))).hasStatus(HttpStatus.FORBIDDEN)
+        }
+    }
+
+    @Test
+    fun aComplianceOfficerSendsTheirOwnDraftToTheComplianceManager() {
+        assertThat(post(b2Body(author = "M. Svobodová"))).hasStatus(HttpStatus.CREATED)
+        val id = idOf("B2", 2)
+        assertThat(action(id, "submit")).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("needs an approver")
+        assertThat(submitTo(id, userId("ANALYST"))).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(submitTo(id, userId("COMPLIANCE_OFFICER"))).hasStatus(HttpStatus.BAD_REQUEST)
+
+        assertThat(submitTo(id, userId("COMPLIANCE_MANAGER"))).hasStatusOk().bodyJson()
+            .extractingPath("$.assignee").isEqualTo("P. Dvořák")
+        assertThat(action(id, "approve", user = userId("COMPLIANCE_OFFICER"))).hasStatus(HttpStatus.FORBIDDEN)
+            .bodyJson().extractingPath("$.detail").asString().contains("wrote this version")
+        assertThat(action(id, "approve", user = userId("COMPLIANCE_MANAGER"))).hasStatusOk().bodyJson()
+            .extractingPath("$.approver").isEqualTo("P. Dvořák")
+    }
+
+    @Test
+    fun theSenderCannotPickThemselvesAsApprover() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        val id = idOf("B2", 2)
+        val officer = userId("COMPLIANCE_OFFICER")
+        assertThat(submitTo(id, officer, sender = officer)).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("neither wrote nor sends it")
+        assertThat(
+            mvc.post().uri("/api/rules/$id/submit").header("X-User-Id", officer.toString()),
+        ).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(submitTo(id, userId("COMPLIANCE_MANAGER"), sender = officer)).hasStatusOk()
+    }
+
+    @Test
+    fun aComplianceManagerDecidesOnlyWhatWasSentToThem() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "submit")).hasStatusOk().bodyJson().extractingPath("$.assignee").isEqualTo("M. Svobodová")
+        assertThat(action(idOf("B2", 2), "approve", user = userId("COMPLIANCE_MANAGER"))).hasStatus(HttpStatus.FORBIDDEN)
+            .bodyJson().extractingPath("$.detail").asString().contains("was sent to M. Svobodová")
     }
 
     @Test
     fun approvingADraftThatWasNotSentIs400() {
         assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
-        assertThat(action(idOf("B2", 2), "approve", user = userId("MANAGER"))).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(action(idOf("B2", 2), "approve", user = userId("COMPLIANCE_OFFICER"))).hasStatus(HttpStatus.BAD_REQUEST)
     }
 
     @Test
@@ -392,7 +447,7 @@ class RuleControllerTest {
     fun aRejectedVersionIsADraftAgain() {
         assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
         assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
-        val rejected = assertThat(action(idOf("B2", 2), "reject", user = userId("MANAGER"))).hasStatusOk().bodyJson()
+        val rejected = assertThat(action(idOf("B2", 2), "reject", user = userId("COMPLIANCE_OFFICER"))).hasStatusOk().bodyJson()
         rejected.extractingPath("$.status").isEqualTo("draft")
         rejected.extractingPath("$.assignee").isNull()
         assertThat(put(idOf("B2", 2), b2Body(pepMin = 70_000.0))).hasStatusOk()
@@ -405,6 +460,10 @@ class RuleControllerTest {
 
     private fun userId(role: String) =
         jdbc.sql("select min(id) from app_user where role = ?").param(role).query(Long::class.java).single()
+
+    private fun submitTo(id: String, approver: Long, sender: Long? = null) =
+        mvc.post().uri("/api/rules/$id/submit").contentType(MediaType.APPLICATION_JSON).content("""{"approverId": $approver}""")
+            .apply { if (sender != null) header("X-User-Id", sender.toString()) }
 
     private fun action(id: String, name: String, user: Long? = null) =
         mvc.post().uri("/api/rules/$id/$name").apply { if (user != null) header("X-User-Id", user.toString()) }
@@ -420,12 +479,19 @@ class RuleControllerTest {
 
     private fun post(body: String) = mvc.post().uri("/api/rules").contentType(MediaType.APPLICATION_JSON).content(body)
 
-    private fun b2Body(pepMin: Double = 50_000.0, key: String = "B2", unit: String = "amount") = """
+    private fun b2Body(
+        pepMin: Double = 50_000.0,
+        key: String = "B2",
+        unit: String = "amount",
+        author: String = "J. Novák",
+        changeReason: String = "PEP payments under 50k were missed",
+    ) = """
         {
           "key": "$key", "alertType": "B", "layer": "company", "scopeSegmentId": null, "scopeClientId": null,
           "grain": "transaction", "anchor": null,
           "condition": "client.pep && tx.amount > p.pep_min && tx.direction in [\"out\", \"unknown\"]",
-          "replacesKey": null, "variables": [], "params": { "pep_min": { "value": $pepMin, "unit": "$unit" } }, "author": "J. Novák"
+          "replacesKey": null, "variables": [], "params": { "pep_min": { "value": $pepMin, "unit": "$unit" } }, "author": "$author",
+          "changeReason": "$changeReason"
         }
     """.trimIndent()
 
@@ -447,7 +513,8 @@ class RuleControllerTest {
                   "window": { "kind": "relative", "from": "PT0S", "to": "PT6H" } }
               ],
               "params": { "min_inflow": { "value": 100000, "unit": "amount" }, "forward_pct": { "value": 80, "unit": "percent" } },
-              "author": "J. Novák"
+              "author": "J. Novák",
+              "changeReason": "Flow-through cases from the July review"
             }
         """.trimIndent()
     }

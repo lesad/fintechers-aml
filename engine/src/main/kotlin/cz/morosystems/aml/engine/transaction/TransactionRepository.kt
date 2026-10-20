@@ -25,7 +25,7 @@ class TransactionRepository(private val jdbc: JdbcClient) {
             with changed as (
                 update alert set status = :status, status_by = :user,
                     assignee_id = case when :status = 'ESCALATED'
-                        then (select min(id) from app_user where role = 'MANAGER') else assignee_id end
+                        then (select min(id) from app_user where role = 'COMPLIANCE_OFFICER') else assignee_id end
                 where transaction_id = :tx and run_id = ($LATEST_RUN)
                 returning run_id, assignee_id
             )

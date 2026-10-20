@@ -27,6 +27,7 @@ data class RuleBody(
     val params: Map<String, ParamJson?> = emptyMap(),
     val author: String,
     val name: String? = null,
+    val changeReason: String? = null,
 )
 
 data class ExplanationJson(val explanation: String, val model: String)
@@ -57,6 +58,7 @@ data class RuleVersionJson(
     val variables: List<VariableJson>,
     val params: Map<String, ParamJson>,
     val author: String?,
+    val changeReason: String?,
     val createdAt: OffsetDateTime,
     val explanation: String?,
     val explanationModel: String?,
@@ -88,6 +90,7 @@ fun RuleVersion.toJson() = RuleVersionJson(
     },
     params = rule.params.mapValues { (_, p) -> ParamJson(p.value, p.unit.name.lowercase()) },
     author = author,
+    changeReason = changeReason,
     createdAt = createdAt,
     explanation = explanation,
     explanationModel = explanationModel,
@@ -118,6 +121,7 @@ fun RuleBody.toNewRule() = NewRule(
     },
     author = author.trim(),
     name = name?.trim()?.ifEmpty { null },
+    changeReason = changeReason?.trim()?.ifEmpty { null },
 )
 
 private fun WindowJson.toWindow(variable: String): Window = when (kind) {

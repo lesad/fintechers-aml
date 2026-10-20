@@ -29,4 +29,6 @@
     <include file="db/migrations/0023-triage-config.sql" />
     <include file="db/migrations/0024-backtest.sql" />
     <include file="db/migrations/0025-case-event-postponed.sql" />
+    <include file="db/migrations/0026-compliance-roles.sql" />
+    <include file="db/migrations/0027-rule-change-reason.sql" />
 </databaseChangeLog>

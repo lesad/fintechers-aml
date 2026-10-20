@@ -49,7 +49,7 @@ data class RuleDefinition(
 /**
  * A stored rule version with its lifecycle and explanation; [status] is `draft`, `pending`, `approved`, `active` or `retired`.
  *
- * @property assignee the manager a `pending` version waits for, by name
+ * @property assignee the compliance officer a `pending` version waits for, by name
  */
 data class RuleVersion(
     val rule: RuleDefinition,
@@ -62,6 +62,8 @@ data class RuleVersion(
     val assignee: String? = null,
     val approver: String? = null,
     val approvedAt: OffsetDateTime? = null,
+    /** Why the version was proposed; null on versions saved before a reason was required. */
+    val changeReason: String? = null,
 )
 
 data class NewRule(
@@ -79,6 +81,8 @@ data class NewRule(
     val author: String,
     /** null keeps the name of the key's latest version. */
     val name: String? = null,
+    /** Why the version is proposed; required to save, not to preview. */
+    val changeReason: String? = null,
 )
 
 data class Segment(val id: Long, val name: String, val predicate: String)

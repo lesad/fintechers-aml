@@ -3,20 +3,25 @@ package cz.morosystems.aml.engine.rules
 import cz.morosystems.aml.engine.cel.RuleCompiler
 import cz.morosystems.aml.engine.cel.Vocabulary
 import cz.morosystems.aml.engine.user.AppUser
+import cz.morosystems.aml.engine.user.APPROVER_ROLES
+import cz.morosystems.aml.engine.user.COMPLIANCE_MANAGER
+import cz.morosystems.aml.engine.user.COMPLIANCE_OFFICER
+import cz.morosystems.aml.engine.user.UserRepository
 import org.springframework.stereotype.Service
 
 class InvalidRuleException(message: String) : RuntimeException(message)
 
-class NotAManagerException(action: String) : RuntimeException("only a manager can $action a rule")
+class NotAnApproverException(message: String) : RuntimeException(message)
 
 data class ExplainReport(val filled: Int, val failed: Int)
 
-/** Saves rule versions as drafts, gives each one its explanation, and takes a draft through a manager's approval. */
+/** Saves rule versions as drafts, gives each one its explanation, and takes a draft through a compliance officer's approval. */
 @Service
 class RuleService(
     private val rules: RuleRepository,
     private val compiler: RuleCompiler,
     private val explainer: RuleExplainer,
+    private val users: UserRepository,
 ) {
     fun all(): List<RuleVersion> = rules.allVersions()
 
@@ -35,10 +40,12 @@ class RuleService(
      *
      * The draft is committed before the model is called, so a Bedrock failure leaves it saved with no explanation.
      *
-     * @throws InvalidRuleException when the rule is incomplete or changes what an earlier version of its key fixed
+     * @throws InvalidRuleException when the rule has no change reason, is incomplete or changes what an earlier version
+     * of its key fixed
      * @throws cz.morosystems.aml.engine.cel.RuleCompileException when a CEL expression does not type-check
      */
     fun save(rule: NewRule): RuleVersion {
+        if (rules.latestOf(rule.key) != null) requireReason(rule)
         validate(rule)
         val id = rules.insertDraft(rule)
         explain(rules.find(id)!!.rule)
@@ -55,6 +62,7 @@ class RuleService(
         val existing = rules.find(id) ?: return null
         if (existing.status != "draft") throw InvalidRuleException("only a draft can be edited; ${existing.rule.key} v${existing.rule.version} is ${existing.status}")
         if (existing.rule.key != rule.key) throw InvalidRuleException("the draft keeps its key ${existing.rule.key}")
+        if (existing.rule.version > 1) requireReason(rule)
         validate(rule)
         if (!rules.updateDraft(id, rule)) throw InvalidRuleException("${existing.rule.key} v${existing.rule.version} is no longer a draft")
         explain(rules.find(id)!!.rule)
@@ -62,22 +70,38 @@ class RuleService(
     }
 
     /**
-     * Sends the draft [id] for approval: it turns `pending`, assigned to a manager, and can no longer be edited.
+     * Sends the draft [id] for approval to [approverId] (four eyes, ADR-0052): a compliance officer or compliance
+     * manager who neither wrote it nor is [sender]; without one, the first compliance officer who is neither. It turns
+     * `pending` and can no longer be edited.
      *
      * @return null when there is no version [id]
-     * @throws InvalidRuleException when [id] is not a draft
+     * @throws InvalidRuleException when [id] is not a draft, or the approver is missing, too junior, its author or the sender
      */
-    fun submit(id: Long): RuleVersion? = transition(id, "draft", "sent for approval", rules::submit)
+    fun submit(id: Long, approverId: Long? = null, sender: AppUser? = null): RuleVersion? {
+        val existing = rules.find(id) ?: return null
+        val excluded = setOfNotNull(existing.author, sender?.name)
+        val approver = if (approverId == null) {
+            users.all().firstOrNull { it.role == COMPLIANCE_OFFICER && it.name !in excluded }
+        } else {
+            users.find(approverId)
+        }
+        if (approver == null || approver.role !in APPROVER_ROLES || approver.name in excluded) {
+            throw InvalidRuleException(
+                "${existing.rule.key} v${existing.rule.version} needs an approver: a compliance officer or compliance manager who neither wrote nor sends it",
+            )
+        }
+        return transition(id, "draft", "sent for approval") { rules.submit(it, approver.id) }
+    }
 
     /**
      * Activates the pending version [id] and retires the version of its key that was active.
      *
      * @return null when there is no version [id]
-     * @throws NotAManagerException when [user] is no manager
+     * @throws NotAnApproverException when [user] may not decide it, see [checkApprover]
      * @throws InvalidRuleException when [id] is not pending
      */
     fun approve(id: Long, user: AppUser): RuleVersion? {
-        if (user.role != "MANAGER") throw NotAManagerException("approve")
+        checkApprover(id, user, "approve")
         return transition(id, "pending", "approved") { rules.approve(it, user.name) }
     }
 
@@ -85,12 +109,25 @@ class RuleService(
      * Sends the pending version [id] back to `draft`, so anyone can edit and send it again.
      *
      * @return null when there is no version [id]
-     * @throws NotAManagerException when [user] is no manager
+     * @throws NotAnApproverException when [user] may not decide it, see [checkApprover]
      * @throws InvalidRuleException when [id] is not pending
      */
     fun reject(id: Long, user: AppUser): RuleVersion? {
-        if (user.role != "MANAGER") throw NotAManagerException("reject")
+        checkApprover(id, user, "reject")
         return transition(id, "pending", "rejected", rules::reject)
+    }
+
+    /**
+     * Four eyes: a compliance officer decides any version they did not write; a compliance manager only the one sent
+     * to them; nobody decides their own.
+     */
+    private fun checkApprover(id: Long, user: AppUser, verb: String) {
+        val existing = rules.find(id) ?: return
+        if (user.role !in APPROVER_ROLES) throw NotAnApproverException("only a compliance officer or compliance manager can $verb a rule")
+        if (existing.author == user.name) throw NotAnApproverException("${user.name} wrote this version; another approver decides it")
+        if (user.role == COMPLIANCE_MANAGER && existing.assignee != user.name) {
+            throw NotAnApproverException("${existing.rule.key} v${existing.rule.version} was sent to ${existing.assignee}, not to ${user.name}")
+        }
     }
 
     /**
@@ -134,6 +171,11 @@ class RuleService(
         val explanation = explainer.explain(rule, rule.scopeSegmentId?.let(rules::segmentName)) ?: return false
         rules.saveExplanation(rule.id, explanation)
         return true
+    }
+
+    /** A version that changes an earlier one says why (ADR-0053); a first version and a preview do not. */
+    private fun requireReason(rule: NewRule) {
+        if (rule.changeReason.isNullOrBlank()) throw InvalidRuleException("say why the rule changes: changeReason is required")
     }
 
     private fun validate(rule: NewRule) {

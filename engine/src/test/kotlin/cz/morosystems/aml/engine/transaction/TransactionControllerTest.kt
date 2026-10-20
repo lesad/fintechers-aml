@@ -144,7 +144,7 @@ class TransactionControllerTest {
 
     @Test
     fun aStatusChangeNeedsAKnownUserAndRecordsThem() {
-        val reviewer = jdbc.sql("select id from app_user where role = 'REVIEWER'").query(Long::class.java).single()
+        val reviewer = jdbc.sql("select id from app_user where role = 'ANALYST'").query(Long::class.java).single()
         assertThat(putStatus("T3", "ESCALATED", user = null)).hasStatus(HttpStatus.BAD_REQUEST)
         assertThat(putStatus("T3", "ESCALATED", user = 999_999)).hasStatus(HttpStatus.BAD_REQUEST)
 
@@ -163,7 +163,7 @@ class TransactionControllerTest {
 
         val body = assertThat(mvc.get().uri("/api/transactions/T3")).hasStatusOk().bodyJson()
         body.extractingPath("$.assignee.id").isEqualTo(manager.toInt())
-        body.extractingPath("$.assignee.role").isEqualTo("MANAGER")
+        body.extractingPath("$.assignee.role").isEqualTo("COMPLIANCE_OFFICER")
         body.extractingPath("$.log[*].action").asArray().containsExactly("ESCALATED")
         body.extractingPath("$.log[0].actor").isEqualTo("J. Novák")
         body.extractingPath("$.log[0].reason").isEqualTo("Source of funds not documented")
@@ -248,7 +248,7 @@ class TransactionControllerTest {
 
     private fun users(): Pair<Long, Long> {
         val byRole = jdbc.sql("select role, id from app_user").query { rs, _ -> rs.getString("role") to rs.getLong("id") }.list().toMap()
-        return byRole.getValue("REVIEWER") to byRole.getValue("MANAGER")
+        return byRole.getValue("ANALYST") to byRole.getValue("COMPLIANCE_OFFICER")
     }
 
     private fun firstUser(): Long = jdbc.sql("select min(id) from app_user").query(Long::class.java).single()

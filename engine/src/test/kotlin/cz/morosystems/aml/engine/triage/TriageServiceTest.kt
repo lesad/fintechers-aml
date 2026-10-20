@@ -114,7 +114,7 @@ class TriageServiceTest {
             """
             select count(*) from alert a left join app_user u on u.id = a.assignee_id
             where a.run_id = ? and a.transaction_id is not null
-              and u.role is distinct from (case when a.status = 'ESCALATED' then 'MANAGER' else 'REVIEWER' end)
+              and u.role is distinct from (case when a.status = 'ESCALATED' then 'COMPLIANCE_OFFICER' else 'ANALYST' end)
             """,
         ).param(runId).query(Long::class.java).single()
         assertThat(misrouted).isZero()

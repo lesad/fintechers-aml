@@ -56,15 +56,26 @@ class RuleController(private val rules: RuleService, private val users: UserRepo
         if (!rules.delete(id)) throw notFound(id)
     }
 
+    /**
+     * Sends a draft for approval to `{"approverId": 3}`, or without a body to the first compliance officer who neither
+     * wrote it nor sends it (the user in `X-User-Id`, when given).
+     */
     @PostMapping("/{id}/submit")
-    fun submit(@PathVariable id: Long): RuleVersionJson = (rules.submit(id) ?: throw notFound(id)).toJson()
+    fun submit(
+        @PathVariable id: Long,
+        @RequestHeader("X-User-Id", required = false) userId: Long?,
+        @RequestBody(required = false) body: SubmitBody?,
+    ): RuleVersionJson = (rules.submit(id, body?.approverId, userId?.let(users::find)) ?: throw notFound(id)).toJson()
 
-    /** Activates a pending version for the manager in `X-User-Id`; 403 for anyone else, 400 when it is not pending. */
+    /**
+     * Activates a pending version for the compliance officer in `X-User-Id`; 403 for anyone else or for the version's
+     * author, 400 when it is not pending.
+     */
     @PostMapping("/{id}/approve")
     fun approve(@PathVariable id: Long, @RequestHeader("X-User-Id", required = false) userId: Long?): RuleVersionJson =
         (rules.approve(id, knownUser(userId)) ?: throw notFound(id)).toJson()
 
-    /** Sends a pending version back to draft for the manager in `X-User-Id`; 403 for anyone else, 400 when it is not pending. */
+    /** Sends a pending version back to draft for the compliance officer in `X-User-Id`; 403 for anyone else, 400 when it is not pending. */
     @PostMapping("/{id}/reject")
     fun reject(@PathVariable id: Long, @RequestHeader("X-User-Id", required = false) userId: Long?): RuleVersionJson =
         (rules.reject(id, knownUser(userId)) ?: throw notFound(id)).toJson()
@@ -121,10 +132,12 @@ class RuleController(private val rules: RuleService, private val users: UserRepo
     @ExceptionHandler(InvalidRuleException::class, RuleCompileException::class)
     fun badRequest(e: RuntimeException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.message)
 
-    @ExceptionHandler(NotAManagerException::class)
-    fun forbidden(e: NotAManagerException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.message)
+    @ExceptionHandler(NotAnApproverException::class)
+    fun forbidden(e: NotAnApproverException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.message)
 
     @ExceptionHandler(DuplicateKeyException::class)
     fun conflict(e: DuplicateKeyException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "another version of this rule was saved at the same time; try again")
 }
+
+data class SubmitBody(val approverId: Long?)

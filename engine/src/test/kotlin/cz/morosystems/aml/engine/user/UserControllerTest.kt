@@ -16,7 +16,7 @@ class UserControllerTest {
     @Test
     fun listsTheSeededReviewerAndManager() {
         val body = assertThat(mvc.get().uri("/api/users")).hasStatusOk().bodyJson()
-        body.extractingPath("$[*].role").asArray().containsExactly("REVIEWER", "MANAGER")
+        body.extractingPath("$[*].role").asArray().containsExactly("ANALYST", "COMPLIANCE_OFFICER", "COMPLIANCE_MANAGER")
         body.extractingPath("$[0].name").isEqualTo("J. Novák")
     }
 }

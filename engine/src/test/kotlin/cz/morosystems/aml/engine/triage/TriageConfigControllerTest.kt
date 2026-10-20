@@ -99,7 +99,7 @@ class TriageConfigControllerTest {
     fun activatingAVersionRetiresTheOneThatWasActive() {
         assertThat(post(body())).hasStatus(HttpStatus.CREATED)
 
-        val promoted = assertThat(mvc.post().uri("/api/triage/config/2/activate")).hasStatusOk().bodyJson()
+        val promoted = assertThat(activate(2)).hasStatusOk().bodyJson()
         promoted.extractingPath("$.version").isEqualTo(2)
         promoted.extractingPath("$.status").isEqualTo("active")
 
@@ -107,8 +107,20 @@ class TriageConfigControllerTest {
     }
 
     @Test
+    fun onlyAComplianceOfficerWhoDidNotWriteItActivatesAVersion() {
+        assertThat(post(body())).hasStatus(HttpStatus.CREATED)
+        assertThat(activate(2, user = null)).hasStatus(HttpStatus.FORBIDDEN)
+        assertThat(activate(2, user = userId("ANALYST"))).hasStatus(HttpStatus.FORBIDDEN)
+        assertThat(activate(2, user = userId("COMPLIANCE_MANAGER"))).hasStatus(HttpStatus.FORBIDDEN)
+        assertThat(post(body(author = "M. Svobodová"))).hasStatus(HttpStatus.CREATED)
+        assertThat(activate(3)).hasStatus(HttpStatus.FORBIDDEN)
+            .bodyJson().extractingPath("$.detail").asString().contains("wrote this version")
+        assertThat(patchRule("A1", """{"author": "J. Novák", "baseScore": 9}""", user = userId("ANALYST"))).hasStatus(HttpStatus.FORBIDDEN)
+    }
+
+    @Test
     fun activatingAVersionThatIsNotThereIs400() {
-        assertThat(mvc.post().uri("/api/triage/config/999/activate")).hasStatus(HttpStatus.BAD_REQUEST)
+        assertThat(activate(999)).hasStatus(HttpStatus.BAD_REQUEST)
             .bodyJson().extractingPath("$.detail").asString().contains("999")
     }
 
@@ -161,7 +173,7 @@ class TriageConfigControllerTest {
     fun coverageFlagsAScoreNoLiveRuleUses() {
         val rules = """[{"ruleKey": "A1", "baseScore": 8}, {"ruleKey": "Z9", "baseScore": 50}]"""
         assertThat(post(body(rules = rules))).hasStatus(HttpStatus.CREATED)
-        assertThat(mvc.post().uri("/api/triage/config/2/activate")).hasStatusOk()
+        assertThat(activate(2)).hasStatusOk()
 
         val coverage = assertThat(mvc.get().uri("/api/triage/coverage")).hasStatusOk().bodyJson()
         coverage.extractingPath("$.unscored").isEqualTo(listOf("A2", "A3", "B1", "B2", "C1"))
@@ -259,11 +271,19 @@ class TriageConfigControllerTest {
 
     private fun post(body: String) = mvc.post().uri("/api/triage/config").contentType(MediaType.APPLICATION_JSON).content(body)
 
-    private fun patchRule(ruleKey: String, body: String) =
+    private fun patchRule(ruleKey: String, body: String, user: Long? = userId("COMPLIANCE_OFFICER")) =
         mvc.patch().uri("/api/triage/config/rules/$ruleKey").contentType(MediaType.APPLICATION_JSON).content(body)
+            .apply { if (user != null) header("X-User-Id", user.toString()) }
 
     private fun patchFactors(body: String) =
         mvc.patch().uri("/api/triage/config/factors").contentType(MediaType.APPLICATION_JSON).content(body)
+            .header("X-User-Id", userId("COMPLIANCE_OFFICER").toString())
+
+    private fun activate(version: Int, user: Long? = userId("COMPLIANCE_OFFICER")) =
+        mvc.post().uri("/api/triage/config/$version/activate").apply { if (user != null) header("X-User-Id", user.toString()) }
+
+    private fun userId(role: String) =
+        jdbc.sql("select min(id) from app_user where role = ?").param(role).query(Long::class.java).single()
 
     private fun body(
         author: String = "J. Novák",
