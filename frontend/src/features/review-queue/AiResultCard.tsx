@@ -115,7 +115,7 @@ export function Refs({ refs }: { refs: string[] }) {
         <span
           key={ref}
           title={`Rests on ${ref}`}
-          className="rounded bg-white/60 px-1 font-mono text-[10px] text-ai-fg"
+          className="rounded border border-ai-fg/30 bg-white/60 px-1 font-mono text-[10px] text-ai-fg"
         >
           {ref}
         </span>

@@ -109,7 +109,10 @@ function RuleRow({ group, selected, onSelect }: RuleRowProps) {
   const draft = group.versions.find((v) => v.status === "draft" || v.status === "pending");
   return (
     <button type="button" aria-current={selected} onClick={onSelect} className={row({ selected })}>
-      <span className="font-mono text-[13px] font-bold">{group.key}</span>
+      {/* The column fits a short key (A1); a longer one ends in an ellipsis, whole in the tooltip. */}
+      <span className="truncate font-mono text-[13px] font-bold" title={group.key}>
+        {group.key}
+      </span>
       <span className="truncate font-semibold">{newest(group)?.name ?? group.key}</span>
       <span />
       <span className="flex flex-wrap items-center gap-1.5 text-xs text-fg-subtle">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { type Column, LoadMore, RiskBadge, Table } from "@/components";
 
 import { periodDays } from "./format";
-import { useBacktestRows, useBacktestSummary } from "./use-backtest";
+import { type BacktestProgress, useBacktestRows, useBacktestSummary } from "./use-backtest";
 
 import type { Backtest, BacktestRow, BacktestView as View } from "./api";
 import type { ReactNode } from "react";
@@ -16,7 +16,7 @@ const VIEWS: { id: View; label: string; count: (b: Backtest) => number }[] = [
     label: "All",
     count: (b) => b.newCount + b.droppedCount + b.changedCount + b.unchangedCount,
   },
-  { id: "changed", label: "Changed", count: (b) => b.newCount + b.droppedCount + b.changedCount },
+  { id: "changed", label: "Changed", count: (b) => b.changedCount },
   { id: "new", label: "New", count: (b) => b.newCount },
   { id: "dropped", label: "Dropped", count: (b) => b.droppedCount },
 ];
@@ -28,6 +28,12 @@ const CHANGE_LABEL: Record<BacktestRow["change"], string> = {
   DROPPED: "Dropped",
   UNCHANGED: "Unchanged",
 };
+
+/** Why a row changed, the rule first: the draft's rule is about the transaction, and/or its alert was triaged anew. */
+const causes = (r: BacktestRow) =>
+  [r.byRule && "directly by the rule", r.byTriage && "through alert triage"]
+    .filter(Boolean)
+    .join(" · ");
 
 const changeText = cva("text-[13px]", {
   variants: {
@@ -53,6 +59,11 @@ const filterTab = cva(
   },
 );
 
+/** A reported case the draft lets through is the one number that warns, so it shows red. */
+const missed = cva("text-lg font-bold tabular-nums", {
+  variants: { any: { true: "text-high", false: "" } },
+});
+
 const eyebrow = "text-[10px] font-semibold tracking-[0.08em] text-fg-subtle uppercase";
 
 const rating = (level: BacktestRow["before"]) =>
@@ -62,11 +73,14 @@ const rating = (level: BacktestRow["before"]) =>
 export function BacktestView({
   draftId,
   onOpen,
+  onProgress,
 }: {
   draftId: number;
   onOpen: (id: string, background: boolean) => void;
+  /** Where the backtest stands, after every answer from the engine; the tab keeps watching while hidden. */
+  onProgress?: (progress: BacktestProgress, backtest: Backtest | null) => void;
 }) {
-  const summary = useBacktestSummary(draftId);
+  const summary = useBacktestSummary(draftId, onProgress);
   const [view, setView] = useState<View>("all");
   const ready = summary.status === "ready" ? summary.data : null;
   const rows = useBacktestRows(draftId, view, ready ? String(ready.createdAt) : null);
@@ -77,8 +91,7 @@ export function BacktestView({
     const n = periodDays(bt.from, bt.to);
     return (
       <Waiting title={`Backtesting ${bt.ruleKey} v${bt.draftVersion}…`}>
-        Replaying {n} {n === 1 ? "day" : "days"} ({bt.from} → {bt.to}) in the background. The whole
-        of July takes about a minute; you can leave this tab and come back.
+        Replaying {n} {n === 1 ? "day" : "days"} ({bt.from} → {bt.to}) in the background.
       </Waiting>
     );
   }
@@ -238,6 +251,26 @@ function Strip({ bt }: { bt: Backtest }) {
           {bt.transactions.toLocaleString("en-US")} transactions replayed
         </span>
       </div>
+      <div className="flex flex-col gap-1 border-l border-border-soft px-6">
+        <span className={eyebrow}>False positives</span>
+        <span className="text-lg font-bold tabular-nums">
+          {bt.falsePositivesCleared.toLocaleString("en-US")}
+          <span className="ml-1 text-xs font-medium text-fg-muted">
+            of {bt.falsePositives.toLocaleString("en-US")} no longer flagged
+          </span>
+        </span>
+        <span className="text-xs text-fg-muted">Cases closed as false positive in the period</span>
+      </div>
+      <div className="flex flex-col gap-1 border-l border-border-soft px-6">
+        <span className={eyebrow}>False negatives</span>
+        <span className={missed({ any: bt.falseNegatives > 0 })}>
+          {bt.falseNegatives.toLocaleString("en-US")}
+          <span className="ml-1 text-xs font-medium text-fg-muted">
+            of {bt.reported.toLocaleString("en-US")} reported let through
+          </span>
+        </span>
+        <span className="text-xs text-fg-muted">Reported cases the draft no longer flags</span>
+      </div>
     </div>
   );
 }
@@ -285,9 +318,9 @@ const columnsFor = (bt: Backtest): Column<BacktestRow>[] => [
     header: "Change",
     className: "text-ellipsis",
     cell: (r) => (
-      <span title={r.note ?? undefined}>
+      <span>
         <span className={changeText({ change: r.change })}>{CHANGE_LABEL[r.change]}</span>
-        {r.note && <span className="text-xs text-fg-subtle"> · {r.note}</span>}
+        {(r.byRule || r.byTriage) && <span className="text-xs text-fg-subtle"> · {causes(r)}</span>}
       </span>
     ),
   },

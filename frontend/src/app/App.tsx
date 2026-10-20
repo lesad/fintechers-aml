@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 
-import { type RiskLevel, type SubTabItem, SubTabs, Tab, Tabs } from "@/components";
+import { type RiskLevel, type SubTabItem, SubTabs, Tab, Tabs, Toast } from "@/components";
 import { ImportPage } from "@/features/data-import";
 import {
   fetchDetail,
@@ -33,6 +33,7 @@ import {
   settingsPath,
   useAppRoutes,
 } from "./use-app-routes";
+import { useBacktestProgress } from "./use-backtest-progress";
 
 const NO_COUNTS: Record<RiskLevel, number> = { High: 0, Medium: 0, Low: 0 };
 
@@ -53,6 +54,7 @@ export function App() {
   // were started from it, so an open tab loads a new one afresh.
   const [btLabels, setBtLabels] = useState<Record<string, string>>({});
   const [btStarts, setBtStarts] = useState<Record<string, number>>({});
+  const backtests = useBacktestProgress(tabs.active);
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const [users, setUsers] = useState<User[]>([]);
@@ -149,7 +151,12 @@ export function App() {
               onClose={() => tabs.closeTab(id)}
               title={id === SETTINGS_TAB ? "Settings" : (btLabels[id] ?? id)}
             >
-              <TabLabel id={id} level={rating.get(id)} backtest={btLabels[id]} />
+              <TabLabel
+                id={id}
+                level={rating.get(id)}
+                backtest={btLabels[id]}
+                progress={backtests.progress[id]}
+              />
             </Tab>
           ))}
         </Tabs>
@@ -181,6 +188,14 @@ export function App() {
           </div>
         ))}
       </div>
+      {backtests.toast && (
+        <Toast
+          message={backtests.toast.message}
+          link={backtests.toast.link}
+          onDone={backtests.closeToast}
+          duration={6000}
+        />
+      )}
     </div>
   );
 
@@ -215,7 +230,14 @@ export function App() {
       );
     const bt = parseBacktestTab(id);
     if (bt)
-      return <BacktestView key={btStarts[id] ?? 0} draftId={bt.draftId} onOpen={tabs.openTab} />;
+      return (
+        <BacktestView
+          key={btStarts[id] ?? 0}
+          draftId={bt.draftId}
+          onOpen={tabs.openTab}
+          onProgress={(progress, backtest) => backtests.report(id, progress, backtest)}
+        />
+      );
     return (
       <TransactionDetail
         id={id}

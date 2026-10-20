@@ -64,6 +64,7 @@ describe("AI Rating card", () => {
     expect(screen.queryByText("What is the source of the incoming funds?")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show open points (1)" }));
+    expect(screen.getByRole("dialog", { name: "Open points" })).toBeInTheDocument();
     expect(screen.getByText("What is the source of the incoming funds?")).toBeInTheDocument();
     expect(screen.getByText("Suspicious: The money left within hours.")).toBeInTheDocument();
     expect(screen.getByText("Ask: Client")).toBeInTheDocument();

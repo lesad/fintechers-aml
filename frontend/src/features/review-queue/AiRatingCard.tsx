@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { AiPill, RiskBadge, type RiskLevel } from "@/components";
+import { AiPill, Modal, RiskBadge, type RiskLevel } from "@/components";
 import { cn } from "@/utils";
 
 import { ASK_WHO_LABEL, ASSESSMENT, type AssessmentBody, VERDICT_LABEL } from "./ai";
@@ -10,7 +10,11 @@ import { useAiResult } from "./use-ai-result";
 const LEVEL = { high: "High", medium: "Medium", low: "Low" } as const;
 
 const item = "m-0 text-[13px] leading-normal text-pretty text-fg";
-const detail = "block text-xs text-fg-muted";
+/** An open point in the dialog, larger than the card's text. */
+const point = "m-0 text-[15px] leading-normal text-pretty text-fg";
+const detail = "mt-0.5 block text-sm text-fg-muted";
+/** The point's next step, whom to ask, stands out from the reasoning above it. */
+const ask = "mt-1.5 inline-block rounded bg-ai-bg px-2 py-0.5 text-sm font-semibold text-ai-fg";
 const unverified = "underline decoration-med-dot decoration-dotted underline-offset-2";
 const link =
   "cursor-pointer self-start border-0 bg-transparent p-0 text-xs font-semibold text-ai-fg hover:underline";
@@ -112,29 +116,41 @@ function Assessment({ body, ruleRating }: { body: AssessmentBody; ruleRating: Ri
         </span>
       )}
       {points.length > 0 && (
-        <button type="button" className={link} aria-expanded={open} onClick={() => setOpen(!open)}>
-          {open ? "Hide" : "Show"} open points ({points.length})
+        <button type="button" className={link} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+          Show open points ({points.length})
         </button>
       )}
+      {/* In a dialog, so the points do not stretch the card and the grid row it shares. */}
       {open && (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {points.map((p, i) => (
-            <li key={p.question.text} className={item}>
-              <span className="font-semibold">
-                {text(`openPoints[${i}].question`, p.question.text)}
-              </span>
-              <Refs refs={p.question.refs} />
-              <span className={detail}>
-                Suspicious: {text(`openPoints[${i}].suspicious`, p.suspicious)}
-              </span>
-              <span className={detail}>Normal: {text(`openPoints[${i}].normal`, p.normal)}</span>
-              <span className={detail}>
-                Would settle: {text(`openPoints[${i}].wouldSettle`, p.wouldSettle)}
-              </span>
-              <span className={detail}>Ask: {ASK_WHO_LABEL[p.askWho]}</span>
-            </li>
-          ))}
-        </ul>
+        <Modal
+          label="Open points"
+          onClose={() => setOpen(false)}
+          className="max-w-[640px]"
+          header={
+            <h2 className="m-0 text-base font-bold">
+              Open points <span className="font-normal text-fg-muted">({points.length})</span>
+            </h2>
+          }
+        >
+          <ul className="m-0 flex list-none flex-col gap-3 px-[18px] py-4">
+            {points.map((p, i) => (
+              <li key={p.question.text} className={point}>
+                <span className="font-semibold">
+                  {text(`openPoints[${i}].question`, p.question.text)}
+                </span>
+                <Refs refs={p.question.refs} />
+                <span className={detail}>
+                  Suspicious: {text(`openPoints[${i}].suspicious`, p.suspicious)}
+                </span>
+                <span className={detail}>Normal: {text(`openPoints[${i}].normal`, p.normal)}</span>
+                <span className={detail}>
+                  Would settle: {text(`openPoints[${i}].wouldSettle`, p.wouldSettle)}
+                </span>
+                <span className={ask}>Ask: {ASK_WHO_LABEL[p.askWho]}</span>
+              </li>
+            ))}
+          </ul>
+        </Modal>
       )}
     </>
   );

@@ -194,6 +194,14 @@ const backtest = z.object({
   droppedCount: z.number(),
   changedCount: z.number(),
   unchangedCount: z.number(),
+  /** Cases in the period people closed as false positive in the current run. */
+  falsePositives: z.number(),
+  /** Of those, the ones the draft no longer flags. */
+  falsePositivesCleared: z.number(),
+  /** Cases in the period people reported in the current run. */
+  reported: z.number(),
+  /** Of those, the ones the draft would let through without an open alert. */
+  falseNegatives: z.number(),
   createdAt: z.string().nullable(),
 });
 
@@ -205,7 +213,10 @@ const backtestRow = z.object({
   before: rating.nullable(),
   after: rating.nullable(),
   change: z.enum(["NEW", "RAISED", "LOWERED", "DROPPED", "UNCHANGED"]),
-  note: z.string().nullable(),
+  /** It changed because the draft's rule itself is about it. */
+  byRule: z.boolean(),
+  /** It changed through the triage of its alert, which holds other transactions' hits; both may hold. */
+  byTriage: z.boolean(),
 });
 
 const backtestRows = z.object({

@@ -3,6 +3,8 @@ import { cn } from "@/utils";
 
 import { parseBacktestTab, SETTINGS_TAB } from "./use-app-routes";
 
+import type { TabProgress } from "./use-backtest-progress";
+
 const icon = "size-3 flex-none";
 
 /** The small cog of the settings tab, as in the header. */
@@ -44,17 +46,53 @@ function ReplayIcon() {
   );
 }
 
+/** In place of a backtest's icon: a spinner while it runs, a check once it finished and the tab was not looked at. */
+function ProgressIcon({ progress }: { progress: TabProgress | undefined }) {
+  if (progress === "running")
+    return (
+      <>
+        <span
+          aria-hidden="true"
+          className="size-3 flex-none animate-spin rounded-full border-2 border-border border-t-purple motion-reduce:animate-none"
+        />
+        <span className="sr-only">running,</span>
+      </>
+    );
+  if (progress === "done")
+    return (
+      <>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className={cn(icon, "text-low")}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        <span className="sr-only">finished,</span>
+      </>
+    );
+  return <ReplayIcon />;
+}
+
 /** What a closable tab shows: a transaction with its rating, the settings, or a backtest. */
 export function TabLabel({
   id,
   level,
   backtest,
+  progress,
 }: {
   id: string;
   /** A transaction's rule rating, once the queue knows it. */
   level: RiskLevel | undefined;
   /** A backtest's rule and version, e.g. "B2 v2", when known. */
   backtest: string | undefined;
+  /** A backtest tab's progress, when it is running or finished unseen. */
+  progress?: TabProgress;
 }) {
   if (id === SETTINGS_TAB)
     return (
@@ -67,7 +105,7 @@ export function TabLabel({
   if (bt)
     return (
       <>
-        <ReplayIcon />
+        <ProgressIcon progress={progress} />
         <span className="text-xs whitespace-nowrap">
           <span className="font-semibold">Backtest</span>
           {backtest && <span className="font-mono"> · {backtest}</span>}

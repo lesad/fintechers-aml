@@ -56,6 +56,10 @@ const SUMMARY = {
   droppedCount: 1,
   changedCount: 0,
   unchangedCount: 1,
+  falsePositives: 4,
+  falsePositivesCleared: 3,
+  reported: 2,
+  falseNegatives: 1,
   createdAt: "2026-10-20T09:14:00Z",
 };
 
@@ -68,7 +72,8 @@ const ROWS = [
     before: null,
     after: "Medium",
     change: "NEW",
-    note: "not flagged with the active rules",
+    byRule: true,
+    byTriage: false,
   },
   {
     id: "T3",
@@ -78,7 +83,8 @@ const ROWS = [
     before: "Low",
     after: null,
     change: "DROPPED",
-    note: "B2 no longer fires",
+    byRule: true,
+    byTriage: true,
   },
   {
     id: "T1",
@@ -88,7 +94,8 @@ const ROWS = [
     before: "High",
     after: "High",
     change: "UNCHANGED",
-    note: null,
+    byRule: false,
+    byTriage: false,
   },
 ];
 
@@ -98,7 +105,9 @@ const rows = (url: URL) => {
   const kept = ROWS.filter(
     (r) =>
       view === "all" ||
-      (view === "changed" ? r.change !== "UNCHANGED" : r.change === view.toUpperCase()),
+      (view === "changed"
+        ? r.change === "RAISED" || r.change === "LOWERED"
+        : r.change === view.toUpperCase()),
   );
   return json({ items: kept, page: 0, size: 100, total: kept.length });
 };
@@ -177,6 +186,8 @@ describe("a draft's delete and backtest", () => {
 
     expect(await screen.findByText("v1 active → v2 draft")).toBeInTheDocument();
     expect(screen.getByText("397,853 transactions replayed", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("of 4 no longer flagged")).toBeInTheDocument();
+    expect(screen.getByText("of 2 reported let through")).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(4));
 
     fireEvent.click(screen.getByRole("tab", { name: /Dropped/ }));
@@ -184,7 +195,10 @@ describe("a draft's delete and backtest", () => {
     expect(String(fetch.mock.lastCall?.[0])).toBe(
       "/api/rules/12/backtest/rows?view=dropped&page=0&size=100",
     );
-    expect(screen.getByText("B2 no longer fires", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Dropped", { selector: "td span" })).toBeInTheDocument();
+    expect(
+      screen.getByText("directly by the rule · through alert triage", { exact: false }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("T3"));
     expect(onOpen).toHaveBeenCalledWith("T3", false);
@@ -197,12 +211,14 @@ describe("a draft's delete and backtest", () => {
         json(++polls < 2 ? { ...SUMMARY, status: "RUNNING", from: "2026-07-25" } : SUMMARY),
       "GET /api/rules/12/backtest/rows": rows,
     });
-    render(<BacktestView draftId={12} onOpen={() => {}} />);
+    const onProgress = vi.fn();
+    render(<BacktestView draftId={12} onOpen={() => {}} onProgress={onProgress} />);
     expect(await screen.findByRole("status")).toHaveTextContent("Replaying 7 days");
     expect(
       await screen.findByText("v1 active → v2 draft", {}, { timeout: 4000 }),
     ).toBeInTheDocument();
     expect(polls).toBe(2);
+    expect(onProgress.mock.calls.map(([progress]) => progress)).toEqual(["running", "done"]);
   });
 
   it("says when a draft has no backtest", async () => {

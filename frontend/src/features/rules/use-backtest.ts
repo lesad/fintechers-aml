@@ -25,28 +25,54 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
 /** How often a running backtest is asked about. */
 const POLL_MS = 2000;
 
-/** The draft's stored backtest; while the engine is still running it, asked about again every [POLL_MS]. */
-export function useBacktestSummary(draftId: number) {
+/**
+ * Where a backtest the tab watches stands: `running`; `done` or `failed` once one it saw running ends; `idle` when
+ * there is nothing to wait for (it was already finished, or there is none).
+ */
+export type BacktestProgress = "running" | "done" | "failed" | "idle";
+
+/**
+ * The draft's stored backtest; while the engine is still running it, asked about again every [POLL_MS].
+ * [onProgress] hears where it stands after every answer.
+ */
+export function useBacktestSummary(
+  draftId: number,
+  onProgress?: (progress: BacktestProgress, backtest: Backtest | null) => void,
+) {
   const [state, setState] = useState<SummaryState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
+  // The latest callback, so a new one from the parent does not restart the polling.
+  const notify = useRef(onProgress);
+  useEffect(() => {
+    notify.current = onProgress;
+  });
 
   useEffect(() => {
     const ctrl = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let ran = false;
     const poll = () =>
       fetchBacktest(draftId, ctrl.signal).then(
         (data) => {
           if (ctrl.signal.aborted) return;
-          if (!data) return setState({ status: "none" });
-          if (data.status === "RUNNING") {
+          if (data?.status === "RUNNING") {
+            ran = true;
             setState({ status: "running", data });
+            notify.current?.("running", data);
             timer = setTimeout(poll, POLL_MS);
-          } else if (data.status === "FAILED") {
+            return;
+          }
+          if (!data) setState({ status: "none" });
+          else if (data.status === "FAILED")
             setState({ status: "failed", message: data.error ?? "unknown error" });
-          } else setState({ status: "ready", data });
+          else setState({ status: "ready", data });
+          notify.current?.(ran ? (data?.status === "FAILED" ? "failed" : "done") : "idle", data);
         },
-        (err: unknown) =>
-          !ctrl.signal.aborted && setState({ status: "error", message: message(err) }),
+        (err: unknown) => {
+          if (ctrl.signal.aborted) return;
+          setState({ status: "error", message: message(err) });
+          notify.current?.("idle", null);
+        },
       );
     setState({ status: "loading" });
     void poll();
