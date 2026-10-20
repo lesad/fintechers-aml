@@ -1,11 +1,11 @@
 import { type RiskLevel, riskDot } from "@/components";
 import { cn } from "@/utils";
 
-import { parseBacktestTab, RULES_TAB } from "./use-app-routes";
+import { parseBacktestTab, SETTINGS_TAB } from "./use-app-routes";
 
 const icon = "size-3 flex-none";
 
-/** The small cog of the rules tab, as in the header. */
+/** The small cog of the settings tab, as in the header. */
 function CogIcon() {
   return (
     <svg
@@ -44,7 +44,7 @@ function ReplayIcon() {
   );
 }
 
-/** What a closable tab shows: a transaction with its rating, the rules, or a backtest. */
+/** What a closable tab shows: a transaction with its rating, the settings, or a backtest. */
 export function TabLabel({
   id,
   level,
@@ -56,11 +56,11 @@ export function TabLabel({
   /** A backtest's rule and version, e.g. "B2 v2", when known. */
   backtest: string | undefined;
 }) {
-  if (id === RULES_TAB)
+  if (id === SETTINGS_TAB)
     return (
       <>
         <CogIcon />
-        <span className="text-xs font-semibold">Rules</span>
+        <span className="text-xs font-semibold">Settings</span>
       </>
     );
   const bt = parseBacktestTab(id);

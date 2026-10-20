@@ -1,0 +1,1 @@
+export { TriageScoringPage } from "./TriageScoringPage";

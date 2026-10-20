@@ -13,7 +13,7 @@ This app is the MoroSystems entry for The FinTechers Hackathon 2026, Track 5, FI
 ## Stack
 
 - **The frontend lives in `frontend/`** (ADR-0029), next to the Kotlin engine in `engine/`. Every `pnpm` command and every `src/…`, `vite.config.ts`, `tsconfig.json`, `.oxlintrc.json` and `.fallowrc.json` path in this file is relative to `frontend/`; `docs/`, `reference/`, `scripts/`, `.github/` and `.claude/` stay at the repo root.
-- **Vite 8 + React 19 — a client-only SPA. There is no server and no database here** (ADR-0025); `react-router` routes `/` (review overview), `/transactions/:id` (the overview with that tab active), `/rules` (the rules tab), `/backtests/:draftId` (a draft's backtest tab) and `/import` (data import) (ADR-0039, ADR-0041, ADR-0049). `index.html` → `src/app/main.tsx` → `src/app/App.tsx`.
+- **Vite 8 + React 19 — a client-only SPA. There is no server and no database here** (ADR-0025); `react-router` routes `/` (review overview), `/transactions/:id` (the overview with that tab active), `/settings/rules` and `/settings/triage` (the settings tab's two sections; `/rules` redirects to `/settings/rules`, query string kept), `/backtests/:draftId` (a draft's backtest tab) and `/import` (data import) (ADR-0039, ADR-0041, ADR-0049, ADR-0054). `index.html` → `src/app/main.tsx` → `src/app/App.tsx`.
 - TypeScript strict, `noUncheckedIndexedAccess` on
 - Tailwind v4 (CSS-first via `@theme`, through `@tailwindcss/vite`)
 - Own UI components on Tailwind (`src/components/`), no component library — no shadcn/ui (ADR-0028); design tokens from `docs/design/` live in `src/app/globals.css`; class variants through `cva` from class-variance-authority (ADR-0031)

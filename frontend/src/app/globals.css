@@ -43,6 +43,15 @@
   --color-low-bg: #e2f2ea;
   --color-low-dot: #2f9e6b;
 
+  /* Triage score bands: the light track a rule's score slider runs over, one tint per band.
+     A set of five, from the Claude Design triage policy page — lighter than the `*-bg`
+     risk tints, which wash out behind the slider's thumb. */
+  --color-auto-track: #dcdce3;
+  --color-low-track: #bfe3d0;
+  --color-med-track: #ffcfb8;
+  --color-high-track: #f3bfbb;
+  --color-escalate-track: #a8a9ba;
+
   /* AI assessment */
   --color-ai-line: #cdb9e5;
   --color-ai-fg: #5e3592;

@@ -20,7 +20,7 @@ type HeaderProps = {
   /** The data import page is open instead of the review overview; its button shows as active. */
   importOpen: boolean;
   onToggleImport: () => void;
-  onRules: () => void;
+  onSettings: () => void;
   /** The logo: back to the review queue tab. */
   onHome: () => void;
 };
@@ -61,7 +61,7 @@ export function Header({
   onUser,
   importOpen,
   onToggleImport,
-  onRules,
+  onSettings,
   onHome,
 }: HeaderProps) {
   const input = useRef<HTMLInputElement>(null);
@@ -172,9 +172,9 @@ export function Header({
         </button>
         <button
           type="button"
-          aria-label="Rules"
-          title="Rules"
-          onClick={onRules}
+          aria-label="Settings"
+          title="Settings"
+          onClick={onSettings}
           className={cn(pageButton({ active: false }), "mr-1")}
         >
           <svg

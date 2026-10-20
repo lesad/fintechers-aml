@@ -1,10 +1,17 @@
 import { act, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "@/test/render";
 
 import { App } from "./App";
+
+// The triage scoring section belongs to its own feature and talks to the engine; the shell only routes to it.
+vi.mock("@/features/triage-scoring", () => ({
+  TriageScoringPage: ({ author }: { author: string }) => (
+    <div>Triage scoring for {author || "nobody"}</div>
+  ),
+}));
 
 const row = (id: string, rating: string, rules: string[], clientId = "K1") => ({
   id,
@@ -324,6 +331,12 @@ const lastQueueCall = () =>
 // Role queries skip hidden detail tabs, so this is always the visible table.
 const queueTable = () => screen.getByRole("table");
 
+/** The current URL next to the app, so a redirect and a sub-tab navigation are visible to the test. */
+function Location() {
+  const { pathname, search } = useLocation();
+  return <span data-testid="location">{`${pathname}${search}`}</span>;
+}
+
 describe("App", () => {
   it("asks the engine for the signed-in user's cases only, in any status unless one is picked", async () => {
     render(<App />);
@@ -450,31 +463,31 @@ describe("App", () => {
     expect(screen.getByText("M. Svobodová")).toBeInTheDocument();
   });
 
-  it("the cog opens the rules as a tab next to the open transactions", async () => {
+  it("the cog opens the settings as a tab next to the open transactions", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
-    const cog = screen.getByRole("button", { name: "Rules" });
+    const cog = screen.getByRole("button", { name: "Settings" });
     expect(cog).not.toHaveAttribute("aria-pressed");
 
     fireEvent.click(cog);
-    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Rules");
+    expect(screen.getByRole("tab", { selected: true, name: /Settings/ })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /TX1/ }));
     fireEvent.click(cog);
-    expect(screen.getAllByRole("tab", { name: /Rules/ })).toHaveLength(1);
+    expect(screen.getAllByRole("tab", { name: /Settings/ })).toHaveLength(1);
   });
 
-  it("the logo goes to the review queue from the rules or a transaction tab, tabs kept", async () => {
+  it("the logo goes to the review queue from the settings or a transaction tab, tabs kept", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
-    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
-    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Rules");
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(screen.getByRole("tab", { selected: true, name: /Settings/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("link", { name: "AML spotter" }));
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
     expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Rules/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
   });
 
   it("puts the open transaction in the URL, so Back returns to the list and a reload reopens it", async () => {
@@ -517,13 +530,72 @@ describe("App", () => {
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
   });
 
-  it("opens the rules page straight from /rules and sends an unknown path back to the overview", async () => {
-    const { unmount } = render(<App />, { route: "/rules" });
-    expect(await screen.findByRole("tab", { selected: true })).toHaveTextContent("Rules");
+  it("opens the detection rules straight from /settings/rules and sends an unknown path back to the overview", async () => {
+    const { unmount } = render(<App />, { route: "/settings/rules" });
+    expect(
+      await screen.findByRole("tab", { selected: true, name: /Settings/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Detection rules" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     unmount();
 
     render(<App />, { route: "/nowhere" });
     expect(await screen.findByRole("tab", { name: /Review queue/ })).toBeInTheDocument();
+  });
+
+  it("opens the settings on the triage scoring section from /settings/triage", async () => {
+    render(<App />, { route: "/settings/triage" });
+    expect(
+      await screen.findByRole("tab", { selected: true, name: /Settings/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Triage scoring" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByText(/Triage scoring for/)).toBeInTheDocument();
+  });
+
+  it("redirects the old /rules link to the detection rules, its ?rule= deep link kept", async () => {
+    render(
+      <>
+        <App />
+        <Location />
+      </>,
+      { route: "/rules?rule=42" },
+    );
+    expect(
+      await screen.findByRole("tab", { selected: true, name: /Settings/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Detection rules" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByTestId("location")).toHaveTextContent("/settings/rules?rule=42");
+  });
+
+  it("a sub-tab click switches the settings section and both stay mounted", async () => {
+    render(
+      <>
+        <App />
+        <Location />
+      </>,
+      { route: "/settings/rules" },
+    );
+    await screen.findByRole("navigation", { name: "Rules" });
+    const triage = screen.getByRole("tab", { name: "Triage scoring" });
+    fireEvent.click(triage);
+    expect(triage).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("location")).toHaveTextContent("/settings/triage");
+    expect(screen.getByText(/Triage scoring for/)).toBeInTheDocument();
+
+    // The rules section only went hidden; its half-filled state is still mounted.
+    expect(screen.getByRole("navigation", { name: "Rules", hidden: true })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Detection rules" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/settings/rules");
+    expect(screen.getByRole("navigation", { name: "Rules" })).toBeInTheDocument();
   });
 
   it("opens a row as a detail tab with the rule's parameters as stored", async () => {

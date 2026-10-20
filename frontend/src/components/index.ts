@@ -15,6 +15,7 @@ export { Modal } from "./Modal";
 export { Popover } from "./Popover";
 export { Select } from "./Select";
 export { type CaseStatus, StatusLabel } from "./StatusLabel";
+export { type SubTabItem, SubTabs } from "./SubTabs";
 export { type Column, Table } from "./Table";
 export { Tab, Tabs } from "./Tabs";
 export { Toast } from "./Toast";

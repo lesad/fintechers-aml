@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Navigate, Route, Routes } from "react-router";
+import { Navigate, Route, Routes, useLocation } from "react-router";
 
-import { type RiskLevel, Tab, Tabs } from "@/components";
+import { type RiskLevel, type SubTabItem, SubTabs, Tab, Tabs } from "@/components";
 import { ImportPage } from "@/features/data-import";
 import {
   fetchDetail,
@@ -20,16 +20,35 @@ import {
   useQueue,
 } from "@/features/review-queue";
 import { BacktestView, RulesPage, saveRule } from "@/features/rules";
+import { TriageScoringPage } from "@/features/triage-scoring";
 import { fetchUsers, saveUser, savedUser, type User } from "@/user";
 
 import { Header } from "./Header";
 import { TabLabel } from "./TabLabel";
-import { backtestTab, parseBacktestTab, RULES_TAB, useAppRoutes } from "./use-app-routes";
+import {
+  backtestTab,
+  parseBacktestTab,
+  type SettingsSub,
+  SETTINGS_TAB,
+  settingsPath,
+  useAppRoutes,
+} from "./use-app-routes";
 
 const NO_COUNTS: Record<RiskLevel, number> = { High: 0, Medium: 0, Low: 0 };
 
+const SETTINGS_SECTIONS: SubTabItem<SettingsSub>[] = [
+  { id: "rules", label: "Detection rules" },
+  { id: "triage", label: "Triage scoring" },
+];
+
+/** `/rules` was the rules page before it became a section of the settings tab; the `?rule=<id>` link still works. */
+function RulesRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`${settingsPath("rules")}${search}`} replace />;
+}
+
 export function App() {
-  const { tabs, importOpen, toggleImport } = useAppRoutes();
+  const { tabs, settings, importOpen, toggleImport } = useAppRoutes();
   // What a backtest tab says, e.g. "B2 v2" (one opened from a link says just "Backtest"), and how many backtests
   // were started from it, so an open tab loads a new one afresh.
   const [btLabels, setBtLabels] = useState<Record<string, string>>({});
@@ -93,14 +112,16 @@ export function App() {
         }}
         importOpen={importOpen}
         onToggleImport={toggleImport}
-        onRules={() => tabs.openTab(RULES_TAB)}
+        onSettings={() => tabs.openTab(SETTINGS_TAB)}
         onHome={() => tabs.select(null)}
       />
 
       <Routes>
         <Route path="/" element={null} />
         <Route path="/transactions/:id" element={null} />
-        <Route path="/rules" element={null} />
+        <Route path="/settings/rules" element={null} />
+        <Route path="/settings/triage" element={null} />
+        <Route path="/rules" element={<RulesRedirect />} />
         <Route path="/backtests/:id" element={null} />
         <Route path="/import" element={<ImportPage onDataChanged={queue.reload} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -126,7 +147,7 @@ export function App() {
               active={tabs.active === id}
               onSelect={() => tabs.select(id)}
               onClose={() => tabs.closeTab(id)}
-              title={id === RULES_TAB ? "Rules" : (btLabels[id] ?? id)}
+              title={id === SETTINGS_TAB ? "Settings" : (btLabels[id] ?? id)}
             >
               <TabLabel id={id} level={rating.get(id)} backtest={btLabels[id]} />
             </Tab>
@@ -164,19 +185,33 @@ export function App() {
   );
 
   function tabContent(id: string) {
-    if (id === RULES_TAB)
+    if (id === SETTINGS_TAB)
       return (
-        <RulesPage
-          author={user?.name ?? ""}
-          user={user}
-          users={users}
-          onBacktest={(draft) => {
-            const tab = backtestTab(draft.id);
-            setBtLabels((l) => ({ ...l, [tab]: `${draft.key} v${draft.version}` }));
-            setBtStarts((s) => ({ ...s, [tab]: (s[tab] ?? 0) + 1 }));
-            tabs.openTab(tab);
-          }}
-        />
+        <>
+          <SubTabs
+            label="Settings sections"
+            items={SETTINGS_SECTIONS}
+            activeId={settings.sub}
+            onSelect={settings.select}
+          />
+          {/* Both sections stay mounted, so a half-filled rule form survives a switch to the scoring and back. */}
+          <div hidden={settings.sub !== "rules"} className="flex min-h-0 flex-1 flex-col">
+            <RulesPage
+              author={user?.name ?? ""}
+              user={user}
+              users={users}
+              onBacktest={(draft) => {
+                const tab = backtestTab(draft.id);
+                setBtLabels((l) => ({ ...l, [tab]: `${draft.key} v${draft.version}` }));
+                setBtStarts((s) => ({ ...s, [tab]: (s[tab] ?? 0) + 1 }));
+                tabs.openTab(tab);
+              }}
+            />
+          </div>
+          <div hidden={settings.sub !== "triage"} className="flex min-h-0 flex-1 flex-col">
+            <TriageScoringPage author={user?.name ?? ""} />
+          </div>
+        </>
       );
     const bt = parseBacktestTab(id);
     if (bt)
