@@ -3,7 +3,9 @@ import { cva } from "class-variance-authority";
 import { Select } from "@/components";
 import { cn } from "@/utils";
 
-import { PARAM_UNITS, type RuleVariable } from "./api";
+import { PARAM_UNITS, type RuleVariable, type Vocabulary } from "./api";
+import { filterNames } from "./completion";
+import { CompletionField } from "./CompletionField";
 import { addButton, field, removeButton } from "./form-parts";
 import { newVariable } from "./rule-draft";
 
@@ -98,7 +100,12 @@ export function ParamRows({ rows, base, onChange }: RowsProps<DraftParam>) {
   );
 }
 
-export function VariableRows({ rows, base, onChange }: RowsProps<DraftVariable>) {
+export function VariableRows({
+  rows,
+  base,
+  vocabulary,
+  onChange,
+}: RowsProps<DraftVariable> & { vocabulary: Vocabulary }) {
   return (
     <>
       {rows.map((x, i) => {
@@ -146,16 +153,26 @@ export function VariableRows({ rows, base, onChange }: RowsProps<DraftVariable>)
                 ×
               </button>
             </div>
-            <label className="flex items-center gap-2 text-fg-subtle">
+            <div className="flex items-center gap-2 text-fg-subtle">
               where
-              <input
-                value={x.filter}
-                onChange={(e) => set({ filter: e.target.value })}
-                placeholder="true"
-                aria-label={`Filter of variable ${n}`}
-                className={cn(field({ mono: true }), "min-w-0 flex-1")}
-              />
-            </label>
+              <span className="relative min-w-0 flex-1">
+                <CompletionField
+                  value={x.filter}
+                  onChange={(filter) => set({ filter })}
+                  names={filterNames(vocabulary, rows.slice(0, i))}
+                  values={vocabulary.values}
+                >
+                  {(props) => (
+                    <input
+                      {...props}
+                      placeholder="true"
+                      aria-label={`Filter of variable ${n}`}
+                      className={cn(field({ mono: true }), "w-full")}
+                    />
+                  )}
+                </CompletionField>
+              </span>
+            </div>
             <div className="flex flex-wrap items-center gap-2 text-fg-subtle">
               window
               <Select

@@ -115,6 +115,29 @@ const explanation = z.object({ explanation: z.string(), model: z.string() });
 export const explainRule = async (body: NewRule) =>
   explanation.parse(await postRule("/api/rules/explanation", body));
 
+const types = z.record(z.string(), z.string());
+
+const vocabulary = z.object({
+  tx: types,
+  client: types,
+  day: types,
+  lists: types,
+  /** Every value a text field with few of them takes in the data, e.g. `tx.direction` → in, out, unknown. */
+  values: z.record(z.string(), z.array(z.string())),
+});
+
+/** The names a rule may use, by prefix, each with its CEL type. */
+export type Vocabulary = z.infer<typeof vocabulary>;
+
+export async function fetchVocabulary(signal?: AbortSignal): Promise<Vocabulary> {
+  const res = await fetch("/api/rules/vocabulary", {
+    signal,
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`/api/rules/vocabulary: HTTP ${res.status}`);
+  return vocabulary.parse(await res.json());
+}
+
 /** Rule versions per key: keys alphabetical, newest version first. */
 export function groupByKey(versions: RuleVersion[]): { key: string; versions: RuleVersion[] }[] {
   const keys = [...new Set(versions.map((v) => v.key))].toSorted();

@@ -1,5 +1,5 @@
 import { fireEvent, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen } from "@/test/render";
 
@@ -9,6 +9,13 @@ import { B2, B2_V2, json, SEEDED } from "./fixtures";
 
 import type { RuleVersion } from "../api";
 
+// NOTE: the form loads its vocabulary on mount; a test that serves nothing gets a 404 instead of the network.
+beforeEach(() =>
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => json({}, 404)),
+  ),
+);
 afterEach(() => vi.unstubAllGlobals());
 
 const form = (from: RuleVersion | null = B2) =>
@@ -79,6 +86,80 @@ describe("RuleForm", () => {
     expect(screen.queryByLabelText("Anchor")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "Per anchor transaction" }));
     expect(screen.getByLabelText("Anchor")).toBeInTheDocument();
+  });
+});
+
+describe("completion", () => {
+  const vocabulary = {
+    tx: { amount: "double", direction: "string" },
+    client: { pep: "bool" },
+    day: {},
+    lists: {},
+    values: { "tx.direction": ["in", "out"] },
+  };
+  const type = (label: string, value: string) =>
+    fireEvent.change(screen.getByLabelText(label), {
+      target: { value, selectionStart: value.length },
+    });
+
+  it("offers the vocabulary's fields in the condition and inserts the one chosen", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(vocabulary)),
+    );
+    form();
+    type("Condition", "client.pep && tx.");
+    const list = await screen.findByRole("listbox");
+    expect(
+      within(list)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["tx.amountdouble", "tx.directionstring"]);
+    fireEvent.keyDown(screen.getByLabelText("Condition"), { key: "ArrowDown" });
+    fireEvent.keyDown(screen.getByLabelText("Condition"), { key: "Enter" });
+    expect(screen.getByLabelText("Condition")).toHaveValue("client.pep && tx.direction");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("offers a text field's values in a variable filter", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(vocabulary)),
+    );
+    form(null);
+    fireEvent.click(screen.getByRole("button", { name: "+ Add variable" }));
+    await screen.findByRole("button", { name: "Remove variable 1" });
+    type("Filter of variable 1", 'tx.direction == "');
+    fireEvent.mouseDown(await screen.findByRole("option", { name: /out/ }));
+    expect(screen.getByLabelText("Filter of variable 1")).toHaveValue('tx.direction == "out"');
+  });
+
+  it("closes when the caret moves elsewhere, so Enter cannot insert at the old place", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(vocabulary)),
+    );
+    form();
+    type("Condition", "tx.");
+    await screen.findByRole("listbox");
+    fireEvent.keyDown(screen.getByLabelText("Condition"), { key: "Home" });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    type("Condition", "tx.d");
+    await screen.findByRole("listbox");
+    fireEvent.mouseDown(screen.getByLabelText("Condition"));
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("still offers the draft's parameters when the vocabulary does not load", async () => {
+    const fetch = vi.fn(async () => json({}, 500));
+    vi.stubGlobal("fetch", fetch);
+    form();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
+    type("Condition", "p.");
+    expect(await screen.findByRole("option", { name: /p\.pep_min/ })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByLabelText("Condition"), { key: "Escape" });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 });
 

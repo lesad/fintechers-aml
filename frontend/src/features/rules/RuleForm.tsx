@@ -4,7 +4,9 @@ import { useState } from "react";
 import { ConditionLegend, conditionToken } from "@/components";
 import { cn } from "@/utils";
 
-import { type RuleVersion, saveRule, updateRule } from "./api";
+import { type RuleVersion, saveRule, updateRule, type Vocabulary } from "./api";
+import { anchorNames, conditionNames } from "./completion";
+import { CompletionField, useVocabulary } from "./CompletionField";
 import { ExplanationPreview } from "./ExplanationPreview";
 import { ChangedBadge, field, Issues, SectionTitle, Segmented } from "./form-parts";
 import { conditionTokens, grainLabel } from "./format";
@@ -86,6 +88,7 @@ export function RuleForm({
   const [saving, setSaving] = useState(false);
   const [rejected, setRejected] = useState<string | null>(null);
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
+  const vocabulary = useVocabulary();
 
   const baseVersion = from?.version ?? null;
   const all = draftIssues(draft, from === null, new Set(existingKeys));
@@ -123,11 +126,15 @@ export function RuleForm({
         <Identity draft={draft} set={set} isNew={from === null} nameBadge={badge("name")}>
           <Issues issues={of("identity")} onFix={fix} />
         </Identity>
-        <Evaluated draft={draft} set={set} badge={badge("grain")} />
+        <Evaluated draft={draft} set={set} badge={badge("grain")} vocabulary={vocabulary} />
 
         <section className={section}>
           <SectionTitle title="Condition">{badge("condition")}</SectionTitle>
-          <ConditionEditor draft={draft} onChange={(condition) => set({ condition })} />
+          <ConditionEditor
+            draft={draft}
+            vocabulary={vocabulary}
+            onChange={(condition) => set({ condition })}
+          />
           <ConditionLegend withUnknown />
           <Issues issues={of("condition")} onFix={fix} />
           {rejected && (
@@ -159,6 +166,7 @@ export function RuleForm({
           <VariableRows
             rows={draft.variables}
             base={base?.variables ?? []}
+            vocabulary={vocabulary}
             onChange={(variables) => set({ variables })}
           />
           <Issues issues={of("variables")} onFix={fix} />
@@ -249,7 +257,12 @@ function Identity({ draft, set, isNew, nameBadge, children }: IdentityProps) {
   );
 }
 
-function Evaluated({ draft, set, badge }: SectionProps & { badge: ReactNode }) {
+function Evaluated({
+  draft,
+  set,
+  badge,
+  vocabulary,
+}: SectionProps & { badge: ReactNode; vocabulary: Vocabulary }) {
   return (
     <section className={section}>
       <SectionTitle title="Evaluated">{badge}</SectionTitle>
@@ -260,16 +273,26 @@ function Evaluated({ draft, set, badge }: SectionProps & { badge: ReactNode }) {
         onChange={(grain) => set({ grain })}
       />
       {draft.grain === "client_anchor" && (
-        <label className="flex flex-wrap items-center gap-2.5 text-fg-muted">
+        <div className="flex flex-wrap items-center gap-2.5 text-fg-muted">
           at each transaction where
-          <input
-            value={draft.anchor}
-            onChange={(e) => set({ anchor: e.target.value })}
-            placeholder='tx.direction == "in"'
-            aria-label="Anchor"
-            className={cn(field({ mono: true }), "min-w-60 flex-1")}
-          />
-        </label>
+          <span className="relative min-w-60 flex-1">
+            <CompletionField
+              value={draft.anchor}
+              onChange={(anchor) => set({ anchor })}
+              names={anchorNames(vocabulary)}
+              values={vocabulary.values}
+            >
+              {(props) => (
+                <input
+                  {...props}
+                  placeholder='tx.direction == "in"'
+                  aria-label="Anchor"
+                  className={cn(field({ mono: true }), "w-full")}
+                />
+              )}
+            </CompletionField>
+          </span>
+        </div>
       )}
     </section>
   );
@@ -313,9 +336,11 @@ function Footer({ status: s, saving, disabled, saveLabel, onCancel, onSave }: Fo
 
 function ConditionEditor({
   draft,
+  vocabulary,
   onChange,
 }: {
   draft: Draft;
+  vocabulary: Vocabulary;
   onChange: (condition: string) => void;
 }) {
   const variables = new Set(draft.variables.map((x) => x.name.trim()).filter(Boolean));
@@ -340,14 +365,22 @@ function ConditionEditor({
         ))}
         {"\n "}
       </pre>
-      <textarea
+      <CompletionField
         value={draft.condition}
-        onChange={(e) => onChange(e.target.value)}
-        spellCheck={false}
-        placeholder="e.g. tx.amount > p.min_amount"
-        aria-label="Condition"
-        className="absolute inset-0 size-full resize-none overflow-hidden rounded-md bg-transparent px-3 py-2.5 font-mono text-[13px] leading-[1.55] break-words whitespace-pre-wrap text-transparent caret-yellow outline-none placeholder:text-indigo-60 focus:ring-2 focus:ring-yellow"
-      />
+        onChange={onChange}
+        names={conditionNames(vocabulary, draft)}
+        values={vocabulary.values}
+      >
+        {(props) => (
+          <textarea
+            {...props}
+            spellCheck={false}
+            placeholder="e.g. tx.amount > p.min_amount"
+            aria-label="Condition"
+            className="absolute inset-0 size-full resize-none overflow-hidden rounded-md bg-transparent px-3 py-2.5 font-mono text-[13px] leading-[1.55] break-words whitespace-pre-wrap text-transparent caret-yellow outline-none placeholder:text-indigo-60 focus:ring-2 focus:ring-yellow"
+          />
+        )}
+      </CompletionField>
     </div>
   );
 }
