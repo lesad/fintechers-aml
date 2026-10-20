@@ -340,6 +340,19 @@ describe("App", () => {
     expect(lastParams().get("status")).toBe("ESCALATED");
   });
 
+  it("generates the AI rating of the first open cases on load, as the detail does", async () => {
+    render(<App />);
+    await waitFor(() =>
+      expect(
+        within(queueTable()).getByTitle("Rule rating High · AI rating High (matches)"),
+      ).toBeTruthy(),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/alerts/7/assessment",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("shows the compliance manager every case, to oversee and not to decide", async () => {
     detailStatus = "ESCALATED";
     assignee = users[1] ?? null;

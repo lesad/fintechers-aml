@@ -6,6 +6,8 @@
 
 ### Changed
 
+- The review queue generates the AI rating of its first five open cases (New or Escalated) on first load, when they have none yet; the badge shows a spinner while it runs. It runs the same per-alert assessment as opening the detail, once per page load.
+- The queue's AI pill takes the AI level's colour also when it matches the rule rating (a red "AI" next to a High), instead of purple.
 - **A rule change needs a reason (ADR-0053).** A version that changes an earlier one needs a "Why this change" in the rule form; `POST` and `PUT /api/rules` refuse it without `changeReason` (400). A first version needs none. The reason shows on the version and in the rules export; a draft from an AI suggestion carries the false-positive reason behind it. The user menu also widens to fit the longer role names.
 - The header's rules cog no longer lights up while the Rules tab is open; the tab shows it.
 - **Four eyes on rule approval (ADR-0052).** "Send for approval" asks for the approver: a compliance officer or the compliance manager, never the author nor the sender. The compliance manager decides only what was sent to them; nobody approves their own version.

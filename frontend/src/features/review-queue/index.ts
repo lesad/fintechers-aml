@@ -10,4 +10,5 @@ export {
 } from "./queue";
 export { ReviewQueue } from "./ReviewQueue";
 export { TransactionDetail } from "./TransactionDetail";
+export { useAutoAssess } from "./use-auto-assess";
 export { useQueue } from "./use-queue";

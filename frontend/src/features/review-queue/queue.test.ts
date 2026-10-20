@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatAge, formatTs, toQueueItem } from "./queue";
+import { formatAge, formatTs, toAssess, toQueueItem } from "./queue";
 
 import type { FlaggedTransaction } from "./api";
 
@@ -56,5 +56,33 @@ describe("formatting", () => {
 
   it("shows a timestamp to the minute", () => {
     expect(formatTs("2026-07-01T00:15:25")).toBe("2026-07-01 00:15");
+  });
+});
+
+describe("toAssess", () => {
+  const row = toQueueItem(flagged);
+
+  it("takes the first five open cases without an AI rating", () => {
+    const rows = Array.from({ length: 7 }, (_, i) => ({ ...row, id: `TX${i}` }));
+    expect(toAssess(rows).map((r) => r.id)).toEqual(["TX0", "TX1", "TX2", "TX3", "TX4"]);
+  });
+
+  it("does not reach past the first five open cases when some of them already have an AI rating", () => {
+    const rows = Array.from({ length: 7 }, (_, i) => ({
+      ...row,
+      id: `TX${i}`,
+      ai: i < 2 ? { rating: "Low" as const } : row.ai,
+    }));
+    expect(toAssess(rows).map((r) => r.id)).toEqual(["TX2", "TX3", "TX4"]);
+  });
+
+  it("skips closed cases and cases that already have an AI rating", () => {
+    const rows = [
+      { ...row, id: "fp", status: "False Positive" as const },
+      { ...row, id: "reported", status: "Reported" as const },
+      { ...row, id: "rated", ai: { rating: "Low" as const } },
+      { ...row, id: "new", status: "New" as const },
+    ];
+    expect(toAssess(rows).map((r) => r.id)).toEqual(["new"]);
   });
 });

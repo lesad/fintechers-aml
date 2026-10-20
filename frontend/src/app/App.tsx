@@ -16,6 +16,7 @@ import {
   statusParam,
   TransactionDetail,
   useDecisions,
+  useAutoAssess,
   useQueue,
 } from "@/features/review-queue";
 import { BacktestView, RulesPage, saveRule } from "@/features/rules";
@@ -67,7 +68,7 @@ export function App() {
     assignee: role === "COMPLIANCE_MANAGER" ? undefined : user?.id,
     aiOnly: filter.aiOnly,
   });
-  const items = review.apply(queue.items);
+  const items = review.apply(useAutoAssess(queue.items, !queue.loading));
   const rating = new Map(items.map((r) => [r.id, r.rule]));
   // The engine counts only the signed-in user's cases (X-User-Id).
   const openByRating = queue.countsByRating ?? NO_COUNTS;

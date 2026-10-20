@@ -96,3 +96,10 @@ export function formatAge(flagged: Date, now: Date): string {
 
 export const formatAmount = (czkAmount: number) =>
   czkAmount.toLocaleString("en-US", { minimumFractionDigits: 2 });
+
+/** The queue rows the dashboard assesses on its own: those of the first `count` open cases that have no AI rating yet. */
+export const toAssess = (items: QueueItem[], count = 5) =>
+  items
+    .filter((r) => r.status === "New" || r.status === "Escalated")
+    .slice(0, count)
+    .filter((r) => r.ai === "none");
