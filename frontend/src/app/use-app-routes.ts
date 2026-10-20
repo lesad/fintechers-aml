@@ -3,35 +3,48 @@ import { useLocation, useMatch, useNavigate } from "react-router";
 
 import { useTabs } from "@/hooks";
 
-/** A page that replaces the review overview while open. */
-type Page = "rules" | "import";
+/** The rules tab's id; a transaction tab's id is the transaction's, a draft's backtest `bt:<draftId>`. */
+export const RULES_TAB = "rules";
+
+export const backtestTab = (draftId: number) => `bt:${draftId}`;
+
+/** The draft of a backtest tab, or null for any other tab. */
+export function parseBacktestTab(id: string) {
+  const m = /^bt:(\d+)$/.exec(id);
+  return m ? { draftId: Number(m[1]) } : null;
+}
+
+const pathOf = (id: string | null) => {
+  if (!id) return "/";
+  if (id === RULES_TAB) return "/rules";
+  const bt = parseBacktestTab(id);
+  return bt ? `/backtests/${bt.draftId}` : `/transactions/${encodeURIComponent(id)}`;
+};
 
 /**
- * The app's URL: `/` is the review overview, `/transactions/:id` the overview with that transaction's tab
- * active (so Back returns to the list), `/rules` the rules page and `/import` the data import page; App sends
- * anything else back to `/`.
+ * The app's URL: `/` is the review overview; a tab has its own path, so Back returns to the list — a transaction
+ * `/transactions/:id`, the rules `/rules`, a draft's backtest `/backtests/:draftId`. `/import` is the data import
+ * page, which replaces the overview; App sends anything else back to `/`.
  */
 export function useAppRoutes() {
   const navigate = useNavigate();
-  const rules = useMatch("/rules") !== null;
   const dataImport = useMatch("/import") !== null;
-  const page: Page | null = rules ? "rules" : dataImport ? "import" : null;
-  const activeTx = useMatch("/transactions/:id")?.params.id ?? null;
-  const tabs = useTabs(activeTx, (id, { replace }) =>
-    navigate(id ? `/transactions/${encodeURIComponent(id)}` : "/", { replace }),
-  );
+  const tx = useMatch("/transactions/:id")?.params.id;
+  const rules = useMatch("/rules") !== null;
+  const bt = useMatch("/backtests/:id")?.params.id;
+  const active = tx ?? (rules ? RULES_TAB : bt ? backtestTab(Number(bt)) : null);
+  const tabs = useTabs(active, (id, { replace }) => navigate(pathOf(id), { replace }));
 
-  // Where the overview was when another page opened, so its button goes back to the same tab.
+  // Where the overview was when the import page opened, so its button goes back to the same tab.
   const { pathname } = useLocation();
   const overview = useRef("/");
   useEffect(() => {
-    if (!page) overview.current = pathname;
-  }, [page, pathname]);
+    if (!dataImport) overview.current = pathname;
+  }, [dataImport, pathname]);
 
   return {
     tabs,
-    page,
-    /** Opens [target], or goes back to the overview when it is already open. */
-    togglePage: (target: Page) => void navigate(page === target ? overview.current : `/${target}`),
+    importOpen: dataImport,
+    toggleImport: () => void navigate(dataImport ? overview.current : "/import"),
   };
 }

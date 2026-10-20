@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import { groupByKey, type RuleVersion } from "./api";
+import { BacktestDialog } from "./BacktestDialog";
+import { DeleteDraftDialog } from "./DeleteDraftDialog";
 import { RuleDetail } from "./RuleDetail";
 import { RuleExport } from "./RuleExport";
 import { RuleForm } from "./RuleForm";
@@ -13,7 +15,12 @@ type RulesPageProps = {
   author: string;
   /** Only a manager approves or rejects a pending version. */
   manager: boolean;
+  /** Opens the backtest just started for [draft] in its own tab. */
+  onBacktest: (draft: RuleVersion) => void;
 };
+
+/** A dialog over the selected draft. */
+type Dialog = "delete" | "backtest" | null;
 
 type Mode =
   | { kind: "view" }
@@ -22,15 +29,11 @@ type Mode =
 
 const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg hover:bg-hover";
 
-export function RulesPage({ author, manager }: RulesPageProps) {
+export function RulesPage({ author, manager, onBacktest }: RulesPageProps) {
   const rules = useRules();
-  const [params] = useSearchParams();
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  // `?rule=<id>` opens that version, e.g. a draft saved from a rule suggestion.
-  const [selectedId, setSelectedId] = useState<number | null>(
-    () => Number(params.get("rule")) || null,
-  );
+  const { selectedKey, setSelectedKey, selectedId, setSelectedId } = useSelection();
   const [mode, setMode] = useState<Mode>({ kind: "view" });
+  const [dialog, setDialog] = useState<Dialog>(null);
   // NOTE: a just-saved draft shows at once, before the reload brings it back from the engine.
   const [saved, setSaved] = useState<RuleVersion[]>([]);
   // A deleted draft disappears at once, before the reload confirms it.
@@ -80,6 +83,7 @@ export function RulesPage({ author, manager }: RulesPageProps) {
               author={author}
               manager={manager}
               onMode={setMode}
+              onDialog={setDialog}
               onSelectVersion={setSelectedId}
               onSaved={(v) => {
                 // NOTE: an approval retires a sibling, so earlier saved copies of the key go stale.
@@ -87,17 +91,86 @@ export function RulesPage({ author, manager }: RulesPageProps) {
                 select(v.key, v.id);
                 rules.reload();
               }}
-              onDeleted={(v) => {
-                setDeleted((d) => [...d, v.id]);
-                select(v.key);
-                rules.reload();
-              }}
             />
           </div>
         </div>
       )}
+      {version?.status === "draft" && (
+        <DraftDialog
+          dialog={dialog}
+          draft={version}
+          active={group?.versions.find((v) => v.status === "active")}
+          onClose={() => setDialog(null)}
+          onDeleted={() => {
+            setDeleted((d) => [...d, version.id]);
+            select(version.key);
+            rules.reload();
+          }}
+          onBacktest={() => onBacktest(version)}
+        />
+      )}
     </div>
   );
+}
+
+/**
+ * The selected key and version. `?rule=<id>` opens that version, e.g. a draft saved from a rule suggestion, also
+ * when the rules tab is already open.
+ */
+function useSelection() {
+  const [params] = useSearchParams();
+  const linked = Number(params.get("rule")) || null;
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(linked);
+  useEffect(() => {
+    if (!linked) return;
+    setSelectedId(linked);
+    setSelectedKey(null);
+  }, [linked]);
+  return { selectedKey, setSelectedKey, selectedId, setSelectedId };
+}
+
+/** The open dialog over a draft: delete it, or pick a period to backtest it over. */
+function DraftDialog({
+  dialog,
+  draft,
+  active,
+  onClose,
+  onDeleted,
+  onBacktest,
+}: {
+  dialog: Dialog;
+  draft: RuleVersion;
+  active: RuleVersion | undefined;
+  onClose: () => void;
+  onDeleted: () => void;
+  onBacktest: () => void;
+}) {
+  if (dialog === "delete")
+    return (
+      <DeleteDraftDialog
+        draft={draft}
+        active={active}
+        onClose={onClose}
+        onDeleted={() => {
+          onClose();
+          onDeleted();
+        }}
+      />
+    );
+  if (dialog === "backtest")
+    return (
+      <BacktestDialog
+        draft={draft}
+        active={active}
+        onClose={onClose}
+        onStarted={() => {
+          onClose();
+          onBacktest();
+        }}
+      />
+    );
+  return null;
 }
 
 type Group = ReturnType<typeof groupByKey>[number];
@@ -126,9 +199,9 @@ type PanelProps = {
   author: string;
   manager: boolean;
   onMode: (mode: Mode) => void;
+  onDialog: (dialog: Dialog) => void;
   onSelectVersion: (id: number) => void;
   onSaved: (saved: RuleVersion) => void;
-  onDeleted: (deleted: RuleVersion) => void;
 };
 
 function Panel({
@@ -140,9 +213,9 @@ function Panel({
   author,
   manager,
   onMode,
+  onDialog,
   onSelectVersion,
   onSaved,
-  onDeleted,
 }: PanelProps) {
   if (mode.kind === "export") {
     return (
@@ -173,7 +246,8 @@ function Panel({
       onEditDraft={() => onMode({ kind: "form", from: version, edit: true })}
       manager={manager}
       onStatusChanged={onSaved}
-      onDeleted={onDeleted}
+      onDelete={() => onDialog("delete")}
+      onBacktest={() => onDialog("backtest")}
     />
   );
 }

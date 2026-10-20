@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router";
 
-import { type RiskLevel, riskDot, Tab, Tabs } from "@/components";
+import { type RiskLevel, Tab, Tabs } from "@/components";
 import { ImportPage } from "@/features/data-import";
 import {
   fetchDetail,
@@ -18,17 +18,21 @@ import {
   useDecisions,
   useQueue,
 } from "@/features/review-queue";
-import { RulesPage, saveRule } from "@/features/rules";
+import { BacktestView, RulesPage, saveRule } from "@/features/rules";
 import { fetchUsers, saveUser, savedUser, type User } from "@/user";
-import { cn } from "@/utils";
 
 import { Header } from "./Header";
-import { useAppRoutes } from "./use-app-routes";
+import { TabLabel } from "./TabLabel";
+import { backtestTab, parseBacktestTab, RULES_TAB, useAppRoutes } from "./use-app-routes";
 
 const NO_COUNTS: Record<RiskLevel, number> = { High: 0, Medium: 0, Low: 0 };
 
 export function App() {
-  const { tabs, page, togglePage } = useAppRoutes();
+  const { tabs, importOpen, toggleImport } = useAppRoutes();
+  // What a backtest tab says, e.g. "B2 v2" (one opened from a link says just "Backtest"), and how many backtests
+  // were started from it, so an open tab loads a new one afresh.
+  const [btLabels, setBtLabels] = useState<Record<string, string>>({});
+  const [btStarts, setBtStarts] = useState<Record<string, number>>({});
   const review = useDecisions();
   const [filter, setFilter] = useState<QueueFilter>(NO_FILTER);
   const [users, setUsers] = useState<User[]>([]);
@@ -85,24 +89,24 @@ export function App() {
           tabs.openTab(id);
           return true;
         }}
-        page={page}
-        onTogglePage={togglePage}
+        importOpen={importOpen}
+        onToggleImport={toggleImport}
+        rulesActive={tabs.active === RULES_TAB}
+        onRules={() => tabs.openTab(RULES_TAB)}
         onHome={() => tabs.select(null)}
       />
 
       <Routes>
         <Route path="/" element={null} />
         <Route path="/transactions/:id" element={null} />
-        <Route
-          path="/rules"
-          element={<RulesPage author={user?.name ?? ""} manager={user?.role === "MANAGER"} />}
-        />
+        <Route path="/rules" element={null} />
+        <Route path="/backtests/:id" element={null} />
         <Route path="/import" element={<ImportPage onDataChanged={queue.reload} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* NOTE: the review area stays mounted behind the rules page, so open tabs and half-written reasons survive. */}
-      <div hidden={page !== null} className="flex min-h-0 flex-1 flex-col">
+      {/* NOTE: the review area stays mounted behind the import page, so open tabs and half-written reasons survive. */}
+      <div hidden={importOpen} className="flex min-h-0 flex-1 flex-col">
         <Tabs>
           <Tab
             active={tabs.active === null}
@@ -115,23 +119,17 @@ export function App() {
               {openCases.toLocaleString("en-US")}
             </span>
           </Tab>
-          {tabs.open.map((id) => {
-            const level = rating.get(id);
-            return (
-              <Tab
-                key={id}
-                active={tabs.active === id}
-                onSelect={() => tabs.select(id)}
-                onClose={() => tabs.closeTab(id)}
-                title={id}
-              >
-                {level && (
-                  <span className={cn("size-[7px] flex-none rounded-[2px]", riskDot({ level }))} />
-                )}
-                <span className="font-mono text-xs">{id}</span>
-              </Tab>
-            );
-          })}
+          {tabs.open.map((id) => (
+            <Tab
+              key={id}
+              active={tabs.active === id}
+              onSelect={() => tabs.select(id)}
+              onClose={() => tabs.closeTab(id)}
+              title={id === RULES_TAB ? "Rules" : (btLabels[id] ?? id)}
+            >
+              <TabLabel id={id} level={rating.get(id)} backtest={btLabels[id]} />
+            </Tab>
+          ))}
         </Tabs>
 
         {tabs.active === null && (
@@ -150,28 +148,50 @@ export function App() {
             onOpen={tabs.openTab}
           />
         )}
-        {/* Open details stay mounted while hidden, so a half-written reason and the scroll position survive a tab switch. */}
+        {/* Open tabs stay mounted while hidden, so a half-written reason, a form and the scroll position survive a tab switch. */}
         {tabs.open.map((id) => (
           <div key={id} hidden={tabs.active !== id} className="flex min-h-0 flex-1 flex-col">
-            <TransactionDetail
-              id={id}
-              decisions={review.decisions}
-              role={role}
-              users={users}
-              onDecide={async (d) => {
-                await setStatus(id, STATUS_CODE[d.action], d.reason);
-                review.decide(id, { ...d, by: user?.name ?? "" });
-                // The case may have left this user's queue (escalated); the engine's list says.
-                queue.reload();
-              }}
-              onAcceptSuggestion={async (rule) =>
-                (await saveRule({ ...rule, author: user?.name ?? "" })).id
-              }
-              onOpen={tabs.openTab}
-            />
+            {tabContent(id)}
           </div>
         ))}
       </div>
     </div>
   );
+
+  function tabContent(id: string) {
+    if (id === RULES_TAB)
+      return (
+        <RulesPage
+          author={user?.name ?? ""}
+          manager={user?.role === "MANAGER"}
+          onBacktest={(draft) => {
+            const tab = backtestTab(draft.id);
+            setBtLabels((l) => ({ ...l, [tab]: `${draft.key} v${draft.version}` }));
+            setBtStarts((s) => ({ ...s, [tab]: (s[tab] ?? 0) + 1 }));
+            tabs.openTab(tab);
+          }}
+        />
+      );
+    const bt = parseBacktestTab(id);
+    if (bt)
+      return <BacktestView key={btStarts[id] ?? 0} draftId={bt.draftId} onOpen={tabs.openTab} />;
+    return (
+      <TransactionDetail
+        id={id}
+        decisions={review.decisions}
+        role={role}
+        users={users}
+        onDecide={async (d) => {
+          await setStatus(id, STATUS_CODE[d.action], d.reason);
+          review.decide(id, { ...d, by: user?.name ?? "" });
+          // The case may have left this user's queue (escalated); the engine's list says.
+          queue.reload();
+        }}
+        onAcceptSuggestion={async (rule) =>
+          (await saveRule({ ...rule, author: user?.name ?? "" })).id
+        }
+        onOpen={tabs.openTab}
+      />
+    );
+  }
 }

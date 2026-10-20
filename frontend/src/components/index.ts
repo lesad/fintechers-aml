@@ -9,6 +9,7 @@ export {
   riskDot,
   type RiskLevel,
 } from "./RatingBadge";
+export { Icon } from "./Icon";
 export { LoadMore } from "./LoadMore";
 export { Modal } from "./Modal";
 export { Popover } from "./Popover";

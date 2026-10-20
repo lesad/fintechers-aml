@@ -1,2 +1,3 @@
-export { saveRule } from "./api";
+export { type Backtest, saveRule } from "./api";
+export { BacktestView } from "./BacktestView";
 export { RulesPage } from "./RulesPage";

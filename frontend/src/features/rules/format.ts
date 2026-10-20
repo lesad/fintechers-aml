@@ -38,3 +38,7 @@ export { conditionTokens } from "@/utils";
 
 /** `2026-10-19T16:42:05+02:00` → `2026-10-19 16:42`, as the engine wrote it. */
 export const shortDate = (iso: string) => iso.slice(0, 16).replace("T", " ");
+
+/** Days from `from` to `to`, both counted: `2026-07-01`..`2026-07-31` is 31. */
+export const periodDays = (from: string, to: string) =>
+  Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000) + 1;

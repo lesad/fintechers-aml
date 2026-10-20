@@ -18,11 +18,11 @@ type AiResultCardProps<T extends Ready | NotReady> = {
   aside?: (result: Extract<T, Ready>) => ReactNode;
 };
 
-// While the model works the card keeps a result's height and its gradient moves, so the detail doesn't jump.
+// While the model works the card fills the height the rule rating gives the row, and its gradient moves.
 const card = cva("gap-2", {
   variants: {
     pending: {
-      true: "min-h-[240px] animate-ai-loading bg-[linear-gradient(120deg,var(--color-ai-from),var(--color-ai-to),var(--color-ai-from))] bg-size-[200%_200%] motion-reduce:animate-none",
+      true: "flex-1 animate-ai-loading bg-[linear-gradient(120deg,var(--color-ai-from),var(--color-ai-to),var(--color-ai-from))] bg-size-[200%_200%] motion-reduce:animate-none",
     },
   },
 });

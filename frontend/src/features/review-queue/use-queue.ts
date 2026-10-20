@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { pageControls } from "@/utils";
+
 import { fetchFlagged, type TransactionPage } from "./api";
 import { type QueueItem, toQueueItem } from "./queue";
 
@@ -85,14 +87,9 @@ export function useQueue({ query, rating, status, assignee, aiOnly = false }: Qu
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [query, rating, status, assignee, aiOnly]);
 
-  const done = !state.loading && state.items.length >= state.total;
   return {
     ...state,
-    done,
-    loadMore: () => {
-      if (!state.loading && !done && !state.error) load(state.nextPage, false);
-    },
-    retry: () => load(state.nextPage, state.items.length === 0),
+    ...pageControls(state, state.nextPage, load),
     /** Starts the list over from page 0, e.g. after a decision moved a case out of it. */
     reload: () => load(0, true),
   };

@@ -1,9 +1,9 @@
 import { cva } from "class-variance-authority";
 import { useState } from "react";
 
-import { ConditionCode, ConditionLegend } from "@/components";
+import { ConditionCode, ConditionLegend, Icon } from "@/components";
 
-import { changeRuleStatus, deleteRule, type RuleVersion } from "./api";
+import { changeRuleStatus, type RuleVersion } from "./api";
 import { grainLabel, paramParts, paramText, scopeLabel, shortDate, windowShort } from "./format";
 
 import type { ReactNode } from "react";
@@ -18,7 +18,9 @@ type RuleDetailProps = {
   /** Only a manager approves or rejects a pending version. */
   manager: boolean;
   onStatusChanged: (changed: RuleVersion) => void;
-  onDeleted: (deleted: RuleVersion) => void;
+  /** Draft only: delete it, or replay a period with it. */
+  onDelete: () => void;
+  onBacktest: () => void;
 };
 
 const dot = cva("inline-block size-1.5 flex-none rounded-full", {
@@ -47,11 +49,11 @@ const tab = cva(
 
 const h2 = "text-[13px] font-semibold";
 const primary =
-  "h-7 rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
+  "inline-flex h-7 items-center gap-1.5 rounded bg-indigo px-3 text-[13px] font-semibold text-white hover:bg-indigo-hover disabled:cursor-not-allowed disabled:bg-retired-dot";
 const secondary =
-  "h-7 rounded border border-indigo bg-bg px-3 text-[13px] font-semibold text-indigo hover:bg-indigo hover:text-white disabled:cursor-not-allowed";
+  "inline-flex h-7 items-center gap-1.5 rounded border border-indigo bg-bg px-3 text-[13px] font-semibold text-indigo hover:bg-indigo hover:text-white disabled:cursor-not-allowed";
 const danger =
-  "h-7 rounded border border-high bg-bg px-3 text-[13px] font-semibold text-high hover:bg-high hover:text-white disabled:cursor-not-allowed";
+  "inline-flex h-7 cursor-pointer items-center gap-1.5 rounded border border-high-dot bg-bg px-3 text-[13px] font-semibold text-high hover:bg-high-bg";
 
 const byline = (v: RuleVersion) => {
   const by = v.author ?? "unknown";
@@ -105,7 +107,8 @@ function Header({
   onEditDraft,
   manager,
   onStatusChanged,
-  onDeleted,
+  onDelete,
+  onBacktest,
 }: RuleDetailProps) {
   const name = siblings[0]?.name ?? v.name;
   return (
@@ -120,20 +123,28 @@ function Header({
           {name && <h1 className="text-lg leading-tight font-semibold text-pretty">{name}</h1>}
         </div>
         {v.status === "draft" && (
-          <button type="button" onClick={onEditDraft} className={primary}>
-            Edit draft v{v.version}
+          <>
+            <button type="button" onClick={onDelete} className={danger}>
+              <Icon name="trash" />
+              Delete
+            </button>
+            <button type="button" onClick={onBacktest} className={secondary}>
+              <Icon name="replay" />
+              Backtest
+            </button>
+          </>
+        )}
+        {v.status === "draft" && (
+          <button type="button" onClick={onEditDraft} className={secondary}>
+            <Icon name="pencil" />
+            Edit
           </button>
         )}
-        <StatusActions
-          key={v.id}
-          version={v}
-          manager={manager}
-          onStatusChanged={onStatusChanged}
-          onDeleted={onDeleted}
-        />
+        <StatusActions key={v.id} version={v} manager={manager} onStatusChanged={onStatusChanged} />
         {/* A draft or pending version is still being decided: edit it instead of stacking a new version on it. */}
         {(v.status === "active" || v.status === "retired") && (
           <button type="button" onClick={onNewVersion} className={secondary}>
+            <Icon name="plus" />
             New version from v{v.version}
           </button>
         )}
@@ -165,26 +176,11 @@ function Header({
   );
 }
 
-type StatusActionsProps = Pick<
-  RuleDetailProps,
-  "version" | "manager" | "onStatusChanged" | "onDeleted"
->;
+type StatusActionsProps = Pick<RuleDetailProps, "version" | "manager" | "onStatusChanged">;
 
-function StatusActions({ version: v, manager, onStatusChanged, onDeleted }: StatusActionsProps) {
+function StatusActions({ version: v, manager, onStatusChanged }: StatusActionsProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
-  const remove = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await deleteRule(v.id);
-      onDeleted(v);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setBusy(false);
-    }
-  };
   const run = async (action: Parameters<typeof changeRuleStatus>[1]) => {
     setBusy(true);
     setError(null);
@@ -201,39 +197,13 @@ function StatusActions({ version: v, manager, onStatusChanged, onDeleted }: Stat
       {error}
     </span>
   );
-  if (v.status === "draft" && confirming) {
-    return (
-      <>
-        {failure}
-        <span className="text-[13px] text-fg-muted">Delete draft v{v.version}?</span>
-        <button type="button" disabled={busy} onClick={remove} className={danger}>
-          Delete
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setConfirming(false)}
-          className={secondary}
-        >
-          Keep
-        </button>
-      </>
-    );
-  }
   if (v.status === "draft") {
     return (
       <>
         {failure}
-        <button type="button" disabled={busy} onClick={() => run("submit")} className={secondary}>
+        <button type="button" disabled={busy} onClick={() => run("submit")} className={primary}>
+          <Icon name="check" />
           Send for approval
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setConfirming(true)}
-          className={danger}
-        >
-          Delete draft
         </button>
       </>
     );
@@ -243,9 +213,11 @@ function StatusActions({ version: v, manager, onStatusChanged, onDeleted }: Stat
     <>
       {failure}
       <button type="button" disabled={busy} onClick={() => run("reject")} className={secondary}>
+        <Icon name="close" />
         Reject
       </button>
       <button type="button" disabled={busy} onClick={() => run("approve")} className={primary}>
+        <Icon name="check" />
         Approve v{v.version}
       </button>
     </>

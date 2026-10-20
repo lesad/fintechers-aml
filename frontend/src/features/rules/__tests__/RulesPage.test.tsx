@@ -21,7 +21,7 @@ const open = async (key: RegExp) =>
 describe("RulesPage", () => {
   it("lists rules by alert type with their name, active version and draft", async () => {
     serve(() => json([...SEEDED, B2_V2]));
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
     const nav = await list();
     expect(within(nav).getByText("Alert type A")).toBeInTheDocument();
     expect(within(nav).getByText("Alert type C")).toBeInTheDocument();
@@ -33,13 +33,15 @@ describe("RulesPage", () => {
 
   it("opens the version named in ?rule=", async () => {
     serve(() => json([...SEEDED, B2_V2]));
-    render(<RulesPage author="J. Novák" manager={false} />, { route: `/rules?rule=${B2_V2.id}` });
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />, {
+      route: `/rules?rule=${B2_V2.id}`,
+    });
     expect(await screen.findByRole("region", { name: "B2 v2" })).toBeInTheDocument();
   });
 
   it("filters rules by key or name", async () => {
     serve();
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
     const nav = await list();
     fireEvent.change(screen.getByPlaceholderText("Filter rules"), {
       target: { value: "flow-through" },
@@ -55,7 +57,7 @@ describe("RulesPage", () => {
 
   it("opens a rule on its active version with what it flags, condition and parameters", async () => {
     serve(() => json([...SEEDED, B2_V2]));
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
     await open(/B2/);
 
     const detail = screen.getByRole("region", { name: "B2 v1" });
@@ -74,7 +76,7 @@ describe("RulesPage", () => {
 
   it("a draft shows how its parameters differ from the active version", async () => {
     serve(() => json([...SEEDED, B2_V2]));
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
     await open(/B2/);
     fireEvent.click(screen.getByRole("tab", { name: "v2 draft" }));
 
@@ -85,14 +87,14 @@ describe("RulesPage", () => {
 
   it("shows a percentage parameter with its unit, not as CZK", async () => {
     serve();
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
     await open(/C1/);
     expect(screen.getByRole("region", { name: "C1 v2" })).toHaveTextContent("forward_pct80 %");
   });
 
   it("a retired version says so and has no explanation yet", async () => {
     serve();
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
     await open(/C1/);
     fireEvent.click(screen.getByRole("tab", { name: "v1 retired" }));
 
@@ -104,7 +106,7 @@ describe("RulesPage", () => {
 
   it("shows an error with retry when the rules fail to load", async () => {
     const fetch = serve(() => json({}, 500));
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />);
     fireEvent.click(await screen.findByRole("button", { name: "Retry" }));
     expect(within(await list()).getAllByRole("button")).not.toHaveLength(0);
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -116,13 +118,15 @@ describe("RulesPage", () => {
       () => json([...SEEDED, B2_V2]),
       () => json(pending),
     );
-    render(<RulesPage author="J. Novák" manager={false} />, { route: `/rules?rule=${B2_V2.id}` });
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} manager={false} />, {
+      route: `/rules?rule=${B2_V2.id}`,
+    });
     fireEvent.click(await screen.findByRole("button", { name: "Send for approval" }));
 
     const detail = await screen.findByText(/Waiting for approval by M. Svobodová/);
     expect(detail).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(`/api/rules/${B2_V2.id}/submit`, expect.anything());
-    expect(screen.queryByRole("button", { name: /Edit draft/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Approve/ })).not.toBeInTheDocument();
   });
 
@@ -132,12 +136,18 @@ describe("RulesPage", () => {
       () => new Response(null, { status: 204 }),
       () => json(SEEDED),
     );
-    render(<RulesPage author="J. Novák" manager={false} />, { route: `/rules?rule=${B2_V2.id}` });
-    await screen.findByRole("button", { name: "Delete draft" });
+    render(<RulesPage author="J. Novák" manager={false} onBacktest={() => {}} />, {
+      route: `/rules?rule=${B2_V2.id}`,
+    });
+    await screen.findByRole("button", { name: "Delete" });
     expect(screen.queryByRole("button", { name: /New version from/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete draft" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "Delete draft B2 v2" })).getByRole("button", {
+        name: "Delete draft",
+      }),
+    );
 
     expect(await screen.findByRole("button", { name: /New version from v1/ })).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(
@@ -152,7 +162,9 @@ describe("RulesPage", () => {
       () => json([...SEEDED, pending]),
       () => json({ ...pending, status: "active", assignee: null, approver: "M. Svobodová" }),
     );
-    render(<RulesPage author="M. Svobodová" manager />, { route: `/rules?rule=${B2_V2.id}` });
+    render(<RulesPage author="M. Svobodová" manager onBacktest={() => {}} />, {
+      route: `/rules?rule=${B2_V2.id}`,
+    });
     fireEvent.click(await screen.findByRole("button", { name: "Approve v2" }));
 
     expect(await screen.findByRole("tab", { name: "v2 active" })).toBeInTheDocument();
@@ -165,7 +177,9 @@ describe("RulesPage", () => {
       () => json([...SEEDED, pending]),
       () => json({ detail: "only a manager can approve a rule" }, 403),
     );
-    render(<RulesPage author="M. Svobodová" manager />, { route: `/rules?rule=${B2_V2.id}` });
+    render(<RulesPage author="M. Svobodová" manager onBacktest={() => {}} />, {
+      route: `/rules?rule=${B2_V2.id}`,
+    });
     fireEvent.click(await screen.findByRole("button", { name: "Approve v2" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("only a manager can approve a rule");
@@ -173,7 +187,7 @@ describe("RulesPage", () => {
 
   it("exports the rules in force at the picked date, without drafts", async () => {
     serve(() => json([...SEEDED, B2_V2]));
-    render(<RulesPage author="J. Novák" manager={false} />);
+    render(<RulesPage author="J. Novák" manager={false} onBacktest={() => {}} />);
     await list();
     fireEvent.click(screen.getByRole("button", { name: "Export rules" }));
     fireEvent.change(screen.getByLabelText("Rules valid at"), {

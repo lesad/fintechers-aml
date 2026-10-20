@@ -17,9 +17,12 @@ type HeaderProps = {
   user: User | null;
   users: User[];
   onUser: (user: User) => void;
-  /** The page open instead of the review overview, if any; its button shows as active. */
-  page: "rules" | "import" | null;
-  onTogglePage: (page: "rules" | "import") => void;
+  /** The data import page is open instead of the review overview; its button shows as active. */
+  importOpen: boolean;
+  onToggleImport: () => void;
+  /** The rules tab is the one shown; the cog shows as active. */
+  rulesActive: boolean;
+  onRules: () => void;
   /** The logo: back to the review queue tab. */
   onHome: () => void;
 };
@@ -58,8 +61,10 @@ export function Header({
   user,
   users,
   onUser,
-  page,
-  onTogglePage,
+  importOpen,
+  onToggleImport,
+  rulesActive,
+  onRules,
   onHome,
 }: HeaderProps) {
   const input = useRef<HTMLInputElement>(null);
@@ -149,9 +154,9 @@ export function Header({
           type="button"
           aria-label="Data import"
           title="Data import"
-          aria-pressed={page === "import"}
-          onClick={() => onTogglePage("import")}
-          className={pageButton({ active: page === "import" })}
+          aria-pressed={importOpen}
+          onClick={onToggleImport}
+          className={pageButton({ active: importOpen })}
         >
           <svg
             aria-hidden="true"
@@ -172,9 +177,9 @@ export function Header({
           type="button"
           aria-label="Rules"
           title="Rules"
-          aria-pressed={page === "rules"}
-          onClick={() => onTogglePage("rules")}
-          className={cn(pageButton({ active: page === "rules" }), "mr-1")}
+          aria-pressed={rulesActive}
+          onClick={onRules}
+          className={cn(pageButton({ active: rulesActive }), "mr-1")}
         >
           <svg
             aria-hidden="true"

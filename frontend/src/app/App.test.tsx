@@ -397,7 +397,7 @@ describe("App", () => {
     expect(screen.getByText("M. Svobodová")).toBeInTheDocument();
   });
 
-  it("the cog opens the rules page and again returns to the queue with tabs intact", async () => {
+  it("the cog opens the rules as a tab next to the open transactions", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
     const cog = screen.getByRole("button", { name: "Rules" });
@@ -405,21 +405,25 @@ describe("App", () => {
 
     fireEvent.click(cog);
     expect(cog).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Rules");
+    expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("tab", { name: /TX1/ }));
+    expect(cog).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(cog);
-    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("TX1");
+    expect(screen.getAllByRole("tab", { name: /Rules/ })).toHaveLength(1);
   });
 
-  it("the logo goes to the review queue from the rules page or a transaction tab, tabs kept", async () => {
+  it("the logo goes to the review queue from the rules or a transaction tab, tabs kept", async () => {
     render(<App />);
     fireEvent.click(await screen.findByText("TX1"));
     fireEvent.click(screen.getByRole("button", { name: "Rules" }));
-    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Rules");
 
     fireEvent.click(screen.getByRole("link", { name: "AML spotter" }));
     expect(screen.getByRole("tab", { selected: true })).toHaveTextContent("Review queue");
     expect(screen.getByRole("tab", { name: /TX1/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Rules/ })).toBeInTheDocument();
   });
 
   it("puts the open transaction in the URL, so Back returns to the list and a reload reopens it", async () => {
@@ -465,7 +469,7 @@ describe("App", () => {
   it("opens the rules page straight from /rules and sends an unknown path back to the overview", async () => {
     const { unmount } = render(<App />, { route: "/rules" });
     expect(screen.getByRole("button", { name: "Rules" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(await screen.findByRole("tab", { selected: true })).toHaveTextContent("Rules");
     unmount();
 
     render(<App />, { route: "/nowhere" });
