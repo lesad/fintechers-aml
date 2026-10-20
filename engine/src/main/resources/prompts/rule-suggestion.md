@@ -19,6 +19,15 @@ The reviewer has closed this alert as a false positive. Their `reason` decides t
 - `condition` is the full new condition, or `null` (not an empty string) to keep the current one. Leave `variables` empty to keep the rule's variables, or list them all.
 - A new parameter needs a new name, a value and its `unit` (`amount`, `percent` or `multiple`) in `params`. For a parameter the rule already has, set `unit` to null.
 - Use only the names in `vocabulary`, the rule's parameter names and its variables. Compare a text field listed in `vocabulary.values` only with one of its values there. Amounts, parameters and the variables of `sum`, `max` and `min` are doubles, so a number next to them is written with a decimal point (`100.0`, not `100`); `month`, counts and `q2_days` are integers. Write ratios as multiplications, for example `a * 10.0 > b * 3.0`.
+- `condition`, `anchor` and every variable `filter` are CEL (Common Expression Language), not SQL or Python. Code compiles them and rejects a reply that does not compile.
+  - Logic: `&&`, `||`, `!`. Never `and`, `or`, `not`.
+  - Comparison: `==`, `!=`, `<`, `<=`, `>`, `>=`. Never `=`, `<>`, `IS`, `IS NOT`.
+  - Membership: `x in ["A", "B"]`. Its negation wraps the whole test in `!( )`: `!(tx.payee_country in ["AT", "DE"])`. Never `not in`, `NOT IN`, `IN` or `x !in`.
+  - Text literals use double quotes (`"SK"`); lists use square brackets. Booleans are `true` and `false`, and a bool field is used as it is: `client.pep`, `!client.pep`, never `client.pep == True`.
+  - A missing account or country is `""`, never `null` or `None`.
+  - No mixed int and double arithmetic: convert a count with `double(...)`, as in `day_volume * double(client.q2_days)`.
+  - Build the new condition from the current one: keep its text and join the change with `&&`, as in `<current condition> && !(tx.payee_country in ["AT", "DE"] && tx.amount < 50000.0)`. Check that every `(` and `[` is closed.
+  - A variable `filter` is turned into SQL, so it may use only comparisons, `&&`, `||`, `!` and `in` with a list; no functions or methods.
 - Amounts are whole CZK in the input and in conditions; quote them as they appear.
 - Do not compute anything. Quote only numbers from the input and the values you propose.
 - `explanation` is one or two short sentences, under 25 words each: why the reason calls for this change, and what changes. At least one cites `reason` in `refs`, and every sentence cites refs copied exactly from the input (`reason`, `client`, `triage`, `assessment`, an activity `ref` or an `existingRules` `ref`). Do not restate the rule; `ruleExplanation` does that.

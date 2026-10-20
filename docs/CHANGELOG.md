@@ -19,6 +19,7 @@
 - The AI Rating shows the newest stored result whatever prompt made it, in `GET /api/alerts/{id}/assessment` and the queue's `aiRating` (ADR-0045). A new one is generated only when none exists or through "Regenerate" on the card. The model may return no open points.
 - The AI Rating card shows the summary as one paragraph with its refs after it, and the open points behind a "Show open points (n)" toggle. The queue's rating badge carries an attached "AI ↑" or "AI ↓" pill in the AI level's colour when the AI rating differs from the rule rating, and a plain "AI" when they match; the card uses the same arrow wording.
 - The rule suggestion reads the alert's latest ready AI Rating (ref `assessment`) instead of the summary text, which nothing generated any more.
+- The rule suggestion prompt states the CEL syntax a condition, anchor and filter must use: `&&`, `||`, `!`, `!(x in [...])` for a negated list test, double-quoted text, `true`/`false`, `""` for a missing value, and only comparisons, logic and `in` inside a variable filter. The model had written `not in`, which failed the compile check and dropped the suggestion.
 
 - A number in the AI Rating that the input does not hold no longer rejects the result (ADR-0046). The result stays ready with `body.warnings`, and the card marks that text as unverified. Numbers from the prompt itself count as known, and the summary may have up to six items.
 
