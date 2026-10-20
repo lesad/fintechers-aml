@@ -44,6 +44,18 @@ describe("RulesPage", () => {
     expect(await screen.findByRole("region", { name: "B2 v2" })).toBeInTheDocument();
   });
 
+  it("fetches again for a ?rule= version saved after the list loaded", async () => {
+    const fetch = serve(
+      () => json(SEEDED),
+      () => json([...SEEDED, B2_V2]),
+    );
+    render(<RulesPage author="J. Novák" onBacktest={() => {}} user={null} users={[]} />, {
+      route: `/rules?rule=${B2_V2.id}`,
+    });
+    expect(await screen.findByRole("region", { name: "B2 v2" })).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("filters rules by key or name", async () => {
     serve();
     render(<RulesPage author="J. Novák" onBacktest={() => {}} user={null} users={[]} />);

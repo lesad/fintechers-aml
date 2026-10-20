@@ -49,6 +49,7 @@
 
 ### Fixed
 
+- "Open in rules" after accepting a rule suggestion opens the new draft. The settings tab stays mounted, so its rule list predated the draft and the page fell back to the first rule's active version; it now fetches once more when the linked version is missing.
 - A summed rule variable drifted below the heller, because a sum of doubles does (`day_volume` 27752.629999999997, an alert reason reading "593425.8300000001 CZK"). `GrainQueryBuilder` now rounds a `sum` to the heller in SQL, where the sum happens. Stored evidence and reason lines are clean after a new run; scores and dispositions are unchanged.
 
 ### Added

@@ -37,7 +37,7 @@ const button = "rounded border border-border bg-bg px-2.5 py-1 text-xs text-fg h
 
 export function RulesPage({ author, user, users, onBacktest, onApproved }: RulesPageProps) {
   const rules = useRules();
-  const { selectedKey, setSelectedKey, selectedId, setSelectedId } = useSelection();
+  const { linked, selectedKey, setSelectedKey, selectedId, setSelectedId } = useSelection();
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   const [dialog, setDialog] = useState<Dialog>(null);
   // NOTE: a just-saved draft shows at once, before the reload brings it back from the engine.
@@ -50,6 +50,16 @@ export function RulesPage({ author, user, users, onBacktest, onApproved }: Rules
   const versions = [...fetched.filter((v) => !saved.some((s) => s.id === v.id)), ...saved].filter(
     (v) => !deleted.includes(v.id),
   );
+  // The settings tab stays mounted, so a version saved elsewhere (a draft accepted from a rule suggestion) is not in
+  // the list loaded earlier when its link arrives: fetch once more for that id.
+  const [refetchedFor, setRefetchedFor] = useState<number | null>(null);
+  const linkedMissing =
+    rules.status === "ready" && linked !== null && !versions.some((v) => v.id === linked);
+  useEffect(() => {
+    if (!linkedMissing || refetchedFor === linked) return;
+    setRefetchedFor(linked);
+    rules.reload();
+  }, [linkedMissing, linked, refetchedFor, rules]);
   const groups = groupByKey(versions);
   const { group, version } = pick(groups, selectedKey, selectedId);
 
@@ -135,7 +145,7 @@ function useSelection() {
     setSelectedId(linked);
     setSelectedKey(null);
   }, [linked]);
-  return { selectedKey, setSelectedKey, selectedId, setSelectedId };
+  return { linked, selectedKey, setSelectedKey, selectedId, setSelectedId };
 }
 
 /** The open dialog over a draft: delete it, or pick a period to backtest it over. */
