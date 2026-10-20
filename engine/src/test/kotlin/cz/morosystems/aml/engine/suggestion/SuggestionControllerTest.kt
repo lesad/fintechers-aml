@@ -90,6 +90,7 @@ class SuggestionControllerTest {
         body.extractingPath("$.impact.client.alertsClosed").isEqualTo(1)
         body.extractingPath("$.impact.company").isNull()
         body.extractingPath("$.declined").isNull()
+        body.extractingPath("$.promptHash").asString().hasSize(12)
         assertThat(bedrock.prompt).contains("\"ref\":\"reason\"", "Monthly payroll pass-through", "\"min_inflow\"", "\"vocabulary\"", "\"values\"", "\"ref\":\"client\"", "\"existingRules\"")
     }
 

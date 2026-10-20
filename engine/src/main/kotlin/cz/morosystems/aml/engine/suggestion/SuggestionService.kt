@@ -1,5 +1,7 @@
 package cz.morosystems.aml.engine.suggestion
 
+import cz.morosystems.aml.engine.EngineProperties
+import cz.morosystems.aml.engine.ai.sha256
 import cz.morosystems.aml.engine.bedrock.Bedrock
 import cz.morosystems.aml.engine.cel.Vocabulary
 import org.slf4j.LoggerFactory
@@ -7,6 +9,7 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Service
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
+import kotlin.io.path.readText
 
 data class SuggestionRequest(val reason: String?)
 
@@ -17,12 +20,21 @@ class SuggestionService(
     private val checker: SuggestionChecker,
     private val impact: SuggestionImpact,
     private val bedrock: Bedrock,
+    private val props: EngineProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val json = JsonMapper()
-    private val system = ClassPathResource("prompts/rule-suggestion.md").getContentAsString(Charsets.UTF_8)
+    private val classpathSystem = ClassPathResource("prompts/rule-suggestion.md").getContentAsString(Charsets.UTF_8)
+
+    private fun system(): String = props.promptsDir?.resolve(PROMPT_FILE)?.readText() ?: classpathSystem
 
     fun suggest(alertId: Long, reason: String): Suggestion {
+        val system = system()
+        val promptHash = sha256(system + SCHEMA).take(12)
+        return suggest(alertId, reason, system, promptHash).copy(promptHash = promptHash)
+    }
+
+    private fun suggest(alertId: Long, reason: String, system: String, promptHash: String): Suggestion {
         val context = repository.context(alertId, reason.trim())
         val input = json.writeValueAsString(inputOf(context))
         val reply = bedrock.askJson(system, input, "rule_suggestion", SCHEMA)
@@ -34,17 +46,17 @@ class SuggestionService(
         val checked = try {
             checker.check(parsed, json.readValue(input, Map::class.java), context)
         } catch (e: InvalidSuggestionException) {
-            log.warn("alert {}: suggestion rejected by the checks: {}; reply: {}", alertId, e.message, reply)
+            log.warn("alert {} [prompt {}]: suggestion rejected by the checks: {}; reply: {}", alertId, promptHash, e.message, reply)
             throw e
         }
         val draft = checked.draft
         if (draft == null) {
-            log.info("alert {}: no suggestion, the model answered none: {}", alertId, checked.suggestion.explanation.joinToString(" ") { it.text })
+            log.info("alert {} [prompt {}]: no suggestion, the model answered none: {}", alertId, promptHash, checked.suggestion.explanation.joinToString(" ") { it.text })
             return checked.suggestion
         }
         val measured = impact.measure(draft, context)
         val declined = impact.declineReason(measured)
-        log.info("alert {}: {} {} v{}, {}; impact {}", alertId, if (declined == null) "suggests" else "declines", draft.definition.key, draft.definition.version, declined ?: "passes the gates", measured)
+        log.info("alert {} [prompt {}]: {} {} v{}, {}; impact {}", alertId, promptHash, if (declined == null) "suggests" else "declines", draft.definition.key, draft.definition.version, declined ?: "passes the gates", measured)
         return checked.suggestion.copy(kind = if (declined == null) checked.suggestion.kind else "none", impact = measured, declined = declined)
     }
 
@@ -89,6 +101,7 @@ class SuggestionService(
     }
 
     private companion object {
+        const val PROMPT_FILE = "rule-suggestion.md"
         val SCHEMA = """
             {"type":"object","additionalProperties":false,
              "required":["kind","ruleKey","layer","condition","variables","params","explanation","ruleExplanation"],"properties":{

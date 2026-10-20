@@ -25,6 +25,8 @@ data class Suggestion(
     val impact: Impact? = null,
     /** Why code turned a valid draft into `none`: it would not stop this alert, is unsafe or changes too little. */
     val declined: String? = null,
+    /** sha256 of the system prompt and schema the reply was made with, so an eval can tell prompt versions apart. */
+    val promptHash: String? = null,
 )
 
 /** For one scope: hits stopped and added (this alert's included) and other alerts closed. */
