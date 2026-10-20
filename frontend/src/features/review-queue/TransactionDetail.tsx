@@ -11,6 +11,7 @@ import { ClientHistoryCard } from "./ClientHistoryCard";
 import { DecisionPanel } from "./DecisionPanel";
 import { DetailStrip } from "./DetailStrip";
 import { MoneyFlow } from "./MoneyFlow";
+import { OpoReport } from "./OpoReport";
 import { RuleRatingCard } from "./RuleRatingCard";
 import { SuggestionModal } from "./SuggestionModal";
 import { useDetail } from "./use-detail";
@@ -26,8 +27,8 @@ type TransactionDetailProps = {
   role: Role;
   /** Everyone the case can be handed to. */
   users: User[];
-  /** Saves the status on the engine, then records the decision. */
-  onDecide: (d: Pick<Decision, "action" | "reason">) => Promise<void>;
+  /** Saves the status on the engine, then records the decision; `postponed` comes with a report only. */
+  onDecide: (d: Pick<Decision, "action" | "reason"> & { postponed?: boolean }) => Promise<void>;
   /** Saves an accepted rule suggestion as a draft and returns the new version's id. */
   onAcceptSuggestion: (rule: SuggestedRule) => Promise<number>;
   onOpen: (id: string, background: boolean) => void;
@@ -101,6 +102,7 @@ function DetailView({
   const alertId = detail.alerts[0]?.id;
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [toast, setToast] = useState<{ message: string; ruleId?: number } | null>(null);
+  const [opo, setOpo] = useState(false);
 
   // A false positive first asks for a rule change, then records the decision (and with it the alert status) whatever
   // the answer: a suggestion opens the modal, no suggestion or a failure only confirms the decision.
@@ -120,6 +122,13 @@ function DetailView({
     setSuggestion(null);
     setToast({ message: `Draft rule ${rule.key} saved.`, ruleId });
   };
+
+  if (opo)
+    return (
+      <main className="min-h-0 flex-1 overflow-auto bg-bg-sub print:overflow-visible print:bg-bg">
+        <OpoReport detail={detail} onClose={() => setOpo(false)} />
+      </main>
+    );
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
@@ -210,10 +219,11 @@ function DetailView({
                 log={detail.log}
                 saved={state.saved}
                 role={role}
-                onDecide={(action, reason) =>
+                onFauReport={() => setOpo(true)}
+                onDecide={(action, reason, postponed) =>
                   action === "False Positive"
                     ? markFalsePositive(reason)
-                    : onDecide({ action, reason }).then(reload)
+                    : onDecide({ action, reason, postponed }).then(reload)
                 }
               />
             )}

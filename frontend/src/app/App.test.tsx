@@ -615,9 +615,11 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "False positive" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Escalate" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Report" }));
-    fireEvent.change(screen.getByPlaceholderText("Why the transaction is reported as suspicious"), {
+    fireEvent.change(screen.getByPlaceholderText(/goes into the FAÚ report/), {
       target: { value: "Pattern matches layering." },
     });
+    expect(screen.getByRole("button", { name: "Report transaction" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: /Postpone/ }));
     fireEvent.click(screen.getByRole("button", { name: "Report transaction" }));
     expect(
       await screen.findByText("Pattern matches layering.", { selector: "span" }),
@@ -626,7 +628,11 @@ describe("App", () => {
       .mocked(fetch)
       .mock.calls.findLast(([, init]) => (init as RequestInit | undefined)?.method === "PUT");
     expect(lastPut?.[1]).toMatchObject({
-      body: JSON.stringify({ status: "REPORTED", reason: "Pattern matches layering." }),
+      body: JSON.stringify({
+        status: "REPORTED",
+        reason: "Pattern matches layering.",
+        postponed: true,
+      }),
     });
   });
 

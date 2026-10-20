@@ -106,7 +106,7 @@ export function App() {
       </Routes>
 
       {/* NOTE: the review area stays mounted behind the import page, so open tabs and half-written reasons survive. */}
-      <div hidden={importOpen} className="flex min-h-0 flex-1 flex-col">
+      <div hidden={importOpen} className="flex min-h-0 flex-1 flex-col print:block">
         <Tabs>
           <Tab
             active={tabs.active === null}
@@ -150,7 +150,11 @@ export function App() {
         )}
         {/* Open tabs stay mounted while hidden, so a half-written reason, a form and the scroll position survive a tab switch. */}
         {tabs.open.map((id) => (
-          <div key={id} hidden={tabs.active !== id} className="flex min-h-0 flex-1 flex-col">
+          <div
+            key={id}
+            hidden={tabs.active !== id}
+            className="flex min-h-0 flex-1 flex-col print:block"
+          >
             {tabContent(id)}
           </div>
         ))}
@@ -182,7 +186,7 @@ export function App() {
         role={role}
         users={users}
         onDecide={async (d) => {
-          await setStatus(id, STATUS_CODE[d.action], d.reason);
+          await setStatus(id, { ...d, status: STATUS_CODE[d.action] });
           review.decide(id, { ...d, by: user?.name ?? "" });
           // The case may have left this user's queue (escalated); the engine's list says.
           queue.reload();

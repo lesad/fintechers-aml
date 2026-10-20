@@ -18,7 +18,7 @@ export function Tabs({ children }: { children: ReactNode }) {
   return (
     <nav
       role="tablist"
-      className="flex h-[34px] flex-none items-stretch overflow-x-auto overflow-y-hidden bg-bg-sub shadow-[inset_0_-1px_0_var(--color-border)] [scrollbar-width:none]"
+      className="flex h-[34px] flex-none items-stretch print:hidden overflow-x-auto overflow-y-hidden bg-bg-sub shadow-[inset_0_-1px_0_var(--color-border)] [scrollbar-width:none]"
     >
       {children}
     </nav>

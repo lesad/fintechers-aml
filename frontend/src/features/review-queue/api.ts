@@ -71,6 +71,8 @@ const caseEvent = z.object({
   actor: z.string().nullable(),
   reason: z.string().nullable(),
   assignee: z.string().nullable(),
+  /** On a report: whether the client's order is held under §20 of the AML Act. */
+  postponed: z.boolean().nullish(),
 });
 
 const detail = z.object({
@@ -140,6 +142,30 @@ const detail = z.object({
 
 const historyPage = z.object({ items: z.array(historyTx), more: z.boolean() });
 
+/** The part of a rule version (`GET /api/rules`) the FAÚ report reads: its grain, windows and thresholds. */
+const opoRule = z.object({
+  key: z.string(),
+  version: z.number(),
+  name: z.string().nullable(),
+  grain: z.enum(["transaction", "client_day", "client_anchor"]),
+  condition: z.string(),
+  variables: z.array(
+    z.object({
+      name: z.string(),
+      agg: z.string(),
+      field: z.string(),
+      window: z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("day") }),
+        z.object({ kind: z.literal("relative"), from: z.string(), to: z.string() }),
+      ]),
+    }),
+  ),
+  params: z.record(
+    z.string(),
+    z.object({ value: z.number(), unit: z.enum(["amount", "percent", "multiple"]) }),
+  ),
+});
+
 export type FlaggedTransaction = z.infer<typeof flagged>;
 export type TransactionPage = z.infer<typeof page>;
 export type Hit = z.infer<typeof hit>;
@@ -150,6 +176,7 @@ export type DetailClient = TransactionDetail["client"];
 export type HistoryTransaction = z.infer<typeof historyTx>;
 export type HistoryPage = z.infer<typeof historyPage>;
 export type CaseEvent = z.infer<typeof caseEvent>;
+export type OpoRule = z.infer<typeof opoRule>;
 
 export class NotFoundError extends Error {}
 
@@ -186,13 +213,20 @@ export function fetchFlagged(
   return get(`/api/transactions?${qs}`, page, signal);
 }
 
-/** Pins the status of the transaction's alerts in the latest run, e.g. `ESCALATED`, and logs it with the reason. */
-export async function setStatus(id: string, status: string, reason: string): Promise<void> {
+/**
+ * Pins the status of the transaction's alerts in the latest run, e.g. `ESCALATED`, and logs it with the reason.
+ *
+ * @param postponed - only with `REPORTED`: the client's order is held under §20; the engine rejects it otherwise
+ */
+export async function setStatus(
+  id: string,
+  { status, reason, postponed }: { status: string; reason: string; postponed?: boolean },
+): Promise<void> {
   const url = `/api/transactions/${encodeURIComponent(id)}/status`;
   const res = await fetch(url, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...userHeaders() },
-    body: JSON.stringify({ status, reason }),
+    body: JSON.stringify({ status, reason, postponed }),
   });
   if (!res.ok) throw new Error(`Saving the status failed (HTTP ${res.status}).`);
 }
@@ -216,6 +250,11 @@ export function fetchHistory(
 ): Promise<HistoryPage> {
   const qs = new URLSearchParams({ direction: side, limit: String(limit) });
   return get(`/api/transactions/${encodeURIComponent(id)}/history?${qs}`, historyPage, signal);
+}
+
+/** Every rule version, retired ones too: a hit names the version that fired. */
+export function fetchOpoRules(signal?: AbortSignal): Promise<OpoRule[]> {
+  return get("/api/rules", z.array(opoRule), signal);
 }
 
 export function fetchDetail(id: string, signal?: AbortSignal): Promise<TransactionDetail> {

@@ -47,7 +47,7 @@ const copy = {
     button: "Report",
     action: "Reported",
     label: "Reason for reporting",
-    placeholder: "Why the transaction is reported as suspicious",
+    placeholder: "In Czech, it goes into the FAÚ report: what is suspicious and why",
     submit: "Report transaction",
     busy: "Reporting…",
   },
@@ -76,7 +76,7 @@ const logEntry = cva("flex flex-col gap-1 rounded-md border border-border px-3 p
 });
 
 /** The case's decision log, newest first; a step without an actor is the engine's own routing. */
-function DecisionLog({ log }: { log: CaseEvent[] }) {
+function DecisionLog({ log, onFauReport }: { log: CaseEvent[]; onFauReport?: () => void }) {
   if (log.length === 0) return null;
   return (
     <ol aria-label="Decision log" className="flex flex-col gap-1.5">
@@ -90,6 +90,18 @@ function DecisionLog({ log }: { log: CaseEvent[] }) {
             {e.actor ?? "Triage"} · {formatTs(e.at)}
           </span>
           {e.reason && <span className="text-[13px] text-pretty">{e.reason}</span>}
+          {e.postponed && (
+            <span className="text-xs font-semibold">Client's order postponed (§20)</span>
+          )}
+          {e.action === "REPORTED" && onFauReport && (
+            <button
+              type="button"
+              onClick={onFauReport}
+              className="mt-1 h-7 cursor-pointer self-start rounded-md border-0 bg-fg px-3 text-xs font-semibold text-bg hover:opacity-90"
+            >
+              FAÚ report (PDF)
+            </button>
+          )}
         </li>
       ))}
     </ol>
@@ -101,8 +113,10 @@ type DecisionPanelProps = {
   /** The case status the engine holds; an escalated case moves on to false positive or report. */
   saved: CaseStatus;
   role: Role;
-  /** Saves to the engine first; a rejection is shown in the panel and nothing is recorded. */
-  onDecide: (action: Decision["action"], reason: string) => Promise<void>;
+  /** Saves to the engine first; a rejection is shown in the panel and nothing is recorded. `postponed` comes with a report only. */
+  onDecide: (action: Decision["action"], reason: string, postponed?: boolean) => Promise<void>;
+  /** Opens the FAÚ report of a reported case. */
+  onFauReport: () => void;
 };
 
 /**
@@ -110,7 +124,7 @@ type DecisionPanelProps = {
  * a reviewer only sees that they wait. Every choice needs a reason. Below, the decision log: who routed, decided
  * or reassigned what and why.
  */
-export function DecisionPanel({ log, saved, role, onDecide }: DecisionPanelProps) {
+export function DecisionPanel({ log, saved, role, onDecide, onFauReport }: DecisionPanelProps) {
   const choices: Choice[] =
     saved === "Escalated" ? ["falsePositive", "report"] : ["falsePositive", "escalate"];
   const [choice, setChoice] = useState<Choice | null>(null);
@@ -120,6 +134,9 @@ export function DecisionPanel({ log, saved, role, onDecide }: DecisionPanelProps
     report: "",
   });
   const reason = choice ? reasons[choice].trim() : "";
+  // A report must say whether the client's order is held under §20; no default, the manager picks one.
+  const [postponed, setPostponed] = useState<boolean | null>(null);
+  const ready = reason !== "" && (choice !== "report" || postponed !== null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const save = (call: () => Promise<void>) => {
@@ -156,7 +173,7 @@ export function DecisionPanel({ log, saved, role, onDecide }: DecisionPanelProps
         <span className="text-[13px] text-fg-muted">
           Resolved as <b className="text-fg">{saved}</b>.
         </span>
-        <DecisionLog log={log} />
+        <DecisionLog log={log} onFauReport={onFauReport} />
       </Card>
     );
   }
@@ -191,10 +208,41 @@ export function DecisionPanel({ log, saved, role, onDecide }: DecisionPanelProps
               className="min-h-[76px] resize-y rounded border border-border bg-bg px-2.5 py-2 text-[13px] leading-[1.45] text-fg outline-none focus:border-purple focus:ring-2 focus:ring-purple/25"
             />
           </label>
+          {choice === "report" && (
+            <fieldset className="flex flex-col gap-1">
+              <legend className="mb-1 text-xs font-semibold">
+                Client's order (§20 AML Act){" "}
+                <span className="font-normal text-fg-subtle">required</span>
+              </legend>
+              {(
+                [
+                  [false, "Execute it"],
+                  [true, "Postpone: execute no earlier than 24 h after FAÚ receives the report"],
+                ] as const
+              ).map(([value, label]) => (
+                <label key={label} className="flex items-start gap-2 text-[13px]">
+                  <input
+                    type="radio"
+                    name="postponed"
+                    checked={postponed === value}
+                    onChange={() => setPostponed(value)}
+                    className="mt-0.5 accent-purple"
+                  />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+          )}
           <button
             type="button"
-            disabled={!reason || saving}
-            onClick={() => save(() => onDecide(copy[choice].action, reason))}
+            disabled={!ready || saving}
+            onClick={() =>
+              save(() =>
+                choice === "report"
+                  ? onDecide(copy[choice].action, reason, postponed ?? undefined)
+                  : onDecide(copy[choice].action, reason),
+              )
+            }
             className="flex h-8 cursor-pointer items-center justify-center gap-2 rounded-md border-0 bg-fg text-[13px] font-semibold text-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving && (
