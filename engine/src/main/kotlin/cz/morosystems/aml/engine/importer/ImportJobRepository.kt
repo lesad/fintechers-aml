@@ -4,11 +4,14 @@ import java.time.OffsetDateTime
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 
-/** One uploaded file and how far it got. `status` is null while it runs. */
+/** One uploaded file, or a rule approval's recalculation, and how far it got. `status` is null while it runs. */
 data class ImportJob(
     val id: Long,
-    val fileName: String,
-    val fileSize: Long,
+    /** Null for a recalculation, which has no file. */
+    val fileName: String?,
+    val fileSize: Long?,
+    /** The approved rule version that started a recalculation, e.g. "B2 v3"; null for an upload. */
+    val rule: String?,
     /** Name of the user who uploaded it. */
     val by: String?,
     val startedAt: OffsetDateTime,
@@ -30,6 +33,11 @@ class ImportJobRepository(private val jdbc: JdbcClient) {
     fun create(fileName: String, fileSize: Long, userId: Long): Long =
         jdbc.sql("insert into import_job (file_name, file_size, user_id, stage) values (?, ?, ?, 'VALIDATE') returning id")
             .params(fileName, fileSize, userId).query(Long::class.java).single()
+
+    /** A recalculation after [rule] was approved: no file, straight to the rule run. */
+    fun createRecalculation(rule: String, userId: Long): Long =
+        jdbc.sql("insert into import_job (rule, user_id, stage) values (?, ?, 'RUN') returning id")
+            .params(rule, userId).query(Long::class.java).single()
 
     fun stage(id: Long, stage: String, rowsTotal: Int? = null) {
         jdbc.sql("update import_job set stage = ?, rows_total = coalesce(?::int, rows_total) where id = ?").params(listOf(stage, rowsTotal, id)).update()
@@ -66,7 +74,8 @@ class ImportJobRepository(private val jdbc: JdbcClient) {
         return ImportJob(
             id = rs.getLong("id"),
             fileName = rs.getString("file_name"),
-            fileSize = rs.getLong("file_size"),
+            fileSize = rs.getObject("file_size") as Long?,
+            rule = rs.getString("rule"),
             by = rs.getString("by"),
             startedAt = rs.getObject("started_at", OffsetDateTime::class.java),
             finishedAt = rs.getObject("finished_at", OffsetDateTime::class.java),

@@ -32,4 +32,5 @@
     <include file="db/migrations/0026-compliance-roles.sql" />
     <include file="db/migrations/0027-rule-change-reason.sql" />
     <include file="db/migrations/0028-backtest-false-positives.sql" />
+    <include file="db/migrations/0029-import-job-rule.sql" />
 </databaseChangeLog>

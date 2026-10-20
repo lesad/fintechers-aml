@@ -1,6 +1,7 @@
 package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.cel.RuleCompileException
+import cz.morosystems.aml.engine.importer.ImportService
 import cz.morosystems.aml.engine.user.AppUser
 import cz.morosystems.aml.engine.user.UserRepository
 import java.time.LocalDate
@@ -25,7 +26,12 @@ class ExplanationUnavailableException : RuntimeException("the model gave no usab
 
 @RestController
 @RequestMapping("/api/rules")
-class RuleController(private val rules: RuleService, private val users: UserRepository, private val backtests: BacktestService) {
+class RuleController(
+    private val rules: RuleService,
+    private val users: UserRepository,
+    private val backtests: BacktestService,
+    private val imports: ImportService,
+) {
     /** Every rule version, by key, newest version first. */
     @GetMapping
     fun all(): List<RuleVersionJson> = rules.all().map { it.toJson() }
@@ -69,11 +75,16 @@ class RuleController(private val rules: RuleService, private val users: UserRepo
 
     /**
      * Activates a pending version for the compliance officer in `X-User-Id`; 403 for anyone else or for the version's
-     * author, 400 when it is not pending.
+     * author, 400 when it is not pending. The alerts are then recalculated with it in the background, a job in the
+     * import history named after the version.
      */
     @PostMapping("/{id}/approve")
-    fun approve(@PathVariable id: Long, @RequestHeader("X-User-Id", required = false) userId: Long?): RuleVersionJson =
-        (rules.approve(id, knownUser(userId)) ?: throw notFound(id)).toJson()
+    fun approve(@PathVariable id: Long, @RequestHeader("X-User-Id", required = false) userId: Long?): RuleVersionJson {
+        val user = knownUser(userId)
+        val approved = rules.approve(id, user) ?: throw notFound(id)
+        imports.recalculate("${approved.rule.key} v${approved.rule.version}", user.id)
+        return approved.toJson()
+    }
 
     /** Sends a pending version back to draft for the compliance officer in `X-User-Id`; 403 for anyone else, 400 when it is not pending. */
     @PostMapping("/{id}/reject")

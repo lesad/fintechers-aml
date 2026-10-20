@@ -58,15 +58,38 @@ class ImportService(
             jobs.stage(id, "IMPORT", rowsTotal = rows.size)
             val loaded = upload.load(rows) { jobs.progress(id, it) }
             jobs.stage(id, "RUN")
-            val previous = jdbc.sql("select max(id) from run where finished_at is not null").query(Long::class.java).optional().orElse(null)
-            val runId = runs.run().runId
-            jobs.finish(id, loaded.rejected, carryOver(previous, runId), loaded.note)
+            jobs.finish(id, loaded.rejected, rerun(), loaded.note)
         } catch (e: Exception) {
             log.warn("import {} failed", id, e)
             jobs.fail(id, e.message ?: e.javaClass.simpleName)
         } finally {
             Files.deleteIfExists(file)
         }
+    }
+
+    /**
+     * Recalculates the alerts with the rules active now, after [rule] was approved: a new run replaces the queue's
+     * alerts and keeps every decided case, as an import does. It waits for an import or recalculation already
+     * running; returns the job at once.
+     */
+    @Synchronized
+    fun recalculate(rule: String, userId: Long): ImportJob {
+        val id = jobs.createRecalculation(rule, userId)
+        worker.submit {
+            try {
+                jobs.finish(id, 0, rerun(), null)
+            } catch (e: Exception) {
+                log.warn("recalculation {} failed", id, e)
+                jobs.fail(id, e.message ?: e.javaClass.simpleName)
+            }
+        }
+        return jobs.find(id)!!
+    }
+
+    /** Runs the active rules into a new run and carries the decided cases over; returns how many alerts are new. */
+    private fun rerun(): Int {
+        val previous = jdbc.sql("select max(id) from run where finished_at is not null").query(Long::class.java).optional().orElse(null)
+        return carryOver(previous, runs.run().runId)
     }
 
     /** Copies people's statuses from [previous] onto the alerts [runId] raised again; returns how many alerts are new. */

@@ -114,7 +114,8 @@ class TransactionRepository(private val jdbc: JdbcClient) {
                    q.alert_types, q.rules, q.rule_names, q.flagged_at, q.rating, q.disposition, q.score, q.status
             from queue q join transaction t on t.id = q.id
             $filter
-            order by q.status = 'REPORTED', q.sev desc, q.score desc, q.id
+            -- New first, then escalated; the closed ones (false positive, reported) last; the most severe first within each.
+            order by array_position(array['NEW','ESCALATED','FALSE_POSITIVE','REPORTED'], q.status), q.sev desc, q.score desc, q.id
             limit :limit offset :offset
             """,
         ).params(params + mapOf("limit" to size, "offset" to page.toLong() * size)).query { rs, _ ->

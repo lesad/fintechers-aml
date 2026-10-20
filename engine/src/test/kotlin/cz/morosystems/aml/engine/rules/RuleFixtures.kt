@@ -6,6 +6,9 @@ import org.springframework.jdbc.core.simple.JdbcClient
 /** Back to the seeded rules: drops every draft and clears explanations, since all Postgres tests share one database. */
 fun JdbcClient.resetRules() {
     val added = "select id from rule where status in ('draft', 'pending') or approved_at is not null"
+    // An approval recalculates the alerts, so a run may hold hits of a version about to go; the runs go first.
+    val ranAdded = sql("select exists (select 1 from rule_hit where rule_id in ($added))").query(Boolean::class.java).single()
+    if (ranAdded) sql("truncate run cascade").update()
     sql("delete from rule_variable where rule_id in ($added)").update()
     sql("delete from rule_param where rule_id in ($added)").update()
     sql("delete from rule where id in ($added)").update()

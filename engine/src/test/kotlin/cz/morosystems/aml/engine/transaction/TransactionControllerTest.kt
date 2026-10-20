@@ -293,6 +293,9 @@ class TransactionControllerTest {
         jdbc.sql("update alert set status = 'REPORTED' where transaction_id = 'T1'").update()
         assertThat(mvc.get().uri("/api/transactions?status=ESCALATED&status=REPORTED")).hasStatusOk()
             .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T3", "T1", "T2")
+        // The whole queue by status: new (T4), escalated (T3), then reported.
+        assertThat(mvc.get().uri("/api/transactions")).hasStatusOk()
+            .bodyJson().extractingPath("$.items[*].id").asArray().containsExactly("T4", "T3", "T1", "T2")
     }
 
     @Test

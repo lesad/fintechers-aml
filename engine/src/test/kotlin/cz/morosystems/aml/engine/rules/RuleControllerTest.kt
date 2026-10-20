@@ -310,6 +310,15 @@ class RuleControllerTest {
 
     private fun count(table: String) = jdbc.sql("select count(*) from $table").query(Long::class.java).single()
 
+    /** Waits for the latest recalculation of [rule], which runs in the background, to end; returns its stage. */
+    private fun awaitRecalculation(rule: String): String {
+        val stage = {
+            jdbc.sql("select stage from import_job where rule = ? order by id desc limit 1").param(rule).query(String::class.java).single()
+        }
+        repeat(300) { stage().takeIf { it == "DONE" || it == "FAILED" }?.let { return it } ?: Thread.sleep(100) }
+        error("recalculation of $rule still running")
+    }
+
     /** Waits for the draft's backtest, which runs in the background, to leave RUNNING. */
     private fun awaitBacktest(draft: Any) {
         val status = { jdbc.sql("select status from backtest where rule_id = ?").param(draft.toString().toLong()).query(String::class.java).single() }
@@ -438,6 +447,8 @@ class RuleControllerTest {
         approved.extractingPath("$.approver").isEqualTo("M. Svobodová")
         approved.extractingPath("$.assignee").isNull()
         assertThat(mvc.get().uri("/api/rules/${idOf("B2", 1)}")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("retired")
+        // The approval recalculates the alerts in the background, a job named after the version.
+        assertThat(awaitRecalculation("B2 v2")).isEqualTo("DONE")
     }
 
     @Test
@@ -465,6 +476,7 @@ class RuleControllerTest {
             .bodyJson().extractingPath("$.detail").asString().contains("wrote this version")
         assertThat(action(id, "approve", user = userId("COMPLIANCE_MANAGER"))).hasStatusOk().bodyJson()
             .extractingPath("$.approver").isEqualTo("P. Dvořák")
+        awaitRecalculation("B2 v2")
     }
 
     @Test
