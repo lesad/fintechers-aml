@@ -46,7 +46,11 @@ data class RuleDefinition(
     val params: Map<String, Param> = emptyMap(),
 )
 
-/** A stored rule version with its lifecycle and explanation; [status] is `draft`, `approved`, `active` or `retired`. */
+/**
+ * A stored rule version with its lifecycle and explanation; [status] is `draft`, `pending`, `approved`, `active` or `retired`.
+ *
+ * @property assignee the manager a `pending` version waits for, by name
+ */
 data class RuleVersion(
     val rule: RuleDefinition,
     val name: String?,
@@ -55,6 +59,9 @@ data class RuleVersion(
     val createdAt: OffsetDateTime,
     val explanation: String?,
     val explanationModel: String?,
+    val assignee: String? = null,
+    val approver: String? = null,
+    val approvedAt: OffsetDateTime? = null,
 )
 
 data class NewRule(

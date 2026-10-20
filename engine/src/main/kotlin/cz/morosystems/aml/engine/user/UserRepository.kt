@@ -12,6 +12,8 @@ class UserRepository(private val jdbc: JdbcClient) {
         jdbc.sql("select id, name, role from app_user order by id")
             .query { rs, _ -> AppUser(rs.getLong("id"), rs.getString("name"), rs.getString("role")) }.list()
 
+    fun find(id: Long): AppUser? = all().firstOrNull { it.id == id }
+
     fun exists(id: Long): Boolean =
         jdbc.sql("select exists (select 1 from app_user where id = ?)").param(id).query(Boolean::class.java).single()
 }

@@ -78,6 +78,38 @@ class RuleRepository(private val jdbc: JdbcClient) {
         return true
     }
 
+    /** Moves the draft [id] to `pending`, assigned to the first manager; false when [id] is no draft. */
+    fun submit(id: Long): Boolean =
+        jdbc.sql(
+            """
+            update rule set status = 'pending', assignee_id = (select min(id) from app_user where role = 'MANAGER')
+            where id = ? and status = 'draft'
+            """,
+        ).param(id).update() > 0
+
+    /** Sends the pending version [id] back to `draft` with no assignee; false when [id] is not pending. */
+    fun reject(id: Long): Boolean =
+        jdbc.sql("update rule set status = 'draft', assignee_id = null where id = ? and status = 'pending'").param(id).update() > 0
+
+    /**
+     * Activates the pending version [id] on behalf of [approver] and retires the active version of its key.
+     *
+     * @return false when [id] is not pending
+     */
+    @Transactional
+    fun approve(id: Long, approver: String): Boolean {
+        // WARN: retire before activating; the unique index on active keys rejects the reverse order.
+        jdbc.sql(
+            "update rule set status = 'retired' where status = 'active' and key = (select key from rule where id = ? and status = 'pending')",
+        ).param(id).update()
+        return jdbc.sql(
+            """
+            update rule set status = 'active', assignee_id = null, approver = ?, approved_at = now()
+            where id = ? and status = 'pending'
+            """,
+        ).params(approver, id).update() > 0
+    }
+
     private fun insertParts(id: Long, rule: NewRule) {
         rule.variables.forEach { v ->
             val (kind, from, to) = when (val w = v.window) {
@@ -126,8 +158,9 @@ class RuleRepository(private val jdbc: JdbcClient) {
         return jdbc.sql(
             """
             select r.id, r.key, r.version, r.alert_type, r.layer, r.scope_segment_id, r.scope_client_id, r.grain, r.anchor,
-                   r.condition, r.replaces_key, r.name, r.status, r.author, r.created_at, r.explanation, r.explanation_model
-            from rule r where $where order by r.key, r.version desc
+                   r.condition, r.replaces_key, r.name, r.status, r.author, r.created_at, r.explanation, r.explanation_model,
+                   u.name as assignee, r.approver, r.approved_at
+            from rule r left join app_user u on u.id = r.assignee_id where $where order by r.key, r.version desc
             """,
         ).params(*args).query { rs, _ ->
             val id = rs.getLong("id")
@@ -153,6 +186,9 @@ class RuleRepository(private val jdbc: JdbcClient) {
                 createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
                 explanation = rs.getString("explanation"),
                 explanationModel = rs.getString("explanation_model"),
+                assignee = rs.getString("assignee"),
+                approver = rs.getString("approver"),
+                approvedAt = rs.getObject("approved_at", OffsetDateTime::class.java),
             )
         }.list()
     }

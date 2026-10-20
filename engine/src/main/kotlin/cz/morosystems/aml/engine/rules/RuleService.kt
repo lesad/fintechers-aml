@@ -1,13 +1,16 @@
 package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.cel.RuleCompiler
+import cz.morosystems.aml.engine.user.AppUser
 import org.springframework.stereotype.Service
 
 class InvalidRuleException(message: String) : RuntimeException(message)
 
+class NotAManagerException(action: String) : RuntimeException("only a manager can $action a rule")
+
 data class ExplainReport(val filled: Int, val failed: Int)
 
-/** Saves rule versions as drafts and gives each one its explanation. */
+/** Saves rule versions as drafts, gives each one its explanation, and takes a draft through a manager's approval. */
 @Service
 class RuleService(
     private val rules: RuleRepository,
@@ -47,6 +50,44 @@ class RuleService(
         if (!rules.updateDraft(id, rule)) throw InvalidRuleException("${existing.rule.key} v${existing.rule.version} is no longer a draft")
         explain(rules.find(id)!!.rule)
         return rules.find(id)!!
+    }
+
+    /**
+     * Sends the draft [id] for approval: it turns `pending`, assigned to a manager, and can no longer be edited.
+     *
+     * @return null when there is no version [id]
+     * @throws InvalidRuleException when [id] is not a draft
+     */
+    fun submit(id: Long): RuleVersion? = transition(id, "draft", "sent for approval", rules::submit)
+
+    /**
+     * Activates the pending version [id] and retires the version of its key that was active.
+     *
+     * @return null when there is no version [id]
+     * @throws NotAManagerException when [user] is no manager
+     * @throws InvalidRuleException when [id] is not pending
+     */
+    fun approve(id: Long, user: AppUser): RuleVersion? {
+        if (user.role != "MANAGER") throw NotAManagerException("approve")
+        return transition(id, "pending", "approved") { rules.approve(it, user.name) }
+    }
+
+    /**
+     * Sends the pending version [id] back to `draft`, so anyone can edit and send it again.
+     *
+     * @return null when there is no version [id]
+     * @throws NotAManagerException when [user] is no manager
+     * @throws InvalidRuleException when [id] is not pending
+     */
+    fun reject(id: Long, user: AppUser): RuleVersion? {
+        if (user.role != "MANAGER") throw NotAManagerException("reject")
+        return transition(id, "pending", "rejected", rules::reject)
+    }
+
+    private fun transition(id: Long, from: String, verb: String, change: (Long) -> Boolean): RuleVersion? {
+        val existing = rules.find(id) ?: return null
+        if (!change(id)) throw InvalidRuleException("only a $from version can be $verb; ${existing.rule.key} v${existing.rule.version} is ${existing.status}")
+        return rules.find(id)
     }
 
     /**

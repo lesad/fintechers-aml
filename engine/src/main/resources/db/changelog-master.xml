@@ -25,4 +25,5 @@
     <include file="db/migrations/0019-assignee-and-case-log.sql" />
     <include file="db/migrations/0020-ai-result.sql" />
     <include file="db/migrations/0021-import-job.sql" />
+    <include file="db/migrations/0022-rule-approval.sql" />
 </databaseChangeLog>

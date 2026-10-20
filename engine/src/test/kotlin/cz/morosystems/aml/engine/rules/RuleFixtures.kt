@@ -5,9 +5,11 @@ import org.springframework.jdbc.core.simple.JdbcClient
 
 /** Back to the seeded rules: drops every draft and clears explanations, since all Postgres tests share one database. */
 fun JdbcClient.resetRules() {
-    sql("delete from rule_variable where rule_id in (select id from rule where status = 'draft')").update()
-    sql("delete from rule_param where rule_id in (select id from rule where status = 'draft')").update()
-    sql("delete from rule where status = 'draft'").update()
+    val added = "select id from rule where status in ('draft', 'pending') or approved_at is not null"
+    sql("delete from rule_variable where rule_id in ($added)").update()
+    sql("delete from rule_param where rule_id in ($added)").update()
+    sql("delete from rule where id in ($added)").update()
+    sql("update rule set status = 'active' where status = 'retired' and not (key = 'C1' and version = 1)").update()
     sql("update rule set explanation = null, explanation_model = null, explanation_prompt_hash = null").update()
 }
 

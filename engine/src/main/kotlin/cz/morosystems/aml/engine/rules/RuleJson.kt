@@ -51,6 +51,9 @@ data class RuleVersionJson(
     val createdAt: OffsetDateTime,
     val explanation: String?,
     val explanationModel: String?,
+    val assignee: String?,
+    val approver: String?,
+    val approvedAt: OffsetDateTime?,
 )
 
 fun RuleVersion.toJson() = RuleVersionJson(
@@ -79,6 +82,9 @@ fun RuleVersion.toJson() = RuleVersionJson(
     createdAt = createdAt,
     explanation = explanation,
     explanationModel = explanationModel,
+    assignee = assignee,
+    approver = approver,
+    approvedAt = approvedAt,
 )
 
 /** @throws InvalidRuleException for an unknown enum value or an unparseable window */

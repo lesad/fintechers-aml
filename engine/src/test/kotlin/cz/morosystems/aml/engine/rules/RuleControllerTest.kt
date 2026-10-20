@@ -218,6 +218,80 @@ class RuleControllerTest {
             .bodyJson().extractingPath("$.detail").asString().contains("try again")
     }
 
+    @Test
+    fun sendingADraftForApprovalAssignsItToTheManager() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        val sent = assertThat(action(idOf("B2", 2), "submit")).hasStatusOk().bodyJson()
+        sent.extractingPath("$.status").isEqualTo("pending")
+        sent.extractingPath("$.assignee").isEqualTo("M. Svobodová")
+    }
+
+    @Test
+    fun aPendingVersionCannotBeEdited() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
+        assertThat(put(idOf("B2", 2), b2Body())).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun sendingAVersionThatIsNoDraftIs400() {
+        assertThat(action(idOf("B2", 1), "submit")).hasStatus(HttpStatus.BAD_REQUEST)
+            .bodyJson().extractingPath("$.detail").asString().contains("only a draft")
+    }
+
+    @Test
+    fun theManagerApprovesAndTheEarlierVersionRetires() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
+        val approved = assertThat(action(idOf("B2", 2), "approve", user = userId("MANAGER"))).hasStatusOk().bodyJson()
+        approved.extractingPath("$.status").isEqualTo("active")
+        approved.extractingPath("$.approver").isEqualTo("M. Svobodová")
+        approved.extractingPath("$.assignee").isNull()
+        assertThat(mvc.get().uri("/api/rules/${idOf("B2", 1)}")).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("retired")
+    }
+
+    @Test
+    fun aReviewerCannotApprove() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
+        assertThat(action(idOf("B2", 2), "approve", user = userId("REVIEWER"))).hasStatus(HttpStatus.FORBIDDEN)
+        assertThat(action(idOf("B2", 2), "reject", user = userId("REVIEWER"))).hasStatus(HttpStatus.FORBIDDEN)
+    }
+
+    @Test
+    fun approvingADraftThatWasNotSentIs400() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "approve", user = userId("MANAGER"))).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun approvingWithoutAUserIs400() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
+        assertThat(action(idOf("B2", 2), "approve")).hasStatus(HttpStatus.BAD_REQUEST)
+    }
+
+    @Test
+    fun aRejectedVersionIsADraftAgain() {
+        assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED)
+        assertThat(action(idOf("B2", 2), "submit")).hasStatusOk()
+        val rejected = assertThat(action(idOf("B2", 2), "reject", user = userId("MANAGER"))).hasStatusOk().bodyJson()
+        rejected.extractingPath("$.status").isEqualTo("draft")
+        rejected.extractingPath("$.assignee").isNull()
+        assertThat(put(idOf("B2", 2), b2Body(pepMin = 70_000.0))).hasStatusOk()
+    }
+
+    @Test
+    fun sendingAnUnknownVersionIs404() {
+        assertThat(action("999999", "submit")).hasStatus(HttpStatus.NOT_FOUND)
+    }
+
+    private fun userId(role: String) =
+        jdbc.sql("select min(id) from app_user where role = ?").param(role).query(Long::class.java).single()
+
+    private fun action(id: String, name: String, user: Long? = null) =
+        mvc.post().uri("/api/rules/$id/$name").apply { if (user != null) header("X-User-Id", user.toString()) }
+
     private fun explain(body: String) =
         mvc.post().uri("/api/rules/explanation").contentType(MediaType.APPLICATION_JSON).content(body)
 

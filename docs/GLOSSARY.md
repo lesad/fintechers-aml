@@ -12,7 +12,7 @@ One meaning per term, for people and agents. The detection terms are the engine'
 | 4 Assist  | AI                     | `llm_context`, alerts, outcomes          | summary, rule proposals                          |
 | 5 Tune    | a person approves      | a rule proposal and its checks           | a new rule version; backtest against the old one |
 
-AI never takes part in stages 1 to 3. Stages 4 and 5 are designed; the engine's checks, approval and backtest are not built yet.
+AI never takes part in stages 1 to 3. Stages 4 and 5 are designed; approval is built (ADR-0044), while the engine's checks and backtest are not built yet.
 
 ## Detection (engine)
 
@@ -28,7 +28,7 @@ AI never takes part in stages 1 to 3. Stages 4 and 5 are designed; the engine's 
 | parameter           | A named numeric threshold of a rule, `p.<name>`, fixed by the rule version. Money is in CZK, ratios in whole percent.                                              | constant, setting                           |
 | layer               | Where a rule or parameter applies: company, segment, client. A more specific layer may add, replace or suppress a company rule.                                                                         | regulatory layer (dropped, ADR-0027)        |
 | segment             | A named group of clients defined by a CEL predicate over `client`.                                                                                                                                         | peer group (that is the data run's term)    |
-| rule version        | An immutable version of a rule, with status `draft`, `approved`, `active` or `retired`. At most one active version per key and scope.                                                                   |                                             |
+| rule version        | An immutable version of a rule, with status `draft`, `pending`, `approved`, `active` or `retired`. At most one active version per key and scope.                                                                   |                                             |
 | check               | What runs on a new rule version before approval: type-check, satisfiable, not always true, change summary, segment overlap.                                                                             |                                             |
 | change summary      | The verifier's informative output for a change: what it now also catches and no longer catches. It never blocks approval.                                                                             | diff (for this)                             |
 | approval            | A named person activates a rule version that passed its checks.                                                                                                                                           |                                             |

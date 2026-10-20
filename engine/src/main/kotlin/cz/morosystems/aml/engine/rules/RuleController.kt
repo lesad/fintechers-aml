@@ -1,6 +1,8 @@
 package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.cel.RuleCompileException
+import cz.morosystems.aml.engine.user.AppUser
+import cz.morosystems.aml.engine.user.UserRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
@@ -19,7 +22,7 @@ class ExplanationUnavailableException : RuntimeException("the model gave no usab
 
 @RestController
 @RequestMapping("/api/rules")
-class RuleController(private val rules: RuleService) {
+class RuleController(private val rules: RuleService, private val users: UserRepository) {
     /** Every rule version, by key, newest version first. */
     @GetMapping
     fun all(): List<RuleVersionJson> = rules.all().map { it.toJson() }
@@ -38,6 +41,25 @@ class RuleController(private val rules: RuleService) {
     fun update(@PathVariable id: Long, @RequestBody body: RuleBody): RuleVersionJson =
         rules.update(id, body.toNewRule())?.toJson() ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "rule version $id not found")
 
+    /** Sends a draft for approval to a manager; 400 when the version is not a draft. */
+    @PostMapping("/{id}/submit")
+    fun submit(@PathVariable id: Long): RuleVersionJson = (rules.submit(id) ?: throw notFound(id)).toJson()
+
+    /** Activates a pending version for the manager in `X-User-Id`; 403 for anyone else, 400 when it is not pending. */
+    @PostMapping("/{id}/approve")
+    fun approve(@PathVariable id: Long, @RequestHeader("X-User-Id", required = false) userId: Long?): RuleVersionJson =
+        (rules.approve(id, knownUser(userId)) ?: throw notFound(id)).toJson()
+
+    /** Sends a pending version back to draft for the manager in `X-User-Id`; 403 for anyone else, 400 when it is not pending. */
+    @PostMapping("/{id}/reject")
+    fun reject(@PathVariable id: Long, @RequestHeader("X-User-Id", required = false) userId: Long?): RuleVersionJson =
+        (rules.reject(id, knownUser(userId)) ?: throw notFound(id)).toJson()
+
+    private fun knownUser(userId: Long?): AppUser =
+        userId?.let(users::find) ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "X-User-Id names no known user")
+
+    private fun notFound(id: Long) = ResponseStatusException(HttpStatus.NOT_FOUND, "rule version $id not found")
+
     /** Explains a rule as it would be saved, without saving it; 400 like a save, 502 when the model gives no usable answer. */
     @PostMapping("/explanation")
     fun explain(@RequestBody body: RuleBody): ExplanationJson {
@@ -51,6 +73,9 @@ class RuleController(private val rules: RuleService) {
 
     @ExceptionHandler(InvalidRuleException::class, RuleCompileException::class)
     fun badRequest(e: RuntimeException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.message)
+
+    @ExceptionHandler(NotAManagerException::class)
+    fun forbidden(e: NotAManagerException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, e.message)
 
     @ExceptionHandler(DuplicateKeyException::class)
     fun conflict(e: DuplicateKeyException): ProblemDetail =
