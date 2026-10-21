@@ -1,8 +1,8 @@
 package cz.morosystems.aml.engine.assessment
 
 import cz.morosystems.aml.engine.PostgresTest
-import cz.morosystems.aml.engine.summary.FakeBedrock
-import cz.morosystems.aml.engine.summary.FakeBedrockConfig
+import cz.morosystems.aml.engine.summary.FakeAiModel
+import cz.morosystems.aml.engine.summary.FakeAiModelConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -17,7 +17,7 @@ import software.amazon.awssdk.core.exception.SdkClientException
 
 @PostgresTest
 @AutoConfigureMockMvc
-@Import(FakeBedrockConfig::class)
+@Import(FakeAiModelConfig::class)
 class AssessmentControllerTest {
     @Autowired
     lateinit var mvc: MockMvcTester
@@ -26,7 +26,7 @@ class AssessmentControllerTest {
     lateinit var jdbc: JdbcClient
 
     @Autowired
-    lateinit var bedrock: FakeBedrock
+    lateinit var bedrock: FakeAiModel
 
     private var alertId = 0L
 

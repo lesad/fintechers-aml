@@ -1,7 +1,7 @@
 package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.PostgresTest
-import cz.morosystems.aml.engine.bedrock.BedrockException
+import cz.morosystems.aml.engine.ai.AiModelException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.simple.JdbcClient
 
 @PostgresTest
-@Import(FakeTextBedrockConfig::class)
+@Import(FakeTextAiModelConfig::class)
 class RuleServiceTest {
     @Autowired
     lateinit var service: RuleService
@@ -22,7 +22,7 @@ class RuleServiceTest {
     lateinit var jdbc: JdbcClient
 
     @Autowired
-    lateinit var bedrock: FakeTextBedrock
+    lateinit var bedrock: FakeTextAiModel
 
     @BeforeEach
     fun seededOnly() {
@@ -44,7 +44,7 @@ class RuleServiceTest {
 
     @Test
     fun countsFailures() {
-        bedrock.failure = BedrockException("The SSO session has expired")
+        bedrock.failure = AiModelException("The SSO session has expired")
         assertThat(service.explainMissing()).isEqualTo(ExplainReport(filled = 0, failed = 7))
         assertThat(repository.allVersions().map { it.explanation }).containsOnlyNulls()
     }

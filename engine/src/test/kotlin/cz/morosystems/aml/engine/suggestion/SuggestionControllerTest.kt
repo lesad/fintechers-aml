@@ -1,8 +1,8 @@
 package cz.morosystems.aml.engine.suggestion
 
 import cz.morosystems.aml.engine.PostgresTest
-import cz.morosystems.aml.engine.summary.FakeBedrock
-import cz.morosystems.aml.engine.summary.FakeBedrockConfig
+import cz.morosystems.aml.engine.summary.FakeAiModel
+import cz.morosystems.aml.engine.summary.FakeAiModelConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,7 +16,7 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester
 
 @PostgresTest
 @AutoConfigureMockMvc
-@Import(FakeBedrockConfig::class)
+@Import(FakeAiModelConfig::class)
 class SuggestionControllerTest {
     @Autowired
     lateinit var mvc: MockMvcTester
@@ -25,7 +25,7 @@ class SuggestionControllerTest {
     lateinit var jdbc: JdbcClient
 
     @Autowired
-    lateinit var bedrock: FakeBedrock
+    lateinit var bedrock: FakeAiModel
 
     private var alertId = 0L
 

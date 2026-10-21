@@ -1,5 +1,6 @@
 package cz.morosystems.aml.engine.bedrock
 
+import cz.morosystems.aml.engine.ai.AiModelException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -26,6 +27,6 @@ class BedrockTest {
 
     @Test
     fun failsWithoutATextBlock() {
-        assertThatThrownBy { answerText(reply(reasoning)) }.isInstanceOf(BedrockException::class.java)
+        assertThatThrownBy { answerText(reply(reasoning)) }.isInstanceOf(AiModelException::class.java)
     }
 }

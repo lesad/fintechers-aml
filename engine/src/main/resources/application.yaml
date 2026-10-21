@@ -14,5 +14,7 @@ spring:
     change-log: classpath:/db/changelog-master.xml
 bedrock:
   model-id: ${BEDROCK_MODEL_ID:eu.anthropic.claude-sonnet-4-5-20250929-v1:0}
+local-claude:
+  model-id: ${LOCAL_CLAUDE_MODEL_ID:sonnet}
 rules:
-  explanation-model-id: ${RULES_EXPLANATION_MODEL_ID:eu.anthropic.claude-opus-4-5-20251101-v1:0}
+  explanation-model-id: ${RULES_EXPLANATION_MODEL_ID:sonnet}

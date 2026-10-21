@@ -1,6 +1,6 @@
 package cz.morosystems.aml.engine.rules
 
-import cz.morosystems.aml.engine.bedrock.Bedrock
+import cz.morosystems.aml.engine.ai.AiModel
 import cz.morosystems.aml.engine.plain
 import cz.morosystems.aml.engine.summary.numbersNotIn
 import java.security.MessageDigest
@@ -17,17 +17,17 @@ data class Explanation(val text: String, val modelId: String, val promptHash: St
 
 /** Writes the one-line plain-English explanation of a rule version; the model only writes text, code checks it. */
 @Component
-class RuleExplainer(private val bedrock: Bedrock, private val properties: RulesProperties) {
+class RuleExplainer(private val model: AiModel, private val properties: RulesProperties) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val system = ClassPathResource("prompts/rule-explanation.md").getContentAsString(Charsets.UTF_8)
 
-    /** Null when Bedrock fails or the reply does not pass the checks; never throws, so a save never depends on the model. */
+    /** Null when the model fails or the reply does not pass the checks; never throws, so a save never depends on the model. */
     fun explain(rule: RuleDefinition, segmentName: String? = null): Explanation? {
         val prompt = explanationPrompt(rule, segmentName)
         val text = try {
-            bedrock.ask(system, prompt, properties.explanationModelId).trim()
+            model.ask(system, prompt, properties.explanationModelId).trim()
         } catch (e: Exception) {
-            log.warn("rule {} v{}: no explanation, Bedrock failed: {}", rule.key, rule.version, e.message)
+            log.warn("rule {} v{}: no explanation, the model failed: {}", rule.key, rule.version, e.message)
             return null
         }
         val problem = problemWith(text, prompt)

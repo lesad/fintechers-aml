@@ -1,6 +1,6 @@
 package cz.morosystems.aml.engine.summary
 
-import cz.morosystems.aml.engine.bedrock.BedrockException
+import cz.morosystems.aml.engine.ai.AiModelException
 import cz.morosystems.aml.engine.suggestion.InvalidSuggestionException
 import cz.morosystems.aml.engine.suggestion.Suggestion
 import cz.morosystems.aml.engine.suggestion.SuggestionRequest
@@ -31,7 +31,7 @@ class SummaryController(private val suggestions: SuggestionService) {
     @ExceptionHandler(AlertNotFoundException::class)
     fun notFound(e: AlertNotFoundException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.message)
 
-    @ExceptionHandler(InvalidSummaryException::class, InvalidSuggestionException::class, BedrockException::class)
+    @ExceptionHandler(InvalidSummaryException::class, InvalidSuggestionException::class, AiModelException::class)
     fun badGateway(e: RuntimeException): ProblemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, e.message)
 }
 

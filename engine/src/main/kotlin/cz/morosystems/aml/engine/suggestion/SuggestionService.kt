@@ -2,7 +2,7 @@ package cz.morosystems.aml.engine.suggestion
 
 import cz.morosystems.aml.engine.EngineProperties
 import cz.morosystems.aml.engine.ai.sha256
-import cz.morosystems.aml.engine.bedrock.Bedrock
+import cz.morosystems.aml.engine.ai.AiModel
 import cz.morosystems.aml.engine.cel.Vocabulary
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
@@ -19,7 +19,7 @@ class SuggestionService(
     private val repository: SuggestionRepository,
     private val checker: SuggestionChecker,
     private val impact: SuggestionImpact,
-    private val bedrock: Bedrock,
+    private val model: AiModel,
     private val props: EngineProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -37,7 +37,7 @@ class SuggestionService(
     private fun suggest(alertId: Long, reason: String, system: String, promptHash: String): Suggestion {
         val context = repository.context(alertId, reason.trim())
         val input = json.writeValueAsString(inputOf(context))
-        val reply = bedrock.askJson(system, input, "rule_suggestion", SCHEMA)
+        val reply = model.askJson(system, input, "rule_suggestion", SCHEMA)
         val parsed = try {
             json.readValue(reply, Map::class.java)
         } catch (e: JacksonException) {

@@ -38,7 +38,7 @@ class RuleService(
     /**
      * Validates [rule], stores it as the next draft version of its key, then asks for its explanation.
      *
-     * The draft is committed before the model is called, so a Bedrock failure leaves it saved with no explanation.
+     * The draft is committed before the model is called, so a model failure leaves it saved with no explanation.
      *
      * @throws InvalidRuleException when the rule has no change reason, is incomplete or changes what an earlier version
      * of its key fixed

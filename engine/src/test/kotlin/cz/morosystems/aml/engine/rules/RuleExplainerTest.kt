@@ -1,14 +1,14 @@
 package cz.morosystems.aml.engine.rules
 
-import cz.morosystems.aml.engine.bedrock.Bedrock
-import cz.morosystems.aml.engine.bedrock.BedrockException
-import cz.morosystems.aml.engine.bedrock.BedrockProperties
+import cz.morosystems.aml.engine.ai.AiModel
+import cz.morosystems.aml.engine.ai.AiModelException
 import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-/** Stands in for Bedrock's plain-text call: returns [reply] (or throws [failure]) and remembers what it was asked. */
-class FakeTextBedrock : Bedrock(BedrockProperties(modelId = "fake-model")) {
+/** Stands in for the model's plain-text call: returns [reply] (or throws [failure]) and remembers what it was asked. */
+class FakeTextAiModel : AiModel {
+    override val modelId = "fake-model"
     var reply = ""
     var failure: Exception? = null
     var prompt = ""
@@ -22,10 +22,12 @@ class FakeTextBedrock : Bedrock(BedrockProperties(modelId = "fake-model")) {
         failure?.let { throw it }
         return reply
     }
+
+    override fun askJson(system: String, prompt: String, schemaName: String, schema: String) = throw UnsupportedOperationException()
 }
 
 class RuleExplainerTest {
-    private val bedrock = FakeTextBedrock()
+    private val bedrock = FakeTextAiModel()
     private val explainer = RuleExplainer(bedrock, RulesProperties(explanationModelId = OPUS))
 
     private val b2 = RuleDefinition(
@@ -117,11 +119,11 @@ class RuleExplainerTest {
 
     @Test
     fun aBedrockFailureIsNull() {
-        bedrock.failure = BedrockException("The SSO session has expired")
+        bedrock.failure = AiModelException("The SSO session has expired")
         assertThat(explainer.explain(b2)).isNull()
     }
 
     private companion object {
-        const val OPUS = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
+        const val OPUS = "sonnet"
     }
 }

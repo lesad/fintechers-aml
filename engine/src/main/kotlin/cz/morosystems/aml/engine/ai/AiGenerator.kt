@@ -1,8 +1,6 @@
 package cz.morosystems.aml.engine.ai
 
 import cz.morosystems.aml.engine.alert.AlertRepository
-import cz.morosystems.aml.engine.bedrock.Bedrock
-import cz.morosystems.aml.engine.bedrock.BedrockException
 import cz.morosystems.aml.engine.summary.AlertActivity
 import cz.morosystems.aml.engine.summary.AlertNotFoundException
 import cz.morosystems.aml.engine.summary.InvalidSummaryException
@@ -12,7 +10,7 @@ import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
 
 /**
- * The one call path for model output on an alert (ADR-0043): collect the activity (plus the code-computed facts when the kind asks for them), ask Bedrock through the kind's fixed
+ * The one call path for model output on an alert (ADR-0043): collect the activity (plus the code-computed facts when the kind asks for them), ask the model through the kind's fixed
  * schema, parse, walk the claims, store and return the envelope. A refused reply is stored as `rejected`, a model or
  * transport error as `failed`; neither is repaired or retried here.
  */
@@ -21,7 +19,7 @@ class AiGenerator(
     private val alerts: AlertRepository,
     private val activity: AlertActivity,
     private val facts: AlertFacts,
-    private val bedrock: Bedrock,
+    private val model: AiModel,
     private val results: AiResultRepository,
 ) {
     private val json = JsonMapper()
@@ -37,11 +35,11 @@ class AiGenerator(
         val system = kind.system(disposition)
         val promptHash = kind.promptHash(disposition)
         fun store(status: String, body: Any?, error: String?) =
-            results.save(alertId, kind.name, status, body, error, bedrock.modelId, promptHash, sha256(input))
+            results.save(alertId, kind.name, status, body, error, model.modelId, promptHash, sha256(input))
 
         val reply = try {
-            bedrock.askJson(system, input, "alert_${kind.name}", kind.schema)
-        } catch (e: BedrockException) {
+            model.askJson(system, input, "alert_${kind.name}", kind.schema)
+        } catch (e: AiModelException) {
             return store(FAILED, null, e.message)
         } catch (e: SdkException) {
             return store(FAILED, null, e.message)

@@ -1,7 +1,7 @@
 package cz.morosystems.aml.engine.rules
 
 import cz.morosystems.aml.engine.PostgresTest
-import cz.morosystems.aml.engine.bedrock.BedrockException
+import cz.morosystems.aml.engine.ai.AiModelException
 import cz.morosystems.aml.engine.run.RunService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -19,15 +19,15 @@ import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.test.web.servlet.assertj.MockMvcTester
 
 @TestConfiguration(proxyBeanMethods = false)
-class FakeTextBedrockConfig {
+class FakeTextAiModelConfig {
     @Bean
     @Primary
-    fun fakeTextBedrock() = FakeTextBedrock()
+    fun fakeTextAiModel() = FakeTextAiModel()
 }
 
 @PostgresTest
 @AutoConfigureMockMvc
-@Import(FakeTextBedrockConfig::class)
+@Import(FakeTextAiModelConfig::class)
 class RuleControllerTest {
     @Autowired
     lateinit var mvc: MockMvcTester
@@ -36,7 +36,7 @@ class RuleControllerTest {
     lateinit var jdbc: JdbcClient
 
     @Autowired
-    lateinit var bedrock: FakeTextBedrock
+    lateinit var bedrock: FakeTextAiModel
 
     @Autowired
     lateinit var controller: RuleController
@@ -90,7 +90,7 @@ class RuleControllerTest {
         saved.extractingPath("$.changeReason").isEqualTo("PEP payments under 50k were missed")
         saved.extractingPath("$.params.pep_min").isEqualTo(mapOf("value" to 50_000.0, "unit" to "amount"))
         saved.extractingPath("$.explanation").isEqualTo(LOWER_B2)
-        saved.extractingPath("$.explanationModel").isEqualTo("eu.anthropic.claude-opus-4-5-20251101-v1:0")
+        saved.extractingPath("$.explanationModel").isEqualTo("sonnet")
     }
 
     @Test
@@ -108,7 +108,7 @@ class RuleControllerTest {
 
     @Test
     fun bedrockFailureStillSaves() {
-        bedrock.failure = BedrockException("The SSO session has expired")
+        bedrock.failure = AiModelException("The SSO session has expired")
         val saved = assertThat(post(b2Body())).hasStatus(HttpStatus.CREATED).bodyJson()
         saved.extractingPath("$.explanation").isNull()
         assertThat(mvc.get().uri("/api/rules")).hasStatusOk().bodyJson().extractingPath("$.length()").isEqualTo(8)
@@ -384,7 +384,7 @@ class RuleControllerTest {
     fun explainsARuleWithoutSavingIt() {
         val explained = assertThat(explain(b2Body())).hasStatusOk().bodyJson()
         explained.extractingPath("$.explanation").isEqualTo(LOWER_B2)
-        explained.extractingPath("$.model").isEqualTo("eu.anthropic.claude-opus-4-5-20251101-v1:0")
+        explained.extractingPath("$.model").isEqualTo("sonnet")
         assertThat(mvc.get().uri("/api/rules")).hasStatusOk().bodyJson().extractingPath("$.length()").isEqualTo(7)
     }
 
@@ -395,7 +395,7 @@ class RuleControllerTest {
 
     @Test
     fun explainingWithoutAUsableAnswerIs502() {
-        bedrock.failure = BedrockException("The SSO session has expired")
+        bedrock.failure = AiModelException("The SSO session has expired")
         assertThat(explain(b2Body())).hasStatus(HttpStatus.BAD_GATEWAY)
             .bodyJson().extractingPath("$.detail").asString().contains("try again")
     }
